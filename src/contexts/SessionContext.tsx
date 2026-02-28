@@ -99,6 +99,43 @@ function normaliseCategory(raw: string): string {
   return 'general';
 }
 
+// ─── Shared keyword patterns — used by both liveExtract and syncFromConversation
+type PatternEntry = { re: RegExp; category: string; confidence: 'clear' | 'needs-follow-up' };
+const KEYWORD_PATTERNS: PatternEntry[] = [
+  {
+    re: /\b(barclays|lloyds|natwest|hsbc|santander|nationwide|monzo|starling|halifax|first direct|metro bank|co-op bank|bank(?:ing)?|current account|savings account|bank account)\b/i,
+    category: 'bank_accounts', confidence: 'clear',
+  },
+  {
+    re: /\b(pension|nhs pension|teacher.?s pension|civil service pension|isa|stocks? and shares|premium bond|investment|annuity|retirement fund|workplace pension|final salary|defined benefit)\b/i,
+    category: 'financial_accounts', confidence: 'clear',
+  },
+  {
+    re: /\b(own(?:s|ed)?\s+(?:my|the|a)\s+(?:house|flat|home|property|bungalow|apartment)|mortgage|freehold|leasehold|property deed|title deed|house deed|bought (?:my|the) house|live in (?:my|a) (?:house|flat|home))\b/i,
+    category: 'property', confidence: 'clear',
+  },
+  {
+    re: /\b(will|last (?:will|testament)|solicitor|power of attorney|lasting power|lpa|insurance polic(?:y|ies)|life insurance|home insurance|trust fund|probate|executor)\b/i,
+    category: 'documents', confidence: 'clear',
+  },
+  {
+    re: /\b(dr\.?\s+[a-z]+|doctor\s+[a-z]+|my gp|general practitioner|my solicitor|my accountant|financial advis(?:er|or)|my lawyer|my (?:son|daughter|wife|husband|partner) is)\b/i,
+    category: 'key_contacts', confidence: 'clear',
+  },
+  {
+    re: /\b(care home|nursing home|residential home|(?:want|prefer|like|wish) to (?:stay|remain|live|be cared for) at home|end of life|do not resuscitate|dnr|funeral|cremation|burial|hospice|palliative)\b/i,
+    category: 'care_wishes', confidence: 'clear',
+  },
+  {
+    re: /\b(deeds?|mortgage(?:d)?|renting|rented|landlord)\b/i,
+    category: 'property', confidence: 'needs-follow-up',
+  },
+  {
+    re: /\b(my (?:gp|doctor) is|my solicitor is|accountant called|adviser named)\b/i,
+    category: 'key_contacts', confidence: 'clear',
+  },
+];
+
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 function loadLS<T>(key: string, fallback: T): T {
   try {
@@ -136,9 +173,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveLS('cn-captured-items', capturedItems); }, [capturedItems]);
   useEffect(() => { saveLS('cn-action-items', actionItems); }, [actionItems]);
 
-  // Track which conversation IDs have been synced — persisted across sessions
+  // Track which conversation IDs have been synced — versioned key resets on pattern updates
   const syncedIds = useRef<Set<string>>(
-    new Set(loadLS<string[]>('cn-synced-ids', []))
+    new Set(loadLS<string[]>('cn-synced-ids-v2', []))
   );
 
   const setUserNote = useCallback((itemId: string, note: string) => {
@@ -152,7 +189,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addCapturedItem = useCallback((item: CapturedItem) => {
-    setCapturedItems(prev => [item, ...prev]);
+    setCapturedItems(prev => {
+      // Deduplicate: skip if same content + category already exists
+      if (prev.some(e => e.category === item.category && e.content.trim() === item.content.trim())) return prev;
+      return [item, ...prev];
+    });
   }, []);
 
   const addActionItem = useCallback((item: ActionItem) => {
@@ -212,12 +253,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   // ─── Real-time keyword extraction during a live session ──────────────────
-  // Runs after each exchange. No external API needed — the ElevenLabs agent
-  // (Clara) is the AI; this catches anything she doesn't tag via capture_note.
   const liveExtract = useCallback(async (recentTranscript: string): Promise<void> => {
     if (!recentTranscript.trim()) return;
 
-    // Only look at lines spoken by the user (Narayan), not Clara
     const narayanLines = recentTranscript
       .split('\n')
       .filter(l => l.startsWith('Narayan:'))
@@ -226,66 +264,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     if (narayanLines.length === 0) return;
 
-    // ── Pattern table — ordered most-specific first ──────────────────────
-    type PatternEntry = {
-      re: RegExp;
-      category: string;
-      confidence: 'clear' | 'needs-follow-up';
-    };
-
-    const PATTERNS: PatternEntry[] = [
-      // Bank accounts
-      {
-        re: /\b(barclays|lloyds|natwest|hsbc|santander|nationwide|monzo|starling|halifax|co-op bank|first direct|metro bank|bank(?:ing)?|current account|savings account|bank account)\b/i,
-        category: 'bank_accounts',
-        confidence: 'clear',
-      },
-      // Financial / pension
-      {
-        re: /\b(pension|nhs pension|teacher.?s pension|civil service pension|isa|stocks? and shares|premium bond|investment|annuity|retirement fund|workplace pension|final salary|defined benefit)\b/i,
-        category: 'financial_accounts',
-        confidence: 'clear',
-      },
-      // Property
-      {
-        re: /\b(own(?:s|ed)?\s+(?:my|the|a)\s+(?:house|flat|home|property|bungalow|apartment)|mortgage|freehold|leasehold|property deed|title deed|house deed|bought (?:my|the) house|live in (?:my|a) (?:house|flat|home))\b/i,
-        category: 'property',
-        confidence: 'clear',
-      },
-      // Documents — will / LPA / insurance
-      {
-        re: /\b(will|last (?:will|testament)|solicitor|power of attorney|lasting power|lpa|insurance polic(?:y|ies)|life insurance|home insurance|trust fund|probate|executor)\b/i,
-        category: 'documents',
-        confidence: 'clear',
-      },
-      // Key contacts — named people
-      {
-        re: /\b(dr\.?\s+[a-z]+|doctor\s+[a-z]+|my gp|general practitioner|my solicitor|my accountant|financial advis(?:er|or)|my lawyer|my (?:son|daughter|wife|husband|partner) is)\b/i,
-        category: 'key_contacts',
-        confidence: 'clear',
-      },
-      // Care wishes
-      {
-        re: /\b(care home|nursing home|residential home|(?:want|prefer|like|wish) to (?:stay|remain|live|be cared for) at home|end of life|do not resuscitate|dnr|funeral|cremation|burial|hospice|palliative)\b/i,
-        category: 'care_wishes',
-        confidence: 'clear',
-      },
-      // Loose property follow-up
-      {
-        re: /\b(deeds?|deeds? (?:are|kept|stored|at|with)|mortgage(?:d)?|renting|rented|landlord)\b/i,
-        category: 'property',
-        confidence: 'needs-follow-up',
-      },
-      // Loose contact follow-up
-      {
-        re: /\b(my (?:gp|doctor) is|my solicitor is|accountant called|adviser named)\b/i,
-        category: 'key_contacts',
-        confidence: 'clear',
-      },
-    ];
-
     for (const text of narayanLines) {
-      for (const { re, category, confidence } of PATTERNS) {
+      for (const { re, category, confidence } of KEYWORD_PATTERNS) {
         if (re.test(text)) {
           addCapturedItem({
             id: `live-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -296,7 +276,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             timestamp: new Date(),
           });
           console.log(`🏷️ Keyword match [${category}]: "${text.slice(0, 60)}…"`);
-          break; // one category per utterance
+          break;
         }
       }
     }
@@ -445,36 +425,39 @@ ${transcriptText.slice(0, 4000)}`,
       } catch (err) {
         console.warn('Claude AI extraction failed, using tool_calls only:', err);
       }
-    } else if (!anthropicKey && transcriptText.length > 50 && items === 0) {
-      // No Anthropic key and no tool_calls found — do basic keyword extraction
-      // so the demo still populates the dashboard with something useful.
-      const lines = transcriptText.split('\n').filter(l => l.startsWith('Narayan:'));
-      for (const line of lines) {
-        const text = line.replace(/^Narayan:\s*/i, '').trim();
-        if (!text) continue;
-        const lower = text.toLowerCase();
-        let category = 'general';
-        if (/will|solicitor|lpa|power of attorney|legal|document/i.test(lower)) category = 'documents';
-        else if (/bank|barclays|lloyds|hsbc|pension|investment|savings|isa|premium bond/i.test(lower)) category = 'financial_accounts';
-        else if (/house|flat|property|mortgage|rent/i.test(lower)) category = 'property';
-        else if (/care home|nurse|hospital|medical|operation|wish|prefer|funeral/i.test(lower)) category = 'care_wishes';
-        else if (/dr |doctor|solicitor|accountant|advisor|contact|friend|daughter|son/i.test(lower)) category = 'key_contacts';
-        else continue; // skip small talk lines
+    } else if (transcriptText.length > 50 && items === 0) {
+      // No tool_calls and no Anthropic key (or key failed) — use shared KEYWORD_PATTERNS
+      // to extract factual statements from Narayan's side of the conversation.
+      const narayanLines = transcriptText
+        .split('\n')
+        .filter(l => l.startsWith('Narayan:'))
+        .map(l => l.replace(/^Narayan:\s*/i, '').trim())
+        .filter(l => l.length > 8);
 
-        addCapturedItem({
-          id: `keyword-${conversationId}-${ts}-${items}`,
-          category,
-          content: text,
-          confidence: 'needs-follow-up',
-          flag: false,
-          timestamp: new Date(),
-        });
-        items++;
+      for (const text of narayanLines) {
+        for (const { re, category, confidence } of KEYWORD_PATTERNS) {
+          if (re.test(text)) {
+            addCapturedItem({
+              id: `keyword-${conversationId}-${ts}-${items}`,
+              category,
+              content: text,
+              confidence,
+              flag: false,
+              timestamp: new Date(),
+            });
+            items++;
+            break; // one category per utterance
+          }
+        }
       }
     }
 
-    syncedIds.current.add(conversationId);
-    saveLS('cn-synced-ids', [...syncedIds.current]);
+    // Only mark as synced if we actually extracted something — conversations with
+    // 0 items will be retried on the next boot sync with potentially improved patterns.
+    if (items > 0 || actions > 0) {
+      syncedIds.current.add(conversationId);
+      saveLS('cn-synced-ids-v2', [...syncedIds.current]);
+    }
     console.log(`✅ Synced conversation ${conversationId}: ${items} items, ${actions} actions`);
     return { items, actions, alreadySynced: false };
   }, [addCapturedItem, addActionItem]);
