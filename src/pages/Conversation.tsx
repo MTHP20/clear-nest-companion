@@ -184,36 +184,48 @@ const Conversation = () => {
       const signedUrl: string = data.signed_url ?? data.conversation_token ?? data.token;
       if (!signedUrl) throw new Error(`No URL in response: ${JSON.stringify(data)}`);
 
-      // Build dynamic override — if we've spoken before, tell Clara to resume
-      const dynamicPromptOverride = hasSpokenBefore.current
-        ? [
-          {
-            role: 'system' as const,
-            content: conversationSummary.current
-              ? `You have already introduced yourself to Narayan. Do NOT say hello or reintroduce yourself. Simply continue the conversation naturally from where you left off. So far you have noted: ${conversationSummary.current}. Pick up the next topic.`
-              : `You have already introduced yourself to Narayan. Do NOT say hello or reintroduce yourself. Simply continue the conversation naturally from where you left off.`,
-          },
-        ]
-        : undefined;
+      // ── Build the system prompt for this session ─────────────────────────
+      // We ALWAYS inject tool-calling instructions so Clara reliably calls
+      // capture_note and flag_action for all 7 dashboard areas.
+      // On resume we also add the continuity context.
+      const toolInstructions = `You are Clara, a warm and gentle AI assistant for ClearNest, helping families plan ahead for eldercare. You are talking with Narayan.
+
+CRITICAL — you MUST call the capture_note tool IMMEDIATELY whenever Narayan mentions ANYTHING about:
+• Which bank(s) he uses, account types, where bank cards/documents are kept → category: "bank_accounts"
+• Pension (provider name, whether it exists), investments, ISAs, savings, premium bonds → category: "financial_accounts"
+• Property he owns or rents, address, where deeds are kept, mortgage details → category: "property"
+• Will (does one exist, where kept, who the solicitor is), Power of Attorney / LPA (is one set up, who is named), insurance policies → category: "documents"
+• Named people: GP name, solicitor, accountant, financial adviser, close family/friends with their role → category: "key_contacts"
+• Care home preference, medical wishes, end-of-life preferences, funeral wishes → category: "care_wishes"
+• Any other important personal information → category: "general"
+
+Call capture_note as soon as the information is mentioned — do NOT wait until the end of the conversation.
+Use flag_action for anything urgent (e.g. no will exists, no LPA set up).
+
+Be warm, patient, and go at Narayan's pace. Never rush him.${
+  hasSpokenBefore.current
+    ? conversationSummary.current
+      ? `\n\nYou have already introduced yourself. Do NOT say hello or reintroduce yourself. Continue naturally from where you left off. Notes captured so far: ${conversationSummary.current}. Move on to the next uncovered topic.`
+      : `\n\nYou have already introduced yourself. Do NOT say hello or reintroduce yourself. Simply continue the conversation naturally.`
+    : ''
+}`;
 
       await conversation.startSession({
         signedUrl,
-        ...(dynamicPromptOverride && {
-          overrides: {
-            agent: {
-              prompt: {
-                prompt: dynamicPromptOverride[0].content,
-              },
-            },
-            // Tune VAD — ignore quiet background, wait longer for pauses
-            turn_detection: {
-              mode: 'server_vad',
-              threshold: 0.55,          // 0–1, higher = less sensitive to quiet noise (default ~0.4)
-              silence_duration_ms: 800, // wait 800ms of silence before treating as end of turn
-              prefix_padding_ms: 300,   // capture 300ms before speech detected
+        overrides: {
+          agent: {
+            prompt: {
+              prompt: toolInstructions,
             },
           },
-        }),
+          // Tune VAD — ignore quiet background, wait longer for pauses
+          turn_detection: {
+            mode: 'server_vad',
+            threshold: 0.55,
+            silence_duration_ms: 800,
+            prefix_padding_ms: 300,
+          },
+        },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not start session';
