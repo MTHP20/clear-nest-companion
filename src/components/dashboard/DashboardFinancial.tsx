@@ -3,13 +3,13 @@ import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
 export default function DashboardFinancial() {
-  const { capturedItems } = useSession();
+  const { capturedItems, parentName } = useSession();
   const financial = capturedItems.filter(i => i.category === 'bank_accounts' || i.category === 'financial_accounts');
 
   return (
     <div className="cn-stagger">
       <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Financial Accounts</h2>
-      <p className="font-body text-muted-foreground mb-6">Captured from Narayan's conversation</p>
+      <p className="font-body text-muted-foreground mb-6">Captured from {parentName}'s conversation</p>
 
       {financial.length === 0 ? (
         <EmptyState section="Financial Accounts" />

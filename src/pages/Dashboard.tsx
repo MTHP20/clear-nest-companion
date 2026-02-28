@@ -29,7 +29,7 @@ const NAV_ITEMS = [
 const Dashboard = () => {
   const [activePage, setActivePage] = useState('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { actionItems, capturedItems, sessions: sessionList, parentName } = useSession();
+  const { actionItems, capturedItems, sessions: sessionList, parentName, childName } = useSession();
   const navigate = useNavigate();
 
   const activeActions = actionItems.filter(a => a.status !== 'done').length;
@@ -133,9 +133,12 @@ const Dashboard = () => {
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
-            <h1 className="font-display text-2xl lg:text-[28px] font-semibold text-foreground">
-              {parentName}'s Summary
-            </h1>
+            <div>
+              <h1 className="font-display text-2xl lg:text-[28px] font-semibold text-foreground">
+                {parentName}'s Summary
+              </h1>
+              <p className="font-body text-sm text-muted-foreground">{childName}'s view</p>
+            </div>
           </div>
           <div className="hidden sm:flex flex-col items-end gap-1">
             <div className="flex items-center gap-2">
