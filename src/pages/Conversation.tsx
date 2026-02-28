@@ -52,14 +52,31 @@ const Conversation = () => {
   // ─── Controls ─────────────────────────────────────────────────────────────
   const startSession = useCallback(async () => {
     if (!agentId) {
-      setLastClaraMessage('Agent ID not configured. Add VITE_ELEVENLABS_AGENT_ID to your .env file.');
+      setLastClaraMessage('Agent ID not configured.');
       return;
     }
 
     try {
-      // Request mic permission before starting
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      await conversation.startSession({ agentId });
+
+      const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
+
+      if (apiKey) {
+        // Get a signed URL so the browser can connect without exposing your key
+        const res = await fetch(
+          `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+          { headers: { 'xi-api-key': apiKey } }
+        );
+        const { signed_url } = await res.json();
+        await conversation.startSession({ signedUrl: signed_url });
+      } else {
+        // Public agent — get conversation token
+        const res = await fetch(
+          `https://api.elevenlabs.io/v1/convai/conversation/get_conversation_token?agent_id=${agentId}`
+        );
+        const { token } = await res.json();
+        await conversation.startSession({ conversationToken: token });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌ Start session error:', msg);
