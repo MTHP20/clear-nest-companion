@@ -29,7 +29,7 @@ const NAV_ITEMS = [
 const Dashboard = () => {
   const [activePage, setActivePage] = useState('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { actionItems, parentName } = useSession();
+  const { actionItems, capturedItems, sessions: sessionList, parentName } = useSession();
   const navigate = useNavigate();
 
   const activeActions = actionItems.filter(a => a.status !== 'done').length;
@@ -54,12 +54,26 @@ const Dashboard = () => {
   };
 
   const handleDownload = () => {
-    const data = { exportedAt: new Date().toISOString(), parentName, message: "Full summary export placeholder" };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const lines = [
+      `ClearNest Family Report — ${parentName}`,
+      `Generated: ${new Date().toLocaleString('en-GB')}`,
+      `Sessions: ${sessionList.length}`,
+      ``,
+      `=== CAPTURED INFORMATION (${capturedItems.length} items) ===`,
+      ...capturedItems.map(i => `[${i.category}] ${i.content} (${i.confidence})`),
+      ``,
+      `=== ACTIONS REQUIRED (${actionItems.filter(a => a.status !== 'done').length} active) ===`,
+      ...actionItems.map(a => `[${a.severity.toUpperCase()}] ${a.title} — ${a.status}`),
+      ``,
+      `---`,
+      `This report was downloaded to your device only.`,
+      `Nothing has been sent to ClearNest servers.`,
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'clearnest-full-summary.json';
+    a.download = `clearnest-family-report-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -69,7 +83,7 @@ const Dashboard = () => {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-sidebar text-sidebar-foreground fixed h-full z-30">
         <div className="p-5 border-b border-sidebar-border">
-          <ClearNestLogo variant="white" />
+          <ClearNestLogo variant="white" href="/" />
         </div>
 
         <nav className="flex-1 py-4">
@@ -84,7 +98,7 @@ const Dashboard = () => {
               <item.icon className="w-5 h-5 shrink-0" />
               <span className="flex-1">{item.label}</span>
               {item.badge && activeActions > 0 && (
-                <span className="bg-alert text-alert-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-amber-500 text-white text-xs font-bold min-w-[22px] h-[22px] flex items-center justify-center rounded-full px-1.5 shadow-sm">
                   {activeActions}
                 </span>
               )}
@@ -92,10 +106,13 @@ const Dashboard = () => {
           ))}
 
           <div className="border-t border-sidebar-border mt-4 pt-4 px-5">
-            <button onClick={handleDownload} className="flex items-center gap-3 font-body text-[16px] text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+            <button onClick={handleDownload} className="flex items-center gap-3 font-body text-[16px] text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors mb-2">
               <Download className="w-5 h-5" />
-              Download Summary
+              Download Family Report
             </button>
+            <p className="font-body text-xs text-sidebar-foreground/40 leading-snug">
+              Downloads to your device only. Nothing is sent to ClearNest servers.
+            </p>
           </div>
         </nav>
 
@@ -120,12 +137,26 @@ const Dashboard = () => {
               {parentName}'s Summary
             </h1>
           </div>
-          <button
-            onClick={() => navigate('/conversation')}
-            className="bg-accent text-accent-foreground font-body font-medium py-2.5 px-5 rounded-lg hover:bg-primary transition-colors hidden sm:block"
-          >
-            Start New Session
-          </button>
+          <div className="hidden sm:flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownload}
+                className="flex items-center gap-1.5 border border-border font-body text-sm font-medium py-2 px-3 rounded-lg hover:bg-muted transition-colors text-foreground"
+              >
+                <Download className="w-4 h-4" />
+                Download Family Report
+              </button>
+              <button
+                onClick={() => navigate('/conversation')}
+                className="bg-accent text-accent-foreground font-body font-medium py-2.5 px-5 rounded-lg hover:bg-primary transition-colors"
+              >
+                Start New Session
+              </button>
+            </div>
+            <p className="font-body text-xs text-muted-foreground">
+              Downloads to your device only. Nothing is sent to ClearNest servers.
+            </p>
+          </div>
         </header>
 
         {/* Mobile Nav Dropdown */}
@@ -142,7 +173,7 @@ const Dashboard = () => {
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
                 {item.badge && activeActions > 0 && (
-                  <span className="bg-alert text-alert-foreground text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                  <span className="bg-amber-500 text-white text-xs font-bold min-w-[22px] h-[22px] flex items-center justify-center rounded-full px-1.5 ml-auto shadow-sm">
                     {activeActions}
                   </span>
                 )}
