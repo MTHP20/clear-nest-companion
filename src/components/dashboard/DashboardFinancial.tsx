@@ -1,0 +1,31 @@
+import { useSession } from '@/contexts/SessionContext';
+
+export default function DashboardFinancial() {
+  const { capturedItems } = useSession();
+  const financial = capturedItems.filter(i => i.category === 'bank_accounts' || i.category === 'financial_accounts');
+
+  return (
+    <div className="cn-stagger">
+      <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Financial Accounts</h2>
+      <p className="font-body text-muted-foreground mb-6">Captured from Arthur's conversation</p>
+
+      <div className="space-y-4">
+        {financial.map(item => (
+          <div key={item.id} className="cn-card cn-card-hover">
+            <p className="font-body font-semibold text-foreground mb-2">{item.content.split('.')[0]}</p>
+            <p className="font-body text-foreground mb-3">{item.content}</p>
+            <span className={`inline-block text-xs font-body font-medium px-3 py-1 rounded-full ${
+              item.confidence === 'clear' ? 'bg-primary/10 text-primary' : 'bg-alert/10 text-alert'
+            }`}>
+              {item.confidence === 'clear' ? 'Confirmed' : 'Needs follow-up'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <button className="mt-6 border-2 border-accent text-accent font-body font-medium py-2.5 px-5 rounded-lg hover:bg-accent/10 transition-colors">
+        + Add manually
+      </button>
+    </div>
+  );
+}
