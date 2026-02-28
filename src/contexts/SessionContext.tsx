@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 
 export interface CapturedItem {
   id: string;
@@ -99,11 +99,29 @@ function normaliseCategory(raw: string): string {
   return 'general';
 }
 
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+function loadLS<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch { return fallback; }
+}
+function saveLS(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota exceeded */ }
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [parentName] = useState('Narayan');
   const [childName] = useState('Sunil');
-  const [capturedItems, setCapturedItems] = useState<CapturedItem[]>([]);
-  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+
+  // ── Persisted state — survives page refresh via localStorage ──────────────
+  const [capturedItems, setCapturedItems] = useState<CapturedItem[]>(() =>
+    loadLS<CapturedItem[]>('cn-captured-items', [])
+  );
+  const [actionItems, setActionItems] = useState<ActionItem[]>(() =>
+    loadLS<ActionItem[]>('cn-action-items', [])
+  );
+
   const [sessions] = useState<SessionEntry[]>([]);
   const [claraResponses] = useState<ClaraResponse[]>([]);
   const [lastClaraMessage, setLastClaraMessage] = useState('');
@@ -114,8 +132,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isThinking, setThinking] = useState(false);
   const [userNotes, setUserNotes] = useState<Record<string, string>>({});
 
-  // Track which conversation IDs have been synced this session (in-memory)
-  const syncedIds = useRef<Set<string>>(new Set());
+  // ── Persist to localStorage whenever items change ─────────────────────────
+  useEffect(() => { saveLS('cn-captured-items', capturedItems); }, [capturedItems]);
+  useEffect(() => { saveLS('cn-action-items', actionItems); }, [actionItems]);
+
+  // Track which conversation IDs have been synced — persisted across sessions
+  const syncedIds = useRef<Set<string>>(
+    new Set(loadLS<string[]>('cn-synced-ids', []))
+  );
 
   const setUserNote = useCallback((itemId: string, note: string) => {
     setUserNotes(prev => ({ ...prev, [itemId]: note }));
@@ -450,11 +474,13 @@ ${transcriptText.slice(0, 4000)}`,
     }
 
     syncedIds.current.add(conversationId);
+    saveLS('cn-synced-ids', [...syncedIds.current]);
     console.log(`✅ Synced conversation ${conversationId}: ${items} items, ${actions} actions`);
     return { items, actions, alreadySynced: false };
   }, [addCapturedItem, addActionItem]);
 
-  // ─── Auto-sync the most recent ElevenLabs conversation ───────────────────
+  // ─── Auto-sync all unsynced ElevenLabs conversations ────────────────────
+  // Fetches the last 20 conversations and syncs any that haven't been seen yet.
   const autoSyncLatest = useCallback(async (): Promise<SyncResult | null> => {
     const EL_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
     const AGENT_ID = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
@@ -462,19 +488,41 @@ ${transcriptText.slice(0, 4000)}`,
 
     try {
       const resp = await fetch(
-        `https://api.elevenlabs.io/v1/convai/conversations?agent_id=${AGENT_ID}&page_size=1`,
+        `https://api.elevenlabs.io/v1/convai/conversations?agent_id=${AGENT_ID}&page_size=20`,
         { headers: { 'xi-api-key': EL_KEY } }
       );
       if (!resp.ok) return null;
       const data = await resp.json();
-      const latest = (data.conversations ?? [])[0] as { conversation_id: string } | undefined;
-      if (!latest) return null;
-      return syncFromConversation(latest.conversation_id);
+      const convs = (data.conversations ?? []) as { conversation_id: string }[];
+
+      let totalItems = 0;
+      let totalActions = 0;
+      for (const conv of convs) {
+        if (syncedIds.current.has(conv.conversation_id)) continue;
+        try {
+          const result = await syncFromConversation(conv.conversation_id);
+          if (!result.alreadySynced) {
+            totalItems += result.items;
+            totalActions += result.actions;
+          }
+        } catch { /* skip failed syncs */ }
+      }
+      return { items: totalItems, actions: totalActions, alreadySynced: totalItems === 0 && totalActions === 0 };
     } catch (err) {
       console.error('autoSyncLatest failed:', err);
       return null;
     }
   }, [syncFromConversation]);
+
+  // ─── Auto-sync all conversations on mount ────────────────────────────────
+  // Runs once when the app first loads — picks up all ElevenLabs conversations
+  // that haven't been synced yet and populates the dashboard immediately.
+  useEffect(() => {
+    autoSyncLatest()
+      .then(r => { if (r && !r.alreadySynced) console.log(`🔄 Boot sync: ${r.items} notes, ${r.actions} actions`); })
+      .catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
 
   return (
     <SessionContext.Provider
