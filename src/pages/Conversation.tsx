@@ -17,12 +17,47 @@ const Conversation = () => {
 
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
+  // ─── Strip internal [NOTE: ...] and [Patient] tags from Clara's display text ──
+  const cleanClaraMessage = (raw: string): string => {
+    return raw
+      // Remove [NOTE: ...] blocks (including multiline)
+      .replace(/\[NOTE:[^\]]*\]/gi, '')
+      // Remove [Patient] prefix
+      .replace(/^\[Patient\]\s*/i, '')
+      // Clean up any double spaces or trailing whitespace
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  };
+
+  const parseAndCaptureNote = (raw: string) => {
+    const noteMatch = raw.match(/\[NOTE:\s*([^\]]+)\]/i);
+    if (!noteMatch) return;
+
+    const noteStr = noteMatch[1];
+
+    // Parse key=value pairs from the note string
+    const get = (key: string) => {
+      const m = noteStr.match(new RegExp(`${key}=([^,\\]]+)`, 'i'));
+      return m ? m[1].trim() : undefined;
+    };
+
+    const category = get('category') ?? 'general';
+    const content = get('content') ?? noteStr;
+    const confidence = (get('confidence') ?? 'clear') as 'clear' | 'needs-follow-up';
+    const flagVal = get('flag');
+    const flag = flagVal === 'true';
+
+    handleAgentToolCall('capture_note', { category, content, confidence, flag });
+  };
+
   // ─── ElevenLabs Conversational AI ─────────────────────────────────────────
   const conversation = useConversation({
     onMessage: (message: { source: string; message: string }) => {
       console.log('💬 Message:', message);
       if (message.source === 'ai') {
-        setLastClaraMessage(message.message);
+        setLastClaraMessage(cleanClaraMessage(message.message));
+        // Parse the note out separately and send to session context
+        parseAndCaptureNote(message.message);
       } else if (message.source === 'user') {
         setLastUserMessage(message.message);
       }
