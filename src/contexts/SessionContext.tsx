@@ -42,6 +42,9 @@ interface SessionContextType {
   lastUserMessage: string;
   isListening: boolean;
   isThinking: boolean;
+  // Notes Sarah can add manually to any captured item
+  userNotes: Record<string, string>;
+  setUserNote: (itemId: string, note: string) => void;
   addCapturedItem: (item: CapturedItem) => void;
   addActionItem: (item: ActionItem) => void;
   updateActionStatus: (id: string, status: ActionItem['status']) => void;
@@ -50,8 +53,6 @@ interface SessionContextType {
   setLastClaraMessage: (msg: string) => void;
   setLastUserMessage: (msg: string) => void;
   simulateConversationTurn: () => void;
-  // Called by Conversation.tsx when ElevenLabs agent emits a tool_call
-  // with a structured note/action to add to the dashboard
   handleAgentToolCall: (toolName: string, parameters: Record<string, unknown>) => void;
 }
 
@@ -78,7 +79,7 @@ const MOCK_TURNS: {
   },
   {
     spoken: "That's perfectly fine. Do you have a will, Arthur? And do you know where it's kept?",
-    note: { category: 'documents', content: "Will exists, drawn up by Henderson & Partners. Kept in a brown envelope in the filing cabinet.", confidence: 'clear', flag: false },
+    note: { category: 'documents', content: 'Will exists, drawn up by Henderson & Partners. Kept in a brown envelope in the filing cabinet.', confidence: 'clear', flag: false },
   },
   {
     spoken: "Lovely. Is there anything you'd like your family to know about how you'd like to be cared for?",
@@ -86,7 +87,7 @@ const MOCK_TURNS: {
   },
   {
     spoken: "That's very clear, Arthur. Do you have any insurance policies? Life insurance, home insurance, anything like that?",
-    note: { category: 'documents', content: "Home insurance with Aviva, renews in March. Life insurance policy exists but provider unknown.", confidence: 'needs-follow-up', flag: true },
+    note: { category: 'documents', content: 'Home insurance with Aviva, renews in March. Life insurance policy exists but provider unknown.', confidence: 'needs-follow-up', flag: true },
     action: { title: 'Life Insurance Provider — Unknown', description: "Arthur has a life insurance policy but can't recall the provider. Documents may be in the filing cabinet.", severity: 'amber', status: 'todo' },
   },
 ];
@@ -125,6 +126,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isThinking, setThinking] = useState(false);
   const [turnIndex, setTurnIndex] = useState(0);
 
+  // Sarah's manual notes keyed by captured item ID
+  const [userNotes, setUserNotes] = useState<Record<string, string>>({});
+
+  const setUserNote = useCallback((itemId: string, note: string) => {
+    setUserNotes(prev => ({ ...prev, [itemId]: note }));
+  }, []);
+
   const addCapturedItem = useCallback((item: CapturedItem) => {
     setCapturedItems(prev => [item, ...prev]);
   }, []);
@@ -138,9 +146,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ─── ElevenLabs tool call handler ─────────────────────────────────────────
-  // When the ElevenLabs agent calls a tool (e.g. "capture_note" or "flag_action"),
-  // this function receives the tool name and parameters and updates the dashboard.
-  // You define these tools in your ElevenLabs agent dashboard.
+  // Called by Conversation.tsx when the ElevenLabs agent fires a tool.
+  // Define "capture_note" and "flag_action" tools in your ElevenLabs agent dashboard.
   const handleAgentToolCall = useCallback(
     (toolName: string, parameters: Record<string, unknown>) => {
       console.log('🔧 Agent tool call:', toolName, parameters);
@@ -155,7 +162,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           timestamp: new Date(),
         };
         addCapturedItem(item);
-        console.log('📋 Note captured:', item);
+        console.log('📋 Note captured from agent:', item);
       }
 
       if (toolName === 'flag_action') {
@@ -168,7 +175,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           learnMoreUrl: (parameters.learnMoreUrl as string) ?? undefined,
         };
         addActionItem(action);
-        console.log('⚠️ Action flagged:', action);
+        console.log('⚠️ Action flagged from agent:', action);
       }
     },
     [addCapturedItem, addActionItem]
@@ -202,10 +209,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return (
     <SessionContext.Provider
       value={{
-        parentName, capturedItems, actionItems, sessions, claraResponses,
-        lastClaraMessage, lastUserMessage, isListening, isThinking,
-        addCapturedItem, addActionItem, updateActionStatus,
-        setListening, setThinking, setLastClaraMessage, setLastUserMessage,
+        parentName,
+        capturedItems,
+        actionItems,
+        sessions,
+        claraResponses,
+        lastClaraMessage,
+        lastUserMessage,
+        isListening,
+        isThinking,
+        userNotes,
+        setUserNote,
+        addCapturedItem,
+        addActionItem,
+        updateActionStatus,
+        setListening,
+        setThinking,
+        setLastClaraMessage,
+        setLastUserMessage,
         simulateConversationTurn,
         handleAgentToolCall,
       }}
