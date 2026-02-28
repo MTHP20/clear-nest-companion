@@ -46,6 +46,7 @@ const Conversation = () => {
     setLastClaraMessage,
     setLastUserMessage,
     handleAgentToolCall,
+    autoSyncLatest,
   } = useSession();
 
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
@@ -107,7 +108,20 @@ const Conversation = () => {
       setLastClaraMessage(`Connection error: ${error}`);
     },
     onConnect: () => console.log('✅ Connected'),
-    onDisconnect: () => console.log('🔌 Disconnected'),
+    onDisconnect: () => {
+      console.log('🔌 Disconnected — syncing conversation to dashboard in 4s…');
+      // Wait 4 s for ElevenLabs to finish storing the conversation, then pull
+      // the transcript and push everything into the dashboard sections.
+      setTimeout(() => {
+        autoSyncLatest()
+          .then(result => {
+            if (result && !result.alreadySynced) {
+              console.log(`✅ Auto-sync complete: ${result.items} notes, ${result.actions} actions added to dashboard`);
+            }
+          })
+          .catch(console.error);
+      }, 4000);
+    },
   });
 
   const isConnected = conversation.status === 'connected';

@@ -38,6 +38,12 @@ export interface ClaraResponse {
   action?: ActionItem;
 }
 
+export interface SyncResult {
+  items: number;
+  actions: number;
+  alreadySynced: boolean;
+}
+
 interface SessionContextType {
   parentName: string;
   childName: string;
@@ -60,9 +66,37 @@ interface SessionContextType {
   setLastClaraMessage: (msg: string) => void;
   setLastUserMessage: (msg: string) => void;
   handleAgentToolCall: (toolName: string, parameters: Record<string, unknown>) => void;
+  syncFromConversation: (conversationId: string) => Promise<SyncResult>;
+  autoSyncLatest: () => Promise<SyncResult | null>;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
+
+// ─── Category normaliser ──────────────────────────────────────────────────────
+// Maps various Claude / ElevenLabs category names → the exact strings the
+// dashboard components filter on.
+const VALID_CATEGORIES = new Set([
+  'documents',
+  'bank_accounts',
+  'financial_accounts',
+  'property',
+  'care_wishes',
+  'key_contacts',
+  'general',
+]);
+
+function normaliseCategory(raw: string): string {
+  const lower = (raw ?? '').toLowerCase().replace(/[\s-]/g, '_');
+  if (VALID_CATEGORIES.has(lower)) return lower;
+  // fuzzy aliases
+  if (lower.includes('document') || lower.includes('will') || lower.includes('legal')) return 'documents';
+  if (lower.includes('bank')) return 'bank_accounts';
+  if (lower.includes('financ') || lower.includes('pension') || lower.includes('invest')) return 'financial_accounts';
+  if (lower.includes('propert') || lower.includes('house') || lower.includes('home')) return 'property';
+  if (lower.includes('care') || lower.includes('wish') || lower.includes('prefer')) return 'care_wishes';
+  if (lower.includes('contact') || lower.includes('person') || lower.includes('doctor') || lower.includes('solicitor')) return 'key_contacts';
+  return 'general';
+}
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [parentName] = useState('Narayan');
@@ -78,6 +112,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isListening, setListening] = useState(false);
   const [isThinking, setThinking] = useState(false);
   const [userNotes, setUserNotes] = useState<Record<string, string>>({});
+
+  // Track which conversation IDs have been synced this session (in-memory)
+  const syncedIds = useRef<Set<string>>(new Set());
 
   const setUserNote = useCallback((itemId: string, note: string) => {
     setUserNotes(prev => ({ ...prev, [itemId]: note }));
@@ -114,9 +151,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  // ─── ElevenLabs tool call handler ──────────────────────────────────────────
-  // The agent can pass `source_quote` in capture_note parameters;
-  // if absent we fall back to the last user utterance automatically.
+  // ─── ElevenLabs tool call handler (live session) ──────────────────────────
   const handleAgentToolCall = useCallback(
     (toolName: string, parameters: Record<string, unknown>) => {
       console.log('🔧 Agent tool call:', toolName, parameters);
@@ -124,7 +159,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (toolName === 'capture_note') {
         const item: CapturedItem = {
           id: `item-${Date.now()}`,
-          category: (parameters.category as string) ?? 'general',
+          category: normaliseCategory((parameters.category as string) ?? 'general'),
           content: (parameters.content as string) ?? '',
           confidence: (parameters.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
           flag: (parameters.flag as boolean) ?? false,
@@ -151,6 +186,219 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [addCapturedItem, addActionItem]
   );
 
+  // ─── Sync a past ElevenLabs conversation into the dashboard ──────────────
+  // Fetches the transcript, extracts Clara's stored tool_calls AND runs
+  // Claude AI over the full transcript text for richer extraction.
+  const syncFromConversation = useCallback(async (conversationId: string): Promise<SyncResult> => {
+    if (syncedIds.current.has(conversationId)) {
+      return { items: 0, actions: 0, alreadySynced: true };
+    }
+
+    const EL_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
+    const resp = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversations/${conversationId}`,
+      { headers: { 'xi-api-key': EL_KEY } }
+    );
+    if (!resp.ok) throw new Error(`ElevenLabs API error ${resp.status}`);
+    const data = await resp.json();
+
+    let items = 0;
+    let actions = 0;
+    const ts = Date.now();
+
+    // ── Step 1: extract tool_calls stored by ElevenLabs in the transcript ──
+    type RawTurn = { role: string; message?: string; tool_calls?: unknown[] };
+    for (const turn of (data.transcript ?? []) as RawTurn[]) {
+      for (const tc of (turn.tool_calls ?? [])) {
+        try {
+          const toolCall = tc as {
+            tool_name?: string;
+            name?: string;
+            params_as_json?: string;
+            parameters?: Record<string, unknown>;
+          };
+          const toolName = toolCall.tool_name ?? toolCall.name ?? '';
+          let params: Record<string, unknown> = {};
+          if (typeof toolCall.params_as_json === 'string') {
+            params = JSON.parse(toolCall.params_as_json);
+          } else if (toolCall.parameters) {
+            params = toolCall.parameters;
+          }
+
+          if (toolName === 'capture_note') {
+            addCapturedItem({
+              id: `sync-${conversationId}-${ts}-${items}`,
+              category: normaliseCategory((params.category as string) ?? 'general'),
+              content: (params.content as string) ?? '',
+              confidence: (params.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
+              flag: (params.flag as boolean) ?? false,
+              timestamp: new Date(),
+            });
+            items++;
+          } else if (toolName === 'flag_action') {
+            addActionItem({
+              id: `sync-action-${conversationId}-${ts}-${actions}`,
+              title: (params.title as string) ?? 'Action required',
+              description: (params.description as string) ?? '',
+              severity: (params.severity as 'red' | 'amber') ?? 'amber',
+              status: 'todo',
+              learnMoreUrl: (params.learnMoreUrl as string) ?? undefined,
+            });
+            actions++;
+          }
+        } catch {
+          // skip malformed tool call
+        }
+      }
+    }
+
+    // ── Step 2: Claude AI extraction from full transcript text ──────────────
+    const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+    const transcriptText = ((data.transcript ?? []) as RawTurn[])
+      .filter(t => t.message && t.message.trim())
+      .map(t => `${t.role === 'agent' ? 'Clara' : 'Narayan'}: ${t.message}`)
+      .join('\n');
+
+    if (anthropicKey && transcriptText.length > 50) {
+      try {
+        const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 1500,
+            messages: [
+              {
+                role: 'user',
+                content: `You are extracting structured information from a conversation between Clara (an AI care-planning assistant) and Narayan (an elderly person whose family is preparing estate/care plans).
+
+Extract ALL substantive factual information Narayan mentions. Return strict JSON (no markdown):
+{
+  "notes": [
+    { "category": "...", "content": "...", "confidence": "clear" | "needs-follow-up" }
+  ],
+  "actions": [
+    { "title": "...", "description": "...", "severity": "red" | "amber" }
+  ]
+}
+
+Category must be one of: documents, bank_accounts, financial_accounts, property, care_wishes, key_contacts, general
+
+Use "documents" for: wills, LPAs, solicitors, legal papers
+Use "bank_accounts" / "financial_accounts" for: banks, pensions, investments, savings
+Use "property" for: house, flat, mortgage, rental
+Use "care_wishes" for: medical preferences, end-of-life wishes, care home preferences
+Use "key_contacts" for: named people (doctors, solicitors, family, friends)
+
+Actions (red = urgent legal/financial, amber = should-do): only create if something clearly needs follow-up.
+
+Conversation:
+${transcriptText.slice(0, 5000)}`,
+              },
+            ],
+          }),
+        });
+
+        if (claudeResp.ok) {
+          const claudeData = await claudeResp.json();
+          const text: string = claudeData.content?.[0]?.text ?? '';
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const extracted = JSON.parse(jsonMatch[0]) as {
+              notes?: Array<{ category: string; content: string; confidence: string }>;
+              actions?: Array<{ title: string; description: string; severity: string }>;
+            };
+            for (const note of extracted.notes ?? []) {
+              if (note.content?.trim()) {
+                addCapturedItem({
+                  id: `ai-${conversationId}-${ts}-${items}`,
+                  category: normaliseCategory(note.category),
+                  content: note.content.trim(),
+                  confidence: (note.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
+                  flag: false,
+                  timestamp: new Date(),
+                });
+                items++;
+              }
+            }
+            for (const action of extracted.actions ?? []) {
+              if (action.title?.trim()) {
+                addActionItem({
+                  id: `ai-action-${conversationId}-${ts}-${actions}`,
+                  title: action.title.trim(),
+                  description: action.description ?? '',
+                  severity: (action.severity as 'red' | 'amber') ?? 'amber',
+                  status: 'todo',
+                });
+                actions++;
+              }
+            }
+            console.log(`🤖 Claude extracted ${items} notes, ${actions} actions from transcript`);
+          }
+        }
+      } catch (err) {
+        console.warn('Claude AI extraction failed, using tool_calls only:', err);
+      }
+    } else if (!anthropicKey && transcriptText.length > 50 && items === 0) {
+      // No Anthropic key and no tool_calls found — do basic keyword extraction
+      // so the demo still populates the dashboard with something useful.
+      const lines = transcriptText.split('\n').filter(l => l.startsWith('Narayan:'));
+      for (const line of lines) {
+        const text = line.replace(/^Narayan:\s*/i, '').trim();
+        if (!text) continue;
+        const lower = text.toLowerCase();
+        let category = 'general';
+        if (/will|solicitor|lpa|power of attorney|legal|document/i.test(lower)) category = 'documents';
+        else if (/bank|barclays|lloyds|hsbc|pension|investment|savings|isa|premium bond/i.test(lower)) category = 'financial_accounts';
+        else if (/house|flat|property|mortgage|rent/i.test(lower)) category = 'property';
+        else if (/care home|nurse|hospital|medical|operation|wish|prefer|funeral/i.test(lower)) category = 'care_wishes';
+        else if (/dr |doctor|solicitor|accountant|advisor|contact|friend|daughter|son/i.test(lower)) category = 'key_contacts';
+        else continue; // skip small talk lines
+
+        addCapturedItem({
+          id: `keyword-${conversationId}-${ts}-${items}`,
+          category,
+          content: text,
+          confidence: 'needs-follow-up',
+          flag: false,
+          timestamp: new Date(),
+        });
+        items++;
+      }
+    }
+
+    syncedIds.current.add(conversationId);
+    console.log(`✅ Synced conversation ${conversationId}: ${items} items, ${actions} actions`);
+    return { items, actions, alreadySynced: false };
+  }, [addCapturedItem, addActionItem]);
+
+  // ─── Auto-sync the most recent ElevenLabs conversation ───────────────────
+  const autoSyncLatest = useCallback(async (): Promise<SyncResult | null> => {
+    const EL_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
+    const AGENT_ID = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
+    if (!EL_KEY || !AGENT_ID) return null;
+
+    try {
+      const resp = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversations?agent_id=${AGENT_ID}&page_size=1`,
+        { headers: { 'xi-api-key': EL_KEY } }
+      );
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      const latest = (data.conversations ?? [])[0] as { conversation_id: string } | undefined;
+      if (!latest) return null;
+      return syncFromConversation(latest.conversation_id);
+    } catch (err) {
+      console.error('autoSyncLatest failed:', err);
+      return null;
+    }
+  }, [syncFromConversation]);
+
   return (
     <SessionContext.Provider
       value={{
@@ -175,6 +423,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setLastClaraMessage,
         setLastUserMessage: wrappedSetLastUserMessage,
         handleAgentToolCall,
+        syncFromConversation,
+        autoSyncLatest,
       }}
     >
       {children}

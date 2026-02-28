@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { ArrowLeft, Clock, MessageSquare, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, MessageSquare, ChevronRight, Loader2, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 // ─── ElevenLabs API types ───────────────────────────────────────────────────
 
@@ -106,14 +106,18 @@ function TranscriptView({
   conv,
   onBack,
   parentName,
+  syncFromConversation,
 }: {
   conv: ELConversation;
   onBack: () => void;
   parentName: string;
+  syncFromConversation: (id: string) => Promise<{ items: number; actions: number; alreadySynced: boolean }>;
 }) {
   const [detail, setDetail] = useState<ELConversationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ items: number; actions: number; alreadySynced: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,10 +162,22 @@ function TranscriptView({
     [turns]
   );
 
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncFromConversation(conv.conversation_id);
+      setSyncResult(result);
+    } catch (err) {
+      console.error('Sync failed:', err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm font-body text-primary hover:text-primary/70 transition-colors"
@@ -170,7 +186,7 @@ function TranscriptView({
           Back
         </button>
         <div className="h-4 w-px bg-border" />
-        <div>
+        <div className="flex-1">
           <p className="font-body font-semibold text-foreground text-sm">
             {formatDate(conv.start_time_unix_secs)}
           </p>
@@ -178,6 +194,30 @@ function TranscriptView({
             {formatDuration(conv.call_duration_secs)} · {conv.message_count} messages
           </p>
         </div>
+
+        {/* Sync to dashboard button */}
+        {syncResult?.alreadySynced ? (
+          <div className="flex items-center gap-1.5 text-xs font-body text-muted-foreground">
+            <CheckCircle2 className="w-4 h-4 text-primary" />
+            Already synced
+          </div>
+        ) : syncResult ? (
+          <div className="flex items-center gap-1.5 text-xs font-body text-primary">
+            <CheckCircle2 className="w-4 h-4" />
+            {syncResult.items} notes &amp; {syncResult.actions} actions added
+          </div>
+        ) : (
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-sm font-body font-medium bg-accent text-accent-foreground px-3 py-1.5 rounded-lg hover:bg-primary transition-colors disabled:opacity-60"
+          >
+            {syncing
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Extracting…</>
+              : <><RefreshCw className="w-3.5 h-3.5" />Sync to Dashboard</>
+            }
+          </button>
+        )}
       </div>
 
       {/* Summary if available */}
@@ -248,7 +288,7 @@ interface DashboardSessionsProps {
 }
 
 export default function DashboardSessions({ query = '' }: DashboardSessionsProps) {
-  const { parentName } = useSession();
+  const { parentName, syncFromConversation } = useSession();
   const [conversations, setConversations] = useState<ELConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -297,6 +337,7 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
           conv={selected}
           onBack={() => setSelected(null)}
           parentName={parentName || 'Narayan'}
+          syncFromConversation={syncFromConversation}
         />
       </div>
     );
