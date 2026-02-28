@@ -128,7 +128,7 @@ const Conversation = () => {
 
   const handleEndChat = () => {
     endSession();
-    navigate('/dashboard');
+    navigate('/');
   };
 
   // ─── Status text — large and clear ───────────────────────────────────────
@@ -354,7 +354,7 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.2,
   },
   greetingBody: {
-    fontSize: 20,
+    fontSize: 30,
     color: '#4a5568',
     lineHeight: 1.7,
     margin: 0,
