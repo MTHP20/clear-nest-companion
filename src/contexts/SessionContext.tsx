@@ -68,6 +68,7 @@ interface SessionContextType {
   handleAgentToolCall: (toolName: string, parameters: Record<string, unknown>) => void;
   syncFromConversation: (conversationId: string) => Promise<SyncResult>;
   autoSyncLatest: () => Promise<SyncResult | null>;
+  liveExtract: (recentTranscript: string) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -186,6 +187,97 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [addCapturedItem, addActionItem]
   );
 
+  // ─── Real-time keyword extraction during a live session ──────────────────
+  // Runs after each exchange. No external API needed — the ElevenLabs agent
+  // (Clara) is the AI; this catches anything she doesn't tag via capture_note.
+  const liveExtract = useCallback(async (recentTranscript: string): Promise<void> => {
+    if (!recentTranscript.trim()) return;
+
+    // Only look at lines spoken by the user (Narayan), not Clara
+    const narayanLines = recentTranscript
+      .split('\n')
+      .filter(l => l.startsWith('Narayan:'))
+      .map(l => l.replace(/^Narayan:\s*/i, '').trim())
+      .filter(l => l.length > 8);
+
+    if (narayanLines.length === 0) return;
+
+    // ── Pattern table — ordered most-specific first ──────────────────────
+    type PatternEntry = {
+      re: RegExp;
+      category: string;
+      confidence: 'clear' | 'needs-follow-up';
+    };
+
+    const PATTERNS: PatternEntry[] = [
+      // Bank accounts
+      {
+        re: /\b(barclays|lloyds|natwest|hsbc|santander|nationwide|monzo|starling|halifax|co-op bank|first direct|metro bank|bank(?:ing)?|current account|savings account|bank account)\b/i,
+        category: 'bank_accounts',
+        confidence: 'clear',
+      },
+      // Financial / pension
+      {
+        re: /\b(pension|nhs pension|teacher.?s pension|civil service pension|isa|stocks? and shares|premium bond|investment|annuity|retirement fund|workplace pension|final salary|defined benefit)\b/i,
+        category: 'financial_accounts',
+        confidence: 'clear',
+      },
+      // Property
+      {
+        re: /\b(own(?:s|ed)?\s+(?:my|the|a)\s+(?:house|flat|home|property|bungalow|apartment)|mortgage|freehold|leasehold|property deed|title deed|house deed|bought (?:my|the) house|live in (?:my|a) (?:house|flat|home))\b/i,
+        category: 'property',
+        confidence: 'clear',
+      },
+      // Documents — will / LPA / insurance
+      {
+        re: /\b(will|last (?:will|testament)|solicitor|power of attorney|lasting power|lpa|insurance polic(?:y|ies)|life insurance|home insurance|trust fund|probate|executor)\b/i,
+        category: 'documents',
+        confidence: 'clear',
+      },
+      // Key contacts — named people
+      {
+        re: /\b(dr\.?\s+[a-z]+|doctor\s+[a-z]+|my gp|general practitioner|my solicitor|my accountant|financial advis(?:er|or)|my lawyer|my (?:son|daughter|wife|husband|partner) is)\b/i,
+        category: 'key_contacts',
+        confidence: 'clear',
+      },
+      // Care wishes
+      {
+        re: /\b(care home|nursing home|residential home|(?:want|prefer|like|wish) to (?:stay|remain|live|be cared for) at home|end of life|do not resuscitate|dnr|funeral|cremation|burial|hospice|palliative)\b/i,
+        category: 'care_wishes',
+        confidence: 'clear',
+      },
+      // Loose property follow-up
+      {
+        re: /\b(deeds?|deeds? (?:are|kept|stored|at|with)|mortgage(?:d)?|renting|rented|landlord)\b/i,
+        category: 'property',
+        confidence: 'needs-follow-up',
+      },
+      // Loose contact follow-up
+      {
+        re: /\b(my (?:gp|doctor) is|my solicitor is|accountant called|adviser named)\b/i,
+        category: 'key_contacts',
+        confidence: 'clear',
+      },
+    ];
+
+    for (const text of narayanLines) {
+      for (const { re, category, confidence } of PATTERNS) {
+        if (re.test(text)) {
+          addCapturedItem({
+            id: `live-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            category,
+            content: text,
+            confidence,
+            flag: false,
+            timestamp: new Date(),
+          });
+          console.log(`🏷️ Keyword match [${category}]: "${text.slice(0, 60)}…"`);
+          break; // one category per utterance
+        }
+      }
+    }
+  }, [addCapturedItem]);
+
   // ─── Sync a past ElevenLabs conversation into the dashboard ──────────────
   // Fetches the transcript, extracts Clara's stored tool_calls AND runs
   // Claude AI over the full transcript text for richer extraction.
@@ -270,35 +362,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             'anthropic-dangerous-direct-browser-access': 'true',
           },
           body: JSON.stringify({
+            // haiku is the cheapest Claude model — ~$0.001 per full conversation sync
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 1500,
+            max_tokens: 900,
             messages: [
               {
                 role: 'user',
-                content: `You are extracting structured information from a conversation between Clara (an AI care-planning assistant) and Narayan (an elderly person whose family is preparing estate/care plans).
+                content: `Extract all factual information from this care-planning conversation. Return ONLY JSON (no markdown):
+{"notes":[{"category":"...","content":"1-sentence fact","confidence":"clear|needs-follow-up"}],"actions":[{"title":"...","description":"...","severity":"red|amber"}]}
 
-Extract ALL substantive factual information Narayan mentions. Return strict JSON (no markdown):
-{
-  "notes": [
-    { "category": "...", "content": "...", "confidence": "clear" | "needs-follow-up" }
-  ],
-  "actions": [
-    { "title": "...", "description": "...", "severity": "red" | "amber" }
-  ]
-}
-
-Category must be one of: documents, bank_accounts, financial_accounts, property, care_wishes, key_contacts, general
-
-Use "documents" for: wills, LPAs, solicitors, legal papers
-Use "bank_accounts" / "financial_accounts" for: banks, pensions, investments, savings
-Use "property" for: house, flat, mortgage, rental
-Use "care_wishes" for: medical preferences, end-of-life wishes, care home preferences
-Use "key_contacts" for: named people (doctors, solicitors, family, friends)
-
-Actions (red = urgent legal/financial, amber = should-do): only create if something clearly needs follow-up.
+Categories: documents (will/LPA/insurance/solicitor), bank_accounts, financial_accounts (pension/ISA/investments), property (house/deeds/mortgage), care_wishes (care home/medical wishes), key_contacts (named GP/solicitor/accountant), general
+Actions only for urgent gaps (no will, no LPA set up, etc).
 
 Conversation:
-${transcriptText.slice(0, 5000)}`,
+${transcriptText.slice(0, 4000)}`,
               },
             ],
           }),
@@ -425,6 +502,7 @@ ${transcriptText.slice(0, 5000)}`,
         handleAgentToolCall,
         syncFromConversation,
         autoSyncLatest,
+        liveExtract,
       }}
     >
       {children}
