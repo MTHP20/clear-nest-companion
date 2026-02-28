@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
-import { Mic, MicOff, PhoneOff } from 'lucide-react';
+import { Mic, PhoneOff, Volume2 } from 'lucide-react';
 import { useConversation } from '@11labs/react';
 import { useSession } from '@/contexts/SessionContext';
 
@@ -16,17 +16,14 @@ function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 30)
     indexRef.current = 0;
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (!fullText) return;
-
     intervalRef.current = setInterval(() => {
       indexRef.current += 1;
       setDisplayed(fullText.slice(0, indexRef.current));
       if (indexRef.current >= fullText.length) clearInterval(intervalRef.current!);
     }, 1000 / charsPerSecond);
-
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fullText, charsPerSecond]);
 
-  // Snap to full if speaking ends before typing finishes
   useEffect(() => {
     if (!isActive && displayed.length < fullText.length) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -46,16 +43,26 @@ const Conversation = () => {
     setLastClaraMessage,
     setLastUserMessage,
     handleAgentToolCall,
-    autoSyncLatest,
   } = useSession();
 
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
-  // ── Track whether a session has ever been started this page visit ─────────
-  // This is passed back to ElevenLabs as context so Clara knows to continue,
-  // not re-introduce. We also store the last topic covered so Clara can resume.
+  // ── Session state ─────────────────────────────────────────────────────────
+  const [isSessionActive, setIsSessionActive] = useState(false); // EL session open
+  const [isHolding, setIsHolding] = useState(false); // user holding button
+  const [isStarting, setIsStarting] = useState(false); // connecting spinner
+  const [hasStartedSession, setHasStartedSession] = useState(false);
+
+  // ── Session continuity ────────────────────────────────────────────────────
   const hasSpokenBefore = useRef(false);
   const conversationSummary = useRef<string>('');
+
+  // ── PTT: track the MediaStream so we can mute/unmute the mic track ────────
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // ── Interrupt buffer ──────────────────────────────────────────────────────
+  const interruptBufferRef = useRef<string[]>([]);
+  const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
   // ── Clean display text ────────────────────────────────────────────────────
   const cleanClaraMessage = (raw: string): string =>
@@ -74,7 +81,6 @@ const Conversation = () => {
       return m ? m[1].trim() : undefined;
     };
     const category = get('category') ?? 'general';
-    // Keep a running summary for context injection on resume
     const content = get('content') ?? noteStr;
     if (content) {
       conversationSummary.current = conversationSummary.current
@@ -89,15 +95,50 @@ const Conversation = () => {
     });
   };
 
+  // ── Mute/unmute mic track based on hold state ─────────────────────────────
+  const setMicActive = (active: boolean) => {
+    if (!mediaStreamRef.current) return;
+    mediaStreamRef.current.getAudioTracks().forEach(track => {
+      track.enabled = active;
+    });
+  };
+
   // ── ElevenLabs ────────────────────────────────────────────────────────────
   const conversation = useConversation({
     onMessage: (message: { source: string; message: string }) => {
       if (message.source === 'ai') {
-        setLastClaraMessage(cleanClaraMessage(message.message));
-        parseAndCaptureNote(message.message);
-        hasSpokenBefore.current = true;
+        const cleaned = cleanClaraMessage(message.message);
+        if (cleaned) {
+          setLastClaraMessage(cleaned);
+          parseAndCaptureNote(message.message);
+          hasSpokenBefore.current = true;
+        }
+        // Flush any buffered interrupts into "You said"
+        if (interruptBufferRef.current.length > 0) {
+          const buffered = interruptBufferRef.current.join(' … ');
+          setLastUserMessage(buffered);
+          interruptBufferRef.current = [];
+          setInterruptNotice(null);
+        }
       } else if (message.source === 'user') {
-        setLastUserMessage(message.message);
+        const userText = message.message?.trim();
+        if (!userText) return;
+        // If they were holding the button, it's a valid intended message
+        // If not (they somehow spoke), buffer it as an interrupt
+        if (isHolding) {
+          setLastUserMessage(userText);
+          setInterruptNotice(null);
+        } else {
+          // Captured during Clara's turn — buffer and flag
+          interruptBufferRef.current.push(userText);
+          setInterruptNotice(`We caught: "${userText}" — Clara will take this into account.`);
+          handleAgentToolCall('capture_note', {
+            category: 'general',
+            content: `Narayan said while Clara was speaking: "${userText}"`,
+            confidence: 'needs-follow-up',
+            flag: true,
+          });
+        }
       }
     },
     onToolCall: (toolCall: { tool_name: string; parameters: Record<string, unknown> }) => {
@@ -107,24 +148,20 @@ const Conversation = () => {
       console.error('❌ ElevenLabs error:', error);
       setLastClaraMessage(`Connection error: ${error}`);
     },
-    onConnect: () => console.log('✅ Connected'),
+    onConnect: () => {
+      console.log('✅ Connected');
+      setIsSessionActive(true);
+      setIsStarting(false);
+      setHasStartedSession(true);
+      setMicActive(false);
+    },
     onDisconnect: () => {
-      console.log('🔌 Disconnected — syncing conversation to dashboard in 4s…');
-      // Wait 4 s for ElevenLabs to finish storing the conversation, then pull
-      // the transcript and push everything into the dashboard sections.
-      setTimeout(() => {
-        autoSyncLatest()
-          .then(result => {
-            if (result && !result.alreadySynced) {
-              console.log(`✅ Auto-sync complete: ${result.items} notes, ${result.actions} actions added to dashboard`);
-            }
-          })
-          .catch(console.error);
-      }, 4000);
+      console.log('🔌 Disconnected');
+      setIsSessionActive(false);
+      setIsHolding(false);
     },
   });
 
-  const isConnected = conversation.status === 'connected';
   const isAgentSpeaking = conversation.isSpeaking;
 
   const { displayed: typedMessage, isTyping } = useTypewriter(
@@ -133,19 +170,24 @@ const Conversation = () => {
     30
   );
 
-  // ── Start session — injects resume context if returning ───────────────────
+  // ── Start the ElevenLabs session once (on first tap) ─────────────────────
   const startSession = useCallback(async () => {
-    if (!agentId) { setLastClaraMessage('Agent ID not configured.'); return; }
+    if (isStarting || isSessionActive) return;
+    setIsStarting(true);
     try {
-      await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 16000,
           channelCount: 1,
-        }
+        },
       });
+      mediaStreamRef.current = stream;
+      // Immediately mute until user holds
+      stream.getAudioTracks().forEach(t => { t.enabled = false; });
+
       const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
       const res = await fetch(
         `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
@@ -156,61 +198,87 @@ const Conversation = () => {
       const signedUrl: string = data.signed_url ?? data.conversation_token ?? data.token;
       if (!signedUrl) throw new Error(`No URL in response: ${JSON.stringify(data)}`);
 
-      // Build dynamic override — if we've spoken before, tell Clara to resume
-      const dynamicPromptOverride = hasSpokenBefore.current
-        ? [
-          {
-            role: 'system' as const,
-            content: conversationSummary.current
-              ? `You have already introduced yourself to Narayan. Do NOT say hello or reintroduce yourself. Simply continue the conversation naturally from where you left off. So far you have noted: ${conversationSummary.current}. Pick up the next topic.`
-              : `You have already introduced yourself to Narayan. Do NOT say hello or reintroduce yourself. Simply continue the conversation naturally from where you left off.`,
-          },
-        ]
+      const resumePrompt = hasSpokenBefore.current
+        ? conversationSummary.current
+          ? `You have already introduced yourself to Narayan. Do NOT say hello or reintroduce yourself. Continue naturally from where you left off. So far you have noted: ${conversationSummary.current}. Pick up the next topic.`
+          : `You have already introduced yourself to Narayan. Do NOT say hello or reintroduce yourself. Continue naturally.`
         : undefined;
 
       await conversation.startSession({
         signedUrl,
-        ...(dynamicPromptOverride && {
+        ...(resumePrompt && {
           overrides: {
-            agent: {
-              prompt: {
-                prompt: dynamicPromptOverride[0].content,
-              },
-            },
-            // Tune VAD — ignore quiet background, wait longer for pauses
-            turn_detection: {
-              mode: 'server_vad',
-              threshold: 0.55,          // 0–1, higher = less sensitive to quiet noise (default ~0.4)
-              silence_duration_ms: 800, // wait 800ms of silence before treating as end of turn
-              prefix_padding_ms: 300,   // capture 300ms before speech detected
-            },
+            agent: { prompt: { prompt: resumePrompt } },
           },
         }),
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not start session';
-      console.error('❌ Start session error:', msg);
+      console.error('❌', msg);
       setLastClaraMessage(`Could not start: ${msg}`);
+      setIsStarting(false);
     }
-  }, [conversation, agentId, setLastClaraMessage]);
+  }, [conversation, agentId, setLastClaraMessage, isStarting, isSessionActive]);
 
-  const endSession = useCallback(async () => { await conversation.endSession(); }, [conversation]);
-  const handleMicPress = () => { if (!isConnected) startSession(); else endSession(); };
+  const endSession = useCallback(async () => {
+    setIsHolding(false);
+    setMicActive(false);
+    setIsSessionActive(false);
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      mediaStreamRef.current = null;
+    }
+    await conversation.endSession();
+  }, [conversation]);
+
   const handleEndChat = () => { endSession(); navigate('/'); };
 
-  const getStatusText = () => {
-    if (!isConnected) return 'Tap the button below to speak with Clara';
-    if (isAgentSpeaking) return 'Clara is speaking…';
-    return 'Clara is listening — speak now';
-  };
-  const getStatusColor = () => {
-    if (!isConnected) return '#7a8b9a';
-    if (isAgentSpeaking) return '#4a7c6b';
-    return '#2e6b9e';
-  };
+  // ── Push-to-talk handlers ─────────────────────────────────────────────────
+  const handlePressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!isSessionActive) {
+      // First press — start the session
+      startSession();
+      return;
+    }
+    // Subsequent presses — open mic
+    setIsHolding(true);
+    setMicActive(true);
+    // If Clara was speaking, she'll naturally handle the interruption
+    // since we're now feeding her real audio
+  }, [isSessionActive, startSession]);
 
-  // ── Whether to show the greeting card (hide once conversation starts) ─────
-  const showGreeting = !lastClaraMessage && !lastUserMessage;
+  const handlePressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!isSessionActive) return;
+    setIsHolding(false);
+    // Mute mic — Clara's VAD will detect silence and take her turn
+    setMicActive(false);
+  }, [isSessionActive]);
+
+  // ── Prevent context menu on long-press mobile ─────────────────────────────
+  const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
+
+  // ── Derive UI phase ───────────────────────────────────────────────────────
+  type Phase = 'idle' | 'connecting' | 'clara_speaking' | 'holding' | 'waiting';
+  const getPhase = (): Phase => {
+    if (!isSessionActive && !isStarting) return 'idle';
+    if (isStarting) return 'connecting';
+    if (isHolding) return 'holding';
+    if (isAgentSpeaking) return 'clara_speaking';
+    return 'waiting';
+  };
+  const phase = getPhase();
+
+  const showGreeting = !lastClaraMessage && !lastUserMessage && !isSessionActive;
+
+  // ── Dot colour ────────────────────────────────────────────────────────────
+  const dotColor =
+    phase === 'holding' ? '#c0392b' :
+      phase === 'clara_speaking' ? '#4a7c6b' :
+        phase === 'waiting' ? '#f0a500' :
+          phase === 'connecting' ? '#8a96a0' :
+            '#c0c8d0';
 
   return (
     <div style={styles.page}>
@@ -224,15 +292,22 @@ const Conversation = () => {
         </button>
       </header>
 
-      {/* ── Main — vertically centred, no scroll ── */}
       <main style={styles.main}>
 
-        {/* Greeting — only shown before conversation starts */}
+        {/* ── Disclaimer — shown once session is active ── */}
+        {isSessionActive && (
+          <div style={styles.disclaimerBanner}>
+            <span style={styles.disclaimerIcon}>💡</span>
+            <span style={styles.disclaimerText}>
+              <strong>Hold the button</strong> to speak. Release when you're done. You can hold at any time — even while Clara is talking.
+            </span>
+          </div>
+        )}
+
+        {/* Greeting */}
         {showGreeting && (
           <div style={styles.greetingCard}>
-            <div style={styles.claraAvatar} aria-hidden="true">
-              <span style={styles.claraInitial}>C</span>
-            </div>
+            <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
             <h1 style={styles.greetingTitle}>Hello. I'm Clara.</h1>
             <p style={styles.greetingBody}>
               I'm here for a gentle chat to help your family get organised.
@@ -241,87 +316,148 @@ const Conversation = () => {
           </div>
         )}
 
-        {/* Clara's message — typewritten, stays until new message */}
+        {/* Clara's message */}
         {lastClaraMessage && (
           <div style={styles.claraMessageCard}>
             <p style={styles.cardLabel}>Clara said:</p>
             <p style={styles.claraMessageText}>
               {typedMessage}
-              {isTyping && <span style={styles.cursor} aria-hidden="true">|</span>}
+              {isTyping && <span style={styles.cursor}>|</span>}
             </p>
           </div>
         )}
 
+        {/* Interrupt notice */}
+        {interruptNotice && (
+          <div style={styles.interruptCard}>
+            <p style={styles.interruptText}>🎙 {interruptNotice}</p>
+          </div>
+        )}
+
         {/* You said */}
-        {lastUserMessage && (
+        {lastUserMessage && !interruptNotice && (
           <div style={styles.userMessageCard}>
             <p style={styles.cardLabel}>You said:</p>
             <p style={styles.userMessageText}>"{lastUserMessage}"</p>
           </div>
         )}
 
-        {/* Status text */}
-        <p style={{ ...styles.statusText, color: getStatusColor() }}>
-          {getStatusText()}
-        </p>
+        {/* ── Status row with dot ── */}
+        {(isSessionActive || isStarting) && (
+          <div style={styles.statusRow}>
+            <span style={{
+              ...styles.bigDot,
+              background: dotColor,
+              boxShadow: phase === 'holding'
+                ? '0 0 0 5px rgba(192,57,43,0.22)'
+                : phase === 'waiting'
+                  ? '0 0 0 5px rgba(240,165,0,0.20)'
+                  : 'none',
+              animation:
+                phase === 'holding' ? 'dotPop 0.9s ease-in-out infinite' :
+                  phase === 'clara_speaking' ? 'dotFade 1.4s ease-in-out infinite' :
+                    phase === 'waiting' ? 'dotFade 1.8s ease-in-out infinite' :
+                      'none',
+            }} />
+            <div style={styles.statusTextBlock}>
+              <p style={{ ...styles.statusMain, color: dotColor }}>
+                {phase === 'connecting' && 'Connecting to Clara…'}
+                {phase === 'clara_speaking' && 'Clara is speaking'}
+                {phase === 'waiting' && 'Hold the button to speak'}
+                {phase === 'holding' && 'Recording — release when done'}
+              </p>
+              <p style={styles.statusSub}>
+                {phase === 'connecting' && 'Please wait a moment'}
+                {phase === 'clara_speaking' && 'Hold the button to interrupt'}
+                {phase === 'waiting' && 'Take your time — no rush'}
+                {phase === 'holding' && 'Clara will hear everything you say'}
+              </p>
+            </div>
+          </div>
+        )}
 
-        {/* Mic button */}
+        {/* ── Push-to-talk button ── */}
         <div style={styles.micWrapper}>
-          {isConnected && !isAgentSpeaking && (
+          {/* Pulse rings — only while holding */}
+          {phase === 'holding' && (
             <>
-              <span style={{ ...styles.pulseRing, animationDelay: '0s' }} />
-              <span style={{ ...styles.pulseRing, animationDelay: '0.45s' }} />
+              <span style={{ ...styles.pulseRing, background: 'rgba(192,57,43,0.18)', animationDelay: '0s' }} />
+              <span style={{ ...styles.pulseRing, background: 'rgba(192,57,43,0.12)', animationDelay: '0.5s' }} />
             </>
           )}
+
           <button
-            onClick={handleMicPress}
-            disabled={isAgentSpeaking}
-            aria-label={isConnected ? 'Stop conversation' : 'Start conversation with Clara'}
+            onMouseDown={handlePressStart}
+            onMouseUp={handlePressEnd}
+            onMouseLeave={handlePressEnd}
+            onTouchStart={handlePressStart}
+            onTouchEnd={handlePressEnd}
+            onTouchCancel={handlePressEnd}
+            onContextMenu={handleContextMenu}
+            disabled={isStarting}
+            aria-label={
+              !hasStartedSession
+                ? 'Start chat with Clara'
+                : phase === 'holding'
+                  ? 'Release to stop talking'
+                  : 'Hold to speak'
+            }
             style={{
               ...styles.micBtn,
-              background: isConnected ? (isAgentSpeaking ? '#b0bec5' : '#2e6b9e') : '#4a7c6b',
-              cursor: isAgentSpeaking ? 'not-allowed' : 'pointer',
-              opacity: isAgentSpeaking ? 0.75 : 1,
-            }}
+              background:
+                phase === 'holding' ? '#c0392b' :
+                  phase === 'clara_speaking' ? '#4a7c6b' :
+                    phase === 'waiting' ? '#f0a500' :
+                      phase === 'connecting' ? '#b0bec5' :
+                        '#4a7c6b',
+              cursor: isStarting ? 'not-allowed' : 'pointer',
+              transform: phase === 'holding' ? 'scale(1.08)' : 'scale(1)',
+              boxShadow: phase === 'holding'
+                ? '0 10px 36px rgba(192,57,43,0.40)'
+                : phase === 'waiting'
+                  ? '0 8px 28px rgba(240,165,0,0.30)'
+                  : '0 6px 20px rgba(0,0,0,0.16)',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            } as React.CSSProperties}
           >
-            {isConnected
-              ? <MicOff size={48} color="#ffffff" />
-              : <Mic size={48} color="#ffffff" />
+            {phase === 'clara_speaking'
+              ? <Volume2 size={48} color="#fff" />
+              : <Mic size={48} color="#fff" />
             }
           </button>
         </div>
 
         {/* Button label */}
-        <p style={styles.micLabel}>
-          {!isConnected && 'Tap to start talking'}
-          {isConnected && !isAgentSpeaking && 'Tap to stop'}
-          {isConnected && isAgentSpeaking && 'Please wait…'}
+        <p style={{ ...styles.micLabel, color: dotColor }}>
+          {!hasStartedSession && 'Start Chat'}
+          {hasStartedSession && phase === 'connecting' && 'Connecting…'}
+          {hasStartedSession && phase === 'clara_speaking' && 'Hold to interrupt'}
+          {hasStartedSession && phase === 'waiting' && 'Hold to speak'}
+          {hasStartedSession && phase === 'holding' && 'Release when done'}
         </p>
-
-        {/* Live dot */}
-        {isConnected && (
-          <div style={styles.statusDot}>
-            <span style={{ ...styles.dot, background: isAgentSpeaking ? '#4a7c6b' : '#2e6b9e' }} />
-            <span style={styles.dotLabel}>
-              {isAgentSpeaking ? 'Clara is speaking' : 'Listening'}
-            </span>
-          </div>
-        )}
 
       </main>
 
-      {/* ── Footer ── */}
       <footer style={styles.footer}>
         <p style={styles.footerText}>
-          You can stop at any time — just say "I'd like to stop" or press <strong>End Chat</strong>.
+          Hold the button to speak at any time — even while Clara is talking.
         </p>
       </footer>
 
       <style>{`
         @keyframes elderPulse {
           0%   { transform: scale(1);   opacity: 0.5; }
-          70%  { transform: scale(1.9); opacity: 0; }
-          100% { transform: scale(1.9); opacity: 0; }
+          70%  { transform: scale(2.0); opacity: 0; }
+          100% { transform: scale(2.0); opacity: 0; }
+        }
+        @keyframes dotPop {
+          0%, 100% { transform: scale(1);    opacity: 1; }
+          50%       { transform: scale(1.25); opacity: 0.85; }
+        }
+        @keyframes dotFade {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.35; }
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -336,7 +472,6 @@ const Conversation = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   page: {
     height: '100vh',
@@ -345,12 +480,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     fontFamily: "'Georgia', 'Times New Roman', serif",
-  },
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+  } as React.CSSProperties,
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '16px 28px',
+    padding: '14px 28px',
     borderBottom: '1px solid #ddd6cc',
     background: '#ffffff',
     flexShrink: 0,
@@ -362,8 +499,8 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ffffff',
     border: 'none',
     borderRadius: 12,
-    padding: '12px 22px',
-    fontSize: 17,
+    padding: '11px 20px',
+    fontSize: 16,
     fontWeight: 700,
     cursor: 'pointer',
     fontFamily: 'inherit',
@@ -375,79 +512,84 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px 24px',
-    maxWidth: 600,
+    padding: '16px 24px',
+    maxWidth: 580,
     margin: '0 auto',
     width: '100%',
-    gap: 18,
+    gap: 14,
     overflow: 'hidden',
+  },
+  disclaimerBanner: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 10,
+    background: '#fff8e8',
+    border: '1.5px solid #e8c96a',
+    borderRadius: 12,
+    padding: '10px 16px',
+    width: '100%',
+    flexShrink: 0,
+    animation: 'fadeIn 0.3s ease',
+  },
+  disclaimerIcon: { fontSize: 16, flexShrink: 0, marginTop: 1 },
+  disclaimerText: {
+    fontSize: 14,
+    color: '#7a5c10',
+    fontFamily: "'Helvetica Neue', sans-serif",
+    lineHeight: 1.5,
+    margin: 0,
   },
   greetingCard: {
     background: '#ffffff',
     borderRadius: 20,
-    padding: '28px 28px',
+    padding: '22px 24px',
     textAlign: 'center',
-    boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
     width: '100%',
     animation: 'fadeIn 0.4s ease',
     flexShrink: 0,
   },
   claraAvatar: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: '50%',
     background: '#4a7c6b',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: '0 auto 14px',
+    margin: '0 auto 10px',
     boxShadow: '0 4px 12px rgba(74,124,107,0.35)',
   },
   claraInitial: {
-    fontSize: 32,
-    color: '#ffffff',
-    fontWeight: 700,
-    fontFamily: 'Georgia, serif',
+    fontSize: 28, color: '#ffffff', fontWeight: 700, fontFamily: 'Georgia, serif',
   },
   greetingTitle: {
-    fontSize: 26,
-    fontWeight: 700,
-    color: '#1a2e26',
-    margin: '0 0 10px',
-    lineHeight: 1.2,
+    fontSize: 22, fontWeight: 700, color: '#1a2e26', margin: '0 0 6px',
   },
   greetingBody: {
-    fontSize: 18,
-    color: '#4a5568',
-    lineHeight: 1.65,
-    margin: 0,
+    fontSize: 16, color: '#4a5568', lineHeight: 1.6, margin: 0,
   },
   claraMessageCard: {
     background: '#e8f4ef',
     border: '2px solid #4a7c6b',
-    borderRadius: 20,
-    padding: '22px 26px',
+    borderRadius: 18,
+    padding: '18px 22px',
     width: '100%',
     animation: 'fadeIn 0.35s ease',
-    boxShadow: '0 2px 12px rgba(74,124,107,0.12)',
+    boxShadow: '0 2px 12px rgba(74,124,107,0.10)',
     flexShrink: 0,
   },
   cardLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 700,
     color: '#4a7c6b',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.1em',
-    margin: '0 0 8px',
+    margin: '0 0 6px',
     fontFamily: "'Helvetica Neue', sans-serif",
   },
   claraMessageText: {
-    fontSize: 22,
-    color: '#1a2e26',
-    lineHeight: 1.6,
-    margin: 0,
-    fontWeight: 400,
-    minHeight: '1.6em',
+    fontSize: 20, color: '#1a2e26', lineHeight: 1.6, margin: 0, fontWeight: 400, minHeight: '1.5em',
   },
   cursor: {
     display: 'inline-block',
@@ -456,30 +598,57 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 200,
     animation: 'blink 0.75s step-start infinite',
   },
+  interruptCard: {
+    background: '#fff3f3',
+    border: '1.5px solid #e8a0a0',
+    borderRadius: 14,
+    padding: '10px 16px',
+    width: '100%',
+    animation: 'fadeIn 0.3s ease',
+    flexShrink: 0,
+  },
+  interruptText: {
+    fontSize: 13, color: '#8b2020', fontFamily: "'Helvetica Neue', sans-serif", margin: 0, lineHeight: 1.5,
+  },
   userMessageCard: {
     background: '#eef2f7',
     border: '2px solid #2e6b9e',
-    borderRadius: 20,
-    padding: '18px 26px',
+    borderRadius: 18,
+    padding: '14px 22px',
     width: '100%',
     animation: 'fadeIn 0.3s ease',
     flexShrink: 0,
   },
   userMessageText: {
-    fontSize: 18,
-    color: '#2c3e50',
-    lineHeight: 1.6,
-    margin: 0,
-    fontStyle: 'italic',
+    fontSize: 17, color: '#2c3e50', lineHeight: 1.6, margin: 0, fontStyle: 'italic',
   },
-  statusText: {
-    fontSize: 18,
-    fontWeight: 600,
-    textAlign: 'center' as const,
-    margin: 0,
-    fontFamily: "'Helvetica Neue', sans-serif",
-    transition: 'color 0.3s ease',
+  statusRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    width: '100%',
+    padding: '12px 18px',
+    background: '#ffffff',
+    borderRadius: 16,
+    boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
     flexShrink: 0,
+  },
+  bigDot: {
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    display: 'block',
+    flexShrink: 0,
+    transition: 'background 0.4s ease, box-shadow 0.4s ease',
+  },
+  statusTextBlock: {
+    display: 'flex', flexDirection: 'column' as const, gap: 2,
+  },
+  statusMain: {
+    fontSize: 16, fontWeight: 700, fontFamily: "'Helvetica Neue', sans-serif", margin: 0, transition: 'color 0.3s ease',
+  },
+  statusSub: {
+    fontSize: 13, color: '#8a96a0', fontFamily: "'Helvetica Neue', sans-serif", margin: 0,
   },
   micWrapper: {
     position: 'relative',
@@ -495,9 +664,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: 148,
     height: 148,
     borderRadius: '50%',
-    background: 'rgba(46,107,158,0.22)',
-    animation: 'elderPulse 1.8s ease-out infinite',
+    animation: 'elderPulse 1.6s ease-out infinite',
     display: 'block',
+    pointerEvents: 'none',
   },
   micBtn: {
     position: 'relative',
@@ -509,49 +678,28 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'background 0.3s ease',
-    boxShadow: '0 6px 24px rgba(0,0,0,0.2)',
+    transition: 'background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease',
     outline: 'none',
+    touchAction: 'none',
   },
   micLabel: {
-    fontSize: 18,
-    color: '#4a5568',
+    fontSize: 16,
     margin: 0,
     fontFamily: "'Helvetica Neue', sans-serif",
-    fontWeight: 600,
+    fontWeight: 700,
     textAlign: 'center' as const,
     flexShrink: 0,
-  },
-  statusDot: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    flexShrink: 0,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: '50%',
-    display: 'inline-block',
-    animation: 'elderPulse 2s ease-out infinite',
-  },
-  dotLabel: {
-    fontSize: 16,
-    color: '#4a5568',
-    fontFamily: "'Helvetica Neue', sans-serif",
+    transition: 'color 0.3s ease',
   },
   footer: {
     textAlign: 'center' as const,
-    padding: '14px 24px 18px',
+    padding: '12px 24px 16px',
     borderTop: '1px solid #ddd6cc',
     background: '#ffffff',
     flexShrink: 0,
   },
   footerText: {
-    fontSize: 15,
-    color: '#718096',
-    margin: 0,
-    lineHeight: 1.5,
+    fontSize: 14, color: '#718096', margin: 0, lineHeight: 1.5,
   },
 };
 
