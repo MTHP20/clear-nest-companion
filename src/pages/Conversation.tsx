@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic } from 'lucide-react';
@@ -6,8 +6,30 @@ import { useSession } from '@/contexts/SessionContext';
 
 const Conversation = () => {
   const navigate = useNavigate();
-  const { isListening, isThinking, lastClaraMessage, simulateConversationTurn } = useSession();
+  const { isListening, isThinking, lastClaraMessage, simulateConversationTurn, triggerDemoStep, demoStep } = useSession();
   const [showEndModal, setShowEndModal] = useState(false);
+
+  // -------------------------------------------------------------------------
+  // DEMO SHORTCUT — Shift+D fires the next item in the demo sequence so
+  // judges can see the dashboard populate live without a live voice API.
+  // Remove this block once the real ElevenLabs integration is wired up.
+  //
+  // MICHAEL — CONNECT HERE:
+  // Replace triggerDemoStep() with the real ElevenLabs agent connection.
+  // When the agent completes a turn, parse the STRUCTURED_NOTE from the
+  // response and call addCapturedItem(structuredNote) on the context.
+  // The agent webhook / tool-call handler should live alongside this file.
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        triggerDemoStep();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [triggerDemoStep]);
 
   const handleMicPress = () => {
     if (!isListening && !isThinking) {
@@ -38,7 +60,7 @@ const Conversation = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4">
-        <ClearNestLogo variant="small" />
+        <ClearNestLogo variant="small" href="/" />
         <button onClick={handleEndChat} className="font-body text-muted-foreground hover:text-foreground transition-colors">
           End Chat
         </button>
@@ -88,6 +110,11 @@ const Conversation = () => {
         <p className="text-sm text-muted-foreground">
           You can stop at any time. Just say "I'd like to stop" or press End Chat.
         </p>
+        {/* DEV HINT — remove before production */}
+        <p className="text-xs text-muted-foreground/40 mt-2">
+          Demo: press <kbd className="font-mono bg-muted px-1 rounded">Shift+D</kbd> to simulate a response
+          {demoStep > 0 && ` · ${demoStep}/6 captured`}
+        </p>
       </footer>
 
       {/* End Session Modal */}
@@ -96,7 +123,7 @@ const Conversation = () => {
           <div className="bg-card rounded-xl p-8 max-w-md w-full shadow-xl cn-slide-in">
             <h2 className="font-display text-2xl font-semibold mb-3 text-foreground">Your session is complete</h2>
             <p className="font-body text-foreground mb-6 leading-relaxed">
-              Arthur's summary is ready for your family to review. This information is only stored on your device — ClearNest never holds your data.
+              Narayan's summary is ready for your family to review. This information is only stored on your device — ClearNest never holds your data.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={handleDownload} className="flex-1 border-2 border-accent text-accent font-body font-medium py-3 px-6 rounded-lg hover:bg-accent/10 transition-colors">
