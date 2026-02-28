@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
-import { Mic } from 'lucide-react';
+import { Mic, MicOff, PhoneOff } from 'lucide-react';
 import { useConversation } from '@11labs/react';
 import { useSession } from '@/contexts/SessionContext';
 
@@ -19,7 +19,6 @@ const Conversation = () => {
 
   // ─── ElevenLabs Conversational AI ─────────────────────────────────────────
   const conversation = useConversation({
-    // Fires when the agent speaks — update "Clara Said" card
     onMessage: (message: { source: string; message: string }) => {
       console.log('💬 Message:', message);
       if (message.source === 'ai') {
@@ -28,25 +27,16 @@ const Conversation = () => {
         setLastUserMessage(message.message);
       }
     },
-
-    // Fires when the agent calls a tool — update dashboard in real time
     onToolCall: (toolCall: { tool_name: string; parameters: Record<string, unknown> }) => {
       console.log('🔧 Tool call:', toolCall);
       handleAgentToolCall(toolCall.tool_name, toolCall.parameters);
     },
-
     onError: (error: string) => {
       console.error('❌ ElevenLabs error:', error);
       setLastClaraMessage(`Connection error: ${error}`);
     },
-
-    onConnect: () => {
-      console.log('✅ Connected to ElevenLabs agent');
-    },
-
-    onDisconnect: () => {
-      console.log('🔌 Disconnected from ElevenLabs agent');
-    },
+    onConnect: () => console.log('✅ Connected to ElevenLabs agent'),
+    onDisconnect: () => console.log('🔌 Disconnected from ElevenLabs agent'),
   });
 
   // ─── Controls ─────────────────────────────────────────────────────────────
@@ -61,22 +51,27 @@ const Conversation = () => {
 
       const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
 
-      if (apiKey) {
-        // Get a signed URL so the browser can connect without exposing your key
-        const res = await fetch(
-          `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
-          { headers: { 'xi-api-key': apiKey } }
-        );
-        const { signed_url } = await res.json();
-        await conversation.startSession({ signedUrl: signed_url });
-      } else {
-        // Public agent — get conversation token
-        const res = await fetch(
-          `https://api.elevenlabs.io/v1/convai/conversation/get_conversation_token?agent_id=${agentId}`
-        );
-        const { token } = await res.json();
-        await conversation.startSession({ conversationToken: token });
+      const res = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+        { headers: { 'xi-api-key': apiKey } }
+      );
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`ElevenLabs API error ${res.status}: ${errText}`);
       }
+
+      const data = await res.json();
+      console.log('🔑 ElevenLabs token response:', data); // <-- tells us exactly what field it returns
+
+      // The signed URL itself is passed directly — NOT wrapped in conversationToken
+      const signedUrl: string = data.signed_url ?? data.conversation_token ?? data.token;
+
+      if (!signedUrl) throw new Error(`No URL in response: ${JSON.stringify(data)}`);
+
+      // Pass the signed URL directly — SDK connects via WebSocket to it
+      await conversation.startSession({ signedUrl });
+
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌ Start session error:', msg);
@@ -88,28 +83,12 @@ const Conversation = () => {
     await conversation.endSession();
   }, [conversation]);
 
-  // ─── Derived state from ElevenLabs SDK ───────────────────────────────────
   const isConnected = conversation.status === 'connected';
   const isAgentSpeaking = conversation.isSpeaking;
 
-  const getButtonLabel = () => {
-    if (!isConnected) return 'Press and speak';
-    if (isAgentSpeaking) return 'Clara is speaking...';
-    return 'Clara is listening...';
-  };
-
-  const getButtonState = () => {
-    if (!isConnected) return 'idle';
-    if (isAgentSpeaking) return 'speaking';
-    return 'listening';
-  };
-
   const handleMicPress = () => {
-    if (!isConnected) {
-      startSession();
-    } else {
-      endSession();
-    }
+    if (!isConnected) startSession();
+    else endSession();
   };
 
   const handleEndChat = () => {
@@ -117,126 +96,362 @@ const Conversation = () => {
     navigate('/dashboard');
   };
 
-  const handleDownload = () => {
-    const data = {
-      exportedAt: new Date().toISOString(),
-      lastUserMessage,
-      lastClaraMessage,
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'clearnest-summary.json';
-    a.click();
-    URL.revokeObjectURL(url);
+  // ─── Status text — large and clear ───────────────────────────────────────
+  const getStatusText = () => {
+    if (!isConnected) return 'Tap the button below to speak with Clara';
+    if (isAgentSpeaking) return 'Clara is speaking…';
+    return 'Clara is listening — speak now';
   };
 
-  const buttonState = getButtonState();
+  const getStatusColor = () => {
+    if (!isConnected) return '#7a8b9a';
+    if (isAgentSpeaking) return '#4a7c6b';
+    return '#2e6b9e';
+  };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div style={styles.page}>
 
-      <header className="flex items-center justify-between px-6 py-4">
+      {/* ── Header ── */}
+      <header style={styles.header}>
         <ClearNestLogo variant="small" />
         <button
           onClick={handleEndChat}
-          className="font-body text-muted-foreground hover:text-foreground transition-colors"
+          style={styles.endChatBtn}
+          aria-label="End chat and go to dashboard"
         >
+          <PhoneOff size={22} style={{ marginRight: 8 }} />
           End Chat
         </button>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12 max-w-xl mx-auto w-full cn-stagger">
+      {/* ── Main ── */}
+      <main style={styles.main}>
 
-        {/* Greeting Card */}
-        <div className="cn-card w-full mb-10 text-center">
-          <h1 className="font-display text-[26px] font-semibold mb-3 text-foreground">
-            Hello. I'm Clara.
-          </h1>
-          <p className="font-body text-foreground leading-relaxed">
-            I'm here for a gentle chat to help your family get organised. There are no wrong
-            answers and we can go at your pace. Take as long as you need.
+        {/* Greeting */}
+        <div style={styles.greetingCard}>
+          <div style={styles.claraAvatar} aria-hidden="true">
+            <span style={styles.claraInitial}>C</span>
+          </div>
+          <h1 style={styles.greetingTitle}>Hello. I'm Clara.</h1>
+          <p style={styles.greetingBody}>
+            I'm here for a gentle chat to help your family get organised.
+            There are no wrong answers — we go at your pace.
           </p>
         </div>
 
-        {/* Mic Button */}
-        <div className="flex flex-col items-center mb-10">
-          <button
-            onClick={handleMicPress}
-            disabled={buttonState === 'speaking'}
-            aria-label={getButtonLabel()}
-            className={`
-              w-[120px] h-[120px] rounded-full bg-accent
-              flex items-center justify-center transition-all
-              ${buttonState === 'listening' ? 'cn-pulse-listening ring-4 ring-accent/40' : ''}
-              ${buttonState === 'speaking'
-                ? 'opacity-70 cursor-not-allowed'
-                : 'hover:bg-primary cursor-pointer'}
-            `}
-          >
-            <Mic className="w-10 h-10 text-accent-foreground" />
-          </button>
-
-          <p className="mt-4 font-body text-foreground">
-            {getButtonLabel()}
-          </p>
-
-          {/* Status indicator */}
-          {isConnected && (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-muted-foreground">
-                {isAgentSpeaking ? 'Clara is speaking — tap to end chat' : 'Listening — speak now'}
-              </span>
-            </div>
-          )}
-
-          {!isConnected && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Tap to start your conversation with Clara
-            </p>
-          )}
-        </div>
-
-        {/* You Said */}
-        {lastUserMessage && (
-          <div className="cn-card cn-slide-in w-full text-center mb-6">
-            <p className="text-xs font-body uppercase tracking-widest text-muted-foreground mb-2">
-              You Said
-            </p>
-            <p className="font-body text-lg text-foreground leading-relaxed italic">
-              "{lastUserMessage}"
-            </p>
+        {/* Clara's last message — persists until user speaks again */}
+        {lastClaraMessage && (
+          <div style={styles.claraMessageCard}>
+            <p style={styles.cardLabel}>Clara said:</p>
+            <p style={styles.claraMessageText}>{lastClaraMessage}</p>
           </div>
         )}
 
-        {/* Clara Said */}
-        {lastClaraMessage && (
-          <div className="cn-card cn-slide-in w-full text-center">
-            <p className="text-xs font-body uppercase tracking-widest text-muted-foreground mb-3">
-              Clara Said
-            </p>
-            <p className="font-display text-xl text-foreground leading-relaxed">
-              {lastClaraMessage}
-            </p>
+        {/* You said — only shown after user speaks */}
+        {lastUserMessage && (
+          <div style={styles.userMessageCard}>
+            <p style={styles.cardLabel}>You said:</p>
+            <p style={styles.userMessageText}>"{lastUserMessage}"</p>
+          </div>
+        )}
+
+        {/* Status */}
+        <p style={{ ...styles.statusText, color: getStatusColor() }}>
+          {getStatusText()}
+        </p>
+
+        {/* ── Big Mic Button ── */}
+        <div style={styles.micWrapper}>
+          {/* Pulsing ring when listening */}
+          {isConnected && !isAgentSpeaking && (
+            <>
+              <span style={{ ...styles.pulseRing, animationDelay: '0s' }} />
+              <span style={{ ...styles.pulseRing, animationDelay: '0.4s' }} />
+            </>
+          )}
+
+          <button
+            onClick={handleMicPress}
+            disabled={isAgentSpeaking}
+            aria-label={isConnected ? 'Stop conversation' : 'Start conversation with Clara'}
+            style={{
+              ...styles.micBtn,
+              background: isConnected
+                ? (isAgentSpeaking ? '#b0bec5' : '#2e6b9e')
+                : '#4a7c6b',
+              cursor: isAgentSpeaking ? 'not-allowed' : 'pointer',
+              opacity: isAgentSpeaking ? 0.75 : 1,
+            }}
+          >
+            {isConnected
+              ? <MicOff size={52} color="#ffffff" />
+              : <Mic size={52} color="#ffffff" />
+            }
+          </button>
+        </div>
+
+        {/* Button label */}
+        <p style={styles.micLabel}>
+          {!isConnected && 'Tap to start talking'}
+          {isConnected && !isAgentSpeaking && 'Tap to stop'}
+          {isConnected && isAgentSpeaking && 'Please wait…'}
+        </p>
+
+        {/* Live status dot */}
+        {isConnected && (
+          <div style={styles.statusDot}>
+            <span style={{
+              ...styles.dot,
+              background: isAgentSpeaking ? '#4a7c6b' : '#2e6b9e',
+            }} />
+            <span style={styles.dotLabel}>
+              {isAgentSpeaking ? 'Clara is speaking' : 'Listening'}
+            </span>
           </div>
         )}
 
       </main>
 
-      <footer className="text-center pb-6 px-4">
-        <p className="text-sm text-muted-foreground">
-          You can stop at any time. Just say "I'd like to stop" or press End Chat.
+      {/* ── Footer ── */}
+      <footer style={styles.footer}>
+        <p style={styles.footerText}>
+          You can stop at any time — just say "I'd like to stop" or press <strong>End Chat</strong>.
         </p>
       </footer>
 
-      {/* End session modal — shown when navigating away */}
-      {/* Now handled inline via handleEndChat → endSession → navigate */}
-
+      {/* ── Pulse animation ── */}
+      <style>{`
+        @keyframes elderPulse {
+          0%   { transform: scale(1);   opacity: 0.5; }
+          70%  { transform: scale(1.9); opacity: 0; }
+          100% { transform: scale(1.9); opacity: 0; }
+        }
+        @keyframes claraFadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
+};
+
+// ─── Inline styles (no Tailwind dependency, all values intentionally large) ──
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background: '#f5f0eb',
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+  },
+
+  // ── Header ──────────────────────────────────────────────────────────────
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '20px 28px',
+    borderBottom: '1px solid #ddd6cc',
+    background: '#ffffff',
+  },
+  endChatBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    background: '#c0392b',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 12,
+    padding: '14px 24px',
+    fontSize: 18,
+    fontWeight: 700,
+    cursor: 'pointer',
+    letterSpacing: '0.02em',
+    fontFamily: 'inherit',
+    boxShadow: '0 3px 8px rgba(192,57,43,0.3)',
+  },
+
+  // ── Main ────────────────────────────────────────────────────────────────
+  main: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '28px 20px 40px',
+    maxWidth: 640,
+    margin: '0 auto',
+    width: '100%',
+    gap: 24,
+  },
+
+  // ── Greeting card ────────────────────────────────────────────────────────
+  greetingCard: {
+    background: '#ffffff',
+    borderRadius: 20,
+    padding: '32px 28px',
+    textAlign: 'center',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+    width: '100%',
+  },
+  claraAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: '50%',
+    background: '#4a7c6b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 16px',
+    boxShadow: '0 4px 12px rgba(74,124,107,0.35)',
+  },
+  claraInitial: {
+    fontSize: 36,
+    color: '#ffffff',
+    fontWeight: 700,
+    fontFamily: 'Georgia, serif',
+  },
+  greetingTitle: {
+    fontSize: 30,
+    fontWeight: 700,
+    color: '#1a2e26',
+    margin: '0 0 12px',
+    lineHeight: 1.2,
+  },
+  greetingBody: {
+    fontSize: 20,
+    color: '#4a5568',
+    lineHeight: 1.7,
+    margin: 0,
+  },
+
+  // ── Clara's message (persistent) ────────────────────────────────────────
+  claraMessageCard: {
+    background: '#e8f4ef',
+    border: '2px solid #4a7c6b',
+    borderRadius: 20,
+    padding: '28px 28px',
+    width: '100%',
+    animation: 'claraFadeIn 0.4s ease',
+    boxShadow: '0 2px 12px rgba(74,124,107,0.15)',
+  },
+  cardLabel: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: '#4a7c6b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    margin: '0 0 10px',
+    fontFamily: "'Helvetica Neue', sans-serif",
+  },
+  claraMessageText: {
+    fontSize: 24,
+    color: '#1a2e26',
+    lineHeight: 1.6,
+    margin: 0,
+    fontWeight: 400,
+  },
+
+  // ── User's message ───────────────────────────────────────────────────────
+  userMessageCard: {
+    background: '#eef2f7',
+    border: '2px solid #2e6b9e',
+    borderRadius: 20,
+    padding: '24px 28px',
+    width: '100%',
+    animation: 'claraFadeIn 0.3s ease',
+  },
+  userMessageText: {
+    fontSize: 20,
+    color: '#2c3e50',
+    lineHeight: 1.6,
+    margin: 0,
+    fontStyle: 'italic',
+  },
+
+  // ── Status text ──────────────────────────────────────────────────────────
+  statusText: {
+    fontSize: 20,
+    fontWeight: 600,
+    textAlign: 'center',
+    margin: 0,
+    fontFamily: "'Helvetica Neue', sans-serif",
+    transition: 'color 0.3s ease',
+  },
+
+  // ── Mic button ───────────────────────────────────────────────────────────
+  micWrapper: {
+    position: 'relative',
+    width: 160,
+    height: 160,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: '50%',
+    background: 'rgba(46,107,158,0.25)',
+    animation: 'elderPulse 1.8s ease-out infinite',
+    display: 'block',
+  },
+  micBtn: {
+    position: 'relative',
+    zIndex: 2,
+    width: 160,
+    height: 160,
+    borderRadius: '50%',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background 0.3s ease, transform 0.15s ease',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.22)',
+    outline: 'none',
+  },
+  micLabel: {
+    fontSize: 20,
+    color: '#4a5568',
+    margin: 0,
+    fontFamily: "'Helvetica Neue', sans-serif",
+    fontWeight: 600,
+    textAlign: 'center',
+  },
+
+  // ── Status dot ───────────────────────────────────────────────────────────
+  statusDot: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dot: {
+    width: 14,
+    height: 14,
+    borderRadius: '50%',
+    display: 'inline-block',
+    animation: 'elderPulse 2s ease-out infinite',
+  },
+  dotLabel: {
+    fontSize: 18,
+    color: '#4a5568',
+    fontFamily: "'Helvetica Neue', sans-serif",
+  },
+
+  // ── Footer ───────────────────────────────────────────────────────────────
+  footer: {
+    textAlign: 'center',
+    padding: '20px 24px 28px',
+    borderTop: '1px solid #ddd6cc',
+    background: '#ffffff',
+  },
+  footerText: {
+    fontSize: 17,
+    color: '#718096',
+    margin: 0,
+    lineHeight: 1.6,
+  },
 };
 
 export default Conversation;
