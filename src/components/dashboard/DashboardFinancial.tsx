@@ -1,10 +1,27 @@
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
-export default function DashboardFinancial() {
+interface DashboardFinancialProps {
+  query?: string;
+  confidenceFilter?: string;
+}
+
+export default function DashboardFinancial({ query = '', confidenceFilter = 'all' }: DashboardFinancialProps) {
   const { capturedItems, parentName } = useSession();
-  const financial = capturedItems.filter(i => i.category === 'bank_accounts' || i.category === 'financial_accounts');
+  const navigate = useNavigate();
+  const financial = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return capturedItems.filter((item) => {
+      const inCategory = item.category === 'bank_accounts' || item.category === 'financial_accounts';
+      if (!inCategory) return false;
+      const matchesQuery = !q || item.content.toLowerCase().includes(q) || (item.sourceQuote ?? '').toLowerCase().includes(q);
+      const matchesConfidence = confidenceFilter === 'all' || item.confidence === confidenceFilter;
+      return matchesQuery && matchesConfidence;
+    });
+  }, [capturedItems, query, confidenceFilter]);
 
   return (
     <div className="cn-stagger">
@@ -30,8 +47,11 @@ export default function DashboardFinancial() {
         </div>
       )}
 
-      <button className="mt-6 border-2 border-accent text-accent font-body font-medium py-2.5 px-5 rounded-lg hover:bg-accent/10 transition-colors">
-        + Add manually
+      <button
+        onClick={() => navigate('/conversation')}
+        className="mt-6 border-2 border-accent text-accent font-body font-medium py-2.5 px-5 rounded-lg hover:bg-accent/10 transition-colors"
+      >
+        Continue conversation
       </button>
     </div>
   );

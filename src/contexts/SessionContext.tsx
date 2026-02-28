@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 
 export interface CapturedItem {
   id: string;
@@ -7,6 +7,10 @@ export interface CapturedItem {
   confidence: 'clear' | 'needs-follow-up';
   flag: boolean;
   timestamp: Date;
+  sourceQuote?: string;
+  verificationStatus?: 'verified' | 'disputed' | 'unverified';
+  verifiedByRole?: string;
+  verifiedAt?: Date;
 }
 
 export interface ActionItem {
@@ -16,6 +20,8 @@ export interface ActionItem {
   severity: 'red' | 'amber';
   status: 'todo' | 'in-progress' | 'done';
   learnMoreUrl?: string;
+  dueDate?: string;
+  assigneeRole?: string;
 }
 
 export interface SessionEntry {
@@ -34,6 +40,7 @@ export interface ClaraResponse {
 
 interface SessionContextType {
   parentName: string;
+  childName: string;
   capturedItems: CapturedItem[];
   actionItems: ActionItem[];
   sessions: SessionEntry[];
@@ -47,6 +54,7 @@ interface SessionContextType {
   addCapturedItem: (item: CapturedItem) => void;
   addActionItem: (item: ActionItem) => void;
   updateActionStatus: (id: string, status: ActionItem['status']) => void;
+  updateCapturedVerification: (id: string, status: 'verified' | 'disputed' | 'unverified') => void;
   setListening: (v: boolean) => void;
   setThinking: (v: boolean) => void;
   setLastClaraMessage: (msg: string) => void;
@@ -57,19 +65,28 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [parentName] = useState('');
+  const [parentName] = useState('Narayan');
+  const [childName] = useState('Sunil');
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [sessions] = useState<SessionEntry[]>([]);
   const [claraResponses] = useState<ClaraResponse[]>([]);
   const [lastClaraMessage, setLastClaraMessage] = useState('');
   const [lastUserMessage, setLastUserMessage] = useState('');
+  // Ref so handleAgentToolCall always reads the latest user message
+  const lastUserMessageRef = useRef('');
   const [isListening, setListening] = useState(false);
   const [isThinking, setThinking] = useState(false);
   const [userNotes, setUserNotes] = useState<Record<string, string>>({});
 
   const setUserNote = useCallback((itemId: string, note: string) => {
     setUserNotes(prev => ({ ...prev, [itemId]: note }));
+  }, []);
+
+  // Wrap setter so the ref stays in sync for use inside handleAgentToolCall
+  const wrappedSetLastUserMessage = useCallback((msg: string) => {
+    lastUserMessageRef.current = msg;
+    setLastUserMessage(msg);
   }, []);
 
   const addCapturedItem = useCallback((item: CapturedItem) => {
@@ -84,6 +101,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setActionItems(prev => prev.map(a => (a.id === id ? { ...a, status } : a)));
   }, []);
 
+  const updateCapturedVerification = useCallback(
+    (id: string, status: 'verified' | 'disputed' | 'unverified') => {
+      setCapturedItems(prev =>
+        prev.map(i =>
+          i.id === id
+            ? { ...i, verificationStatus: status, verifiedByRole: 'dad', verifiedAt: new Date() }
+            : i
+        )
+      );
+    },
+    []
+  );
+
+  // ─── ElevenLabs tool call handler ──────────────────────────────────────────
+  // The agent can pass `source_quote` in capture_note parameters;
+  // if absent we fall back to the last user utterance automatically.
   const handleAgentToolCall = useCallback(
     (toolName: string, parameters: Record<string, unknown>) => {
       console.log('🔧 Agent tool call:', toolName, parameters);
@@ -96,6 +129,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           confidence: (parameters.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
           flag: (parameters.flag as boolean) ?? false,
           timestamp: new Date(),
+          sourceQuote: (parameters.source_quote as string) || lastUserMessageRef.current || undefined,
         };
         addCapturedItem(item);
         console.log('📋 Note captured:', item);
@@ -121,6 +155,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     <SessionContext.Provider
       value={{
         parentName,
+        childName,
         capturedItems,
         actionItems,
         sessions,
@@ -134,10 +169,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         addCapturedItem,
         addActionItem,
         updateActionStatus,
+        updateCapturedVerification,
         setListening,
         setThinking,
         setLastClaraMessage,
-        setLastUserMessage,
+        setLastUserMessage: wrappedSetLastUserMessage,
         handleAgentToolCall,
       }}
     >
@@ -151,5 +187,3 @@ export function useSession() {
   if (!ctx) throw new Error('useSession must be used within SessionProvider');
   return ctx;
 }
-
-//TEST 

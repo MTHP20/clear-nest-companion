@@ -1,10 +1,24 @@
+import { useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
-export default function DashboardProperty() {
+interface DashboardPropertyProps {
+  query?: string;
+  confidenceFilter?: string;
+}
+
+export default function DashboardProperty({ query = '', confidenceFilter = 'all' }: DashboardPropertyProps) {
   const { capturedItems, parentName } = useSession();
-  const property = capturedItems.filter(i => i.category === 'property');
+  const property = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return capturedItems.filter((item) => {
+      if (item.category !== 'property') return false;
+      const matchesQuery = !q || item.content.toLowerCase().includes(q) || (item.sourceQuote ?? '').toLowerCase().includes(q);
+      const matchesConfidence = confidenceFilter === 'all' || item.confidence === confidenceFilter;
+      return matchesQuery && matchesConfidence;
+    });
+  }, [capturedItems, query, confidenceFilter]);
 
   return (
     <div className="cn-stagger">

@@ -1,15 +1,27 @@
+import { useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
-export default function DashboardCareWishes() {
+interface DashboardCareWishesProps {
+  query?: string;
+}
+
+export default function DashboardCareWishes({ query = '' }: DashboardCareWishesProps) {
   const { capturedItems, parentName } = useSession();
-  const wishes = capturedItems.filter(i => i.category === 'care_wishes');
+  const wishes = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return capturedItems.filter((item) => {
+      if (item.category !== 'care_wishes') return false;
+      if (!q) return true;
+      return item.content.toLowerCase().includes(q) || (item.sourceQuote ?? '').toLowerCase().includes(q);
+    });
+  }, [capturedItems, query]);
 
   return (
     <div className="cn-stagger">
       <p className="font-display text-lg italic text-foreground mb-6 max-w-2xl leading-relaxed">
-        {parentName} shared the following wishes during his conversation. These are his words, in his own voice.
+        {parentName} shared the following wishes during the conversation. These are shown in {parentName}'s own voice.
       </p>
 
       {wishes.length === 0 ? (
