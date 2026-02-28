@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, PhoneOff, Volume2 } from 'lucide-react';
@@ -34,16 +34,37 @@ function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 30)
   return { displayed, isTyping: displayed.length < fullText.length };
 }
 
+// ─── Coverage areas — the 6 topics Clara needs to cover ──────────────────────
+const COVERAGE_AREAS = [
+  { category: 'bank_accounts',      label: 'Bank Accounts' },
+  { category: 'financial_accounts', label: 'Pensions & Investments' },
+  { category: 'property',           label: 'Property' },
+  { category: 'documents',          label: 'Will & Documents' },
+  { category: 'key_contacts',       label: 'Key Contacts' },
+  { category: 'care_wishes',        label: 'Care Wishes' },
+] as const;
+
 // ─── Component ───────────────────────────────────────────────────────────────
 const Conversation = () => {
   const navigate = useNavigate();
   const {
+    capturedItems,
     lastClaraMessage,
     lastUserMessage,
     setLastClaraMessage,
     setLastUserMessage,
     handleAgentToolCall,
   } = useSession();
+
+  // ── "Still to cover" — categories with no captured items yet ─────────────
+  const coveredCategories = useMemo(
+    () => new Set(capturedItems.map(i => i.category)),
+    [capturedItems]
+  );
+  const uncoveredAreas = useMemo(
+    () => COVERAGE_AREAS.filter(a => !coveredCategories.has(a.category)),
+    [coveredCategories]
+  );
 
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
@@ -439,6 +460,18 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
 
       </main>
 
+      {/* ── Still to cover banner — visible between sessions ── */}
+      {!isSessionActive && (capturedItems.length > 0 || !!lastClaraMessage) && uncoveredAreas.length > 0 && (
+        <div style={styles.stillToCoverBanner}>
+          <div style={styles.stillToCoverDot} />
+          <p style={styles.stillToCoverText}>
+            <strong>Still to cover:</strong>{' '}
+            {uncoveredAreas.map(a => a.label).join(', ')}.{' '}
+            <span style={{ color: '#4a7c6b' }}>Start a new session to cover these topics.</span>
+          </p>
+        </div>
+      )}
+
       <footer style={styles.footer}>
         <p style={styles.footerText}>
           Hold the button to speak at any time — even while Clara is talking.
@@ -649,6 +682,31 @@ const styles: Record<string, React.CSSProperties> = {
   micLabel: {
     fontSize: 16, margin: 0, fontFamily: "'Helvetica Neue', sans-serif", fontWeight: 700,
     textAlign: 'center' as const, flexShrink: 0, transition: 'color 0.3s ease',
+  },
+  stillToCoverBanner: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 12,
+    background: '#fdf6e3',
+    borderTop: '1px solid #e8d98a',
+    borderBottom: '1px solid #e8d98a',
+    padding: '12px 28px',
+    flexShrink: 0,
+  },
+  stillToCoverDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: '#c49a00',
+    flexShrink: 0,
+    marginTop: 5,
+  },
+  stillToCoverText: {
+    fontSize: 15,
+    color: '#5c4200',
+    margin: 0,
+    lineHeight: 1.55,
+    fontFamily: "'Helvetica Neue', sans-serif",
   },
   footer: {
     textAlign: 'center' as const, padding: '12px 24px 16px',
