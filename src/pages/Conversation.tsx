@@ -34,7 +34,7 @@ function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 30)
   return { displayed, isTyping: displayed.length < fullText.length };
 }
 
-// ─── Coverage areas — the 6 topics Clara needs to cover ──────────────────────
+// ─── Coverage areas ───────────────────────────────────────────────────────────
 const COVERAGE_AREAS = [
   { category: 'bank_accounts',      label: 'Bank Accounts' },
   { category: 'financial_accounts', label: 'Pensions & Investments' },
@@ -44,7 +44,7 @@ const COVERAGE_AREAS = [
   { category: 'care_wishes',        label: 'Care Wishes' },
 ] as const;
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 const Conversation = () => {
   const navigate = useNavigate();
   const {
@@ -56,7 +56,6 @@ const Conversation = () => {
     handleAgentToolCall,
   } = useSession();
 
-  // ── "Still to cover" — categories with no captured items yet ─────────────
   const coveredCategories = useMemo(
     () => new Set(capturedItems.map(i => i.category)),
     [capturedItems]
@@ -69,23 +68,29 @@ const Conversation = () => {
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
   // ── Session state ─────────────────────────────────────────────────────────
-  const [isSessionActive, setIsSessionActive]   = useState(false);
-  const [isHolding, setIsHolding]               = useState(false);
-  const [isStarting, setIsStarting]             = useState(false);
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [isHolding, setIsHolding]             = useState(false);
+  const [isStarting, setIsStarting]           = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
 
-  // ── Session continuity ────────────────────────────────────────────────────
-  const hasSpokenBefore     = useRef(false);
-  const conversationSummary = useRef<string>('');
+  // ── Refs (stable across renders, never cause re-renders) ─────────────────
+  const hasSpokenBefore         = useRef(false);
+  const conversationSummary     = useRef<string>('');
+  const mediaStreamRef          = useRef<MediaStream | null>(null);
+  const interruptBufferRef      = useRef<string[]>([]);
+  const isSessionActiveRef      = useRef(false);   // mirrors state for use inside closures
+  const isStartingRef           = useRef(false);   // mirrors state for use inside closures
+  const isHoldingRef            = useRef(false);   // mirrors state for use inside closures
 
-  // ── PTT: MediaStream ref for mute/unmute ──────────────────────────────────
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-
-  // ── Interrupt buffer ──────────────────────────────────────────────────────
-  const interruptBufferRef = useRef<string[]>([]);
+  // ── Interrupt UI ──────────────────────────────────────────────────────────
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
-  // ── Clean display text ────────────────────────────────────────────────────
+  // ── Keep refs in sync with state ─────────────────────────────────────────
+  useEffect(() => { isSessionActiveRef.current = isSessionActive; }, [isSessionActive]);
+  useEffect(() => { isStartingRef.current = isStarting; }, [isStarting]);
+  useEffect(() => { isHoldingRef.current = isHolding; }, [isHolding]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const cleanClaraMessage = (raw: string): string =>
     raw
       .replace(/\[NOTE:[^\]]*\]/gi, '')
@@ -116,7 +121,6 @@ const Conversation = () => {
     });
   };
 
-  // ── Mute/unmute mic track ─────────────────────────────────────────────────
   const setMicActive = (active: boolean) => {
     if (!mediaStreamRef.current) return;
     mediaStreamRef.current.getAudioTracks().forEach(track => {
@@ -134,7 +138,6 @@ const Conversation = () => {
           parseAndCaptureNote(message.message);
           hasSpokenBefore.current = true;
         }
-        // Flush any buffered interrupts into "You said"
         if (interruptBufferRef.current.length > 0) {
           const buffered = interruptBufferRef.current.join(' … ');
           setLastUserMessage(buffered);
@@ -144,12 +147,11 @@ const Conversation = () => {
       } else if (message.source === 'user') {
         const userText = message.message?.trim();
         if (!userText) return;
-        if (isHolding) {
-          // Intentional PTT input — show it directly
+        // Use ref (not state) to read isHolding — avoids stale closure
+        if (isHoldingRef.current) {
           setLastUserMessage(userText);
           setInterruptNotice(null);
         } else {
-          // Audio leaked while Clara was speaking — buffer and flag
           interruptBufferRef.current.push(userText);
           setInterruptNotice(`We caught: "${userText}" — Clara will take this into account.`);
           handleAgentToolCall('capture_note', {
@@ -167,18 +169,24 @@ const Conversation = () => {
     onError: (error: string) => {
       console.error('❌ ElevenLabs error:', error);
       setLastClaraMessage(`Connection error: ${error}`);
+      isStartingRef.current = false;
+      setIsStarting(false);
     },
     onConnect: () => {
       console.log('✅ Connected');
+      isStartingRef.current = false;
+      isSessionActiveRef.current = true;
       setIsSessionActive(true);
       setIsStarting(false);
       setHasStartedSession(true);
-      // Always start muted — user must hold to speak
-      setMicActive(false);
+      setMicActive(false); // always start muted
     },
     onDisconnect: () => {
       console.log('🔌 Disconnected');
+      isSessionActiveRef.current = false;
+      isStartingRef.current = false;
       setIsSessionActive(false);
+      setIsStarting(false);
       setIsHolding(false);
     },
   });
@@ -191,10 +199,16 @@ const Conversation = () => {
     30
   );
 
-  // ── Start session ─────────────────────────────────────────────────────────
+  // ── Start session — called exactly once per session ───────────────────────
   const startSession = useCallback(async () => {
-    if (isStarting || isSessionActive) return;
+    // Guard using refs so this check is never stale
+    if (isStartingRef.current || isSessionActiveRef.current) {
+      console.log('⚠️ startSession called but already starting/active — ignoring');
+      return;
+    }
+    isStartingRef.current = true;
     setIsStarting(true);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -206,19 +220,21 @@ const Conversation = () => {
         },
       });
       mediaStreamRef.current = stream;
-      stream.getAudioTracks().forEach(t => { t.enabled = false; });
+      stream.getAudioTracks().forEach(t => { t.enabled = false; }); // start muted
 
       const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
       const res = await fetch(
         `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
         { headers: { 'xi-api-key': apiKey } }
       );
-      if (!res.ok) { const t = await res.text(); throw new Error(`API error ${res.status}: ${t}`); }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`API error ${res.status}: ${t}`);
+      }
       const data = await res.json();
       const signedUrl: string = data.signed_url ?? data.conversation_token ?? data.token;
       if (!signedUrl) throw new Error(`No URL in response: ${JSON.stringify(data)}`);
 
-      // Build system prompt — always include tool instructions, add resume context if returning
       const toolInstructions = `You are Clara, a warm and gentle AI assistant for ClearNest, helping families plan ahead for eldercare. You are talking with Narayan.
 
 CRITICAL — you MUST call the capture_note tool IMMEDIATELY whenever Narayan mentions ANYTHING about:
@@ -243,50 +259,62 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
 
       await conversation.startSession({
         signedUrl,
-        overrides: {
-          agent: {
-            prompt: { prompt: toolInstructions },
-          },
-        },
+        overrides: { agent: { prompt: { prompt: toolInstructions } } },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌', msg);
       setLastClaraMessage(`Could not start: ${msg}`);
+      isStartingRef.current = false;
       setIsStarting(false);
+      // Clean up stream if it was acquired
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(t => t.stop());
+        mediaStreamRef.current = null;
+      }
     }
-  }, [conversation, agentId, setLastClaraMessage, isStarting, isSessionActive]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentId, conversation]);  // conversation is stable from useConversation
 
   const endSession = useCallback(async () => {
     setIsHolding(false);
+    isHoldingRef.current = false;
     setMicActive(false);
+    isSessionActiveRef.current = false;
     setIsSessionActive(false);
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(t => t.stop());
       mediaStreamRef.current = null;
     }
-    await conversation.endSession();
+    try { await conversation.endSession(); } catch (_) { /* ignore */ }
   }, [conversation]);
 
-  const handleEndChat = () => { endSession(); navigate('/'); };
+  const handleEndChat = useCallback(() => {
+    endSession();
+    navigate('/');
+  }, [endSession, navigate]);
 
-  // ── Push-to-talk handlers ─────────────────────────────────────────────────
+  // ── PTT handlers ──────────────────────────────────────────────────────────
   const handlePressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    if (!isSessionActive) {
+    if (!isSessionActiveRef.current) {
+      // First press — start the session (Clara will auto-introduce herself)
       startSession();
       return;
     }
+    // Session live — activate mic for PTT
+    isHoldingRef.current = true;
     setIsHolding(true);
     setMicActive(true);
-  }, [isSessionActive, startSession]);
+  }, [startSession]);
 
   const handlePressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    if (!isSessionActive) return;
+    if (!isSessionActiveRef.current) return;
+    isHoldingRef.current = false;
     setIsHolding(false);
     setMicActive(false);
-  }, [isSessionActive]);
+  }, []);
 
   const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
@@ -301,14 +329,15 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
   };
   const phase = getPhase();
 
-  const showGreeting = !lastClaraMessage && !lastUserMessage && !isSessionActive;
+  // Greeting: only show before the very first session starts
+  const showGreeting = !hasStartedSession && !isStarting;
 
   const dotColor =
     phase === 'holding'        ? '#c0392b' :
     phase === 'clara_speaking' ? '#4a7c6b' :
     phase === 'waiting'        ? '#f0a500' :
     phase === 'connecting'     ? '#8a96a0' :
-                                  '#c0c8d0';
+                                  '#4a7c6b';
 
   return (
     <div style={styles.page}>
@@ -324,7 +353,7 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
 
       <main style={styles.main}>
 
-        {/* Disclaimer */}
+        {/* Disclaimer — shown once session is live */}
         {isSessionActive && (
           <div style={styles.disclaimerBanner}>
             <span style={styles.disclaimerIcon}>💡</span>
@@ -334,7 +363,7 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </div>
         )}
 
-        {/* Greeting */}
+        {/* Greeting — only before first session */}
         {showGreeting && (
           <div style={styles.greetingCard}>
             <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
@@ -403,7 +432,7 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </div>
         )}
 
-        {/* PTT button */}
+        {/* ── Single mic button — tap to start, hold to talk ── */}
         <div style={styles.micWrapper}>
           {phase === 'holding' && (
             <>
@@ -451,16 +480,16 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
 
         {/* Button label */}
         <p style={{ ...styles.micLabel, color: dotColor }}>
-          {!hasStartedSession                              && 'Start Chat'}
-          {hasStartedSession && phase === 'connecting'    && 'Connecting…'}
-          {hasStartedSession && phase === 'clara_speaking'&& 'Hold to interrupt'}
-          {hasStartedSession && phase === 'waiting'       && 'Hold to speak'}
-          {hasStartedSession && phase === 'holding'       && 'Release when done'}
+          {!hasStartedSession                               && 'Start Chat'}
+          {hasStartedSession && phase === 'connecting'     && 'Connecting…'}
+          {hasStartedSession && phase === 'clara_speaking' && 'Hold to interrupt'}
+          {hasStartedSession && phase === 'waiting'        && 'Hold to speak'}
+          {hasStartedSession && phase === 'holding'        && 'Release when done'}
         </p>
 
       </main>
 
-      {/* ── Still to cover banner — visible between sessions ── */}
+      {/* ── Still to cover banner ── */}
       {!isSessionActive && (capturedItems.length > 0 || !!lastClaraMessage) && uncoveredAreas.length > 0 && (
         <div style={styles.stillToCoverBanner}>
           <div style={styles.stillToCoverDot} />
@@ -694,19 +723,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   stillToCoverDot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    background: '#c49a00',
-    flexShrink: 0,
-    marginTop: 5,
+    width: 8, height: 8, borderRadius: '50%', background: '#c49a00', flexShrink: 0, marginTop: 5,
   },
   stillToCoverText: {
-    fontSize: 15,
-    color: '#5c4200',
-    margin: 0,
-    lineHeight: 1.55,
-    fontFamily: "'Helvetica Neue', sans-serif",
+    fontSize: 15, color: '#5c4200', margin: 0, lineHeight: 1.55,
+    fontFamily: "'Helvetetic Neue', sans-serif",
   },
   footer: {
     textAlign: 'center' as const, padding: '12px 24px 16px',
