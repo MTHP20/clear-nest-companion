@@ -47,9 +47,32 @@ const Conversation = () => {
     setLastUserMessage,
     handleAgentToolCall,
     autoSyncLatest,
+    liveExtract,
   } = useSession();
 
+  // ── Live transcript buffer for real-time AI extraction ────────────────────
+  // Accumulates every user + Clara turn. After each new user message we
+  // debounce 2.5 s (giving Clara time to reply) then send the last 6 turns
+  // to Claude so it can populate the dashboard sections in real-time.
+  const transcriptBuffer = useRef<Array<{ role: 'user' | 'ai'; text: string }>>([]);
+  const extractTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleExtract = useCallback(() => {
+    if (extractTimer.current) clearTimeout(extractTimer.current);
+    extractTimer.current = setTimeout(() => {
+      // Take the last 6 turns (3 full exchanges) for context
+      const recent = transcriptBuffer.current.slice(-6);
+      const snippet = recent
+        .map(t => `${t.role === 'ai' ? 'Clara' : 'Narayan'}: ${t.text}`)
+        .join('\n');
+      liveExtract(snippet);
+    }, 2500);
+  }, [liveExtract]);
+
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
+
+  // Clear extraction timer on unmount
+  useEffect(() => () => { if (extractTimer.current) clearTimeout(extractTimer.current); }, []);
 
   // ── Track whether a session has ever been started this page visit ─────────
   // This is passed back to ElevenLabs as context so Clara knows to continue,
@@ -96,8 +119,13 @@ const Conversation = () => {
         setLastClaraMessage(cleanClaraMessage(message.message));
         parseAndCaptureNote(message.message);
         hasSpokenBefore.current = true;
+        transcriptBuffer.current.push({ role: 'ai', text: message.message });
       } else if (message.source === 'user') {
         setLastUserMessage(message.message);
+        transcriptBuffer.current.push({ role: 'user', text: message.message });
+        // Trigger AI extraction after every user utterance (debounced so
+        // Clara's reply is included in the snippet before we extract)
+        scheduleExtract();
       }
     },
     onToolCall: (toolCall: { tool_name: string; parameters: Record<string, unknown> }) => {

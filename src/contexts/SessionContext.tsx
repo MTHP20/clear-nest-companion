@@ -68,6 +68,7 @@ interface SessionContextType {
   handleAgentToolCall: (toolName: string, parameters: Record<string, unknown>) => void;
   syncFromConversation: (conversationId: string) => Promise<SyncResult>;
   autoSyncLatest: () => Promise<SyncResult | null>;
+  liveExtract: (recentTranscript: string) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -185,6 +186,81 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [addCapturedItem, addActionItem]
   );
+
+  // ─── Real-time AI extraction during a live session ───────────────────────
+  // Called every few exchanges during the conversation. Sends the recent
+  // transcript snippet to Claude and immediately adds any new findings to
+  // the dashboard sections as cards — no page refresh needed.
+  const liveExtract = useCallback(async (recentTranscript: string): Promise<void> => {
+    const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+    if (!anthropicKey || !recentTranscript.trim()) return;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 800,
+          messages: [
+            {
+              role: 'user',
+              content: `You are listening to a live conversation between Clara (AI care-planning assistant) and an elderly person. Extract any NEW factual information just mentioned that belongs to one of these 7 categories:
+
+1. bank_accounts — which bank(s) they use, account types, where bank cards/documents are kept
+2. financial_accounts — pension details (provider name, whether it exists), investments, ISAs, savings accounts
+3. property — owns/rents home, property address, where deeds are kept, mortgage info
+4. documents — will (does one exist, where kept, solicitor name), insurance policies, Power of Attorney (LPA: is one set up, who is named)
+5. key_contacts — named people: GP name, solicitor name, accountant, financial adviser, close family/friends with roles
+6. care_wishes — preferred place to be cared for (home/care home), medical preferences, end-of-life wishes, funeral wishes
+7. general — other important life information mentioned
+
+Return ONLY valid JSON — no explanation, no markdown:
+{"extractions": [{"category": "bank_accounts|financial_accounts|property|documents|key_contacts|care_wishes|general", "content": "clear 1-sentence fact", "confidence": "clear|needs-follow-up"}]}
+
+If nothing from these categories was mentioned, return: {"extractions": []}
+
+Recent conversation:
+${recentTranscript}`,
+            },
+          ],
+        }),
+      });
+
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const text: string = data.content?.[0]?.text ?? '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) return;
+
+      const result = JSON.parse(match[0]) as {
+        extractions?: Array<{ category: string; content: string; confidence: string }>;
+      };
+
+      let added = 0;
+      for (const item of result.extractions ?? []) {
+        if (item.content?.trim()) {
+          addCapturedItem({
+            id: `live-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            category: normaliseCategory(item.category),
+            content: item.content.trim(),
+            confidence: (item.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
+            flag: false,
+            timestamp: new Date(),
+          });
+          added++;
+        }
+      }
+      if (added > 0) console.log(`🧠 Live extract: ${added} new card(s) added to dashboard`);
+    } catch (err) {
+      console.warn('liveExtract failed:', err);
+    }
+  }, [addCapturedItem]);
 
   // ─── Sync a past ElevenLabs conversation into the dashboard ──────────────
   // Fetches the transcript, extracts Clara's stored tool_calls AND runs
@@ -425,6 +501,7 @@ ${transcriptText.slice(0, 5000)}`,
         handleAgentToolCall,
         syncFromConversation,
         autoSyncLatest,
+        liveExtract,
       }}
     >
       {children}
