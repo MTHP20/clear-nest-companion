@@ -149,7 +149,7 @@ const Conversation = () => {
 
       {/* ── Header ── */}
       <header style={styles.header}>
-        <ClearNestLogo variant="small" />
+        <ClearNestLogo href="/" variant="small" />
         <button
           onClick={handleEndChat}
           style={styles.endChatBtn}
