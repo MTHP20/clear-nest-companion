@@ -68,26 +68,20 @@ const Conversation = () => {
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
   // ── Session state ─────────────────────────────────────────────────────────
-  const [isSessionActive, setIsSessionActive] = useState(false);
   const [isHolding, setIsHolding]             = useState(false);
-  const [isStarting, setIsStarting]           = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
 
-  // ── Refs (stable across renders, never cause re-renders) ─────────────────
+  // ── Refs ──────────────────────────────────────────────────────────────────
   const hasSpokenBefore         = useRef(false);
   const conversationSummary     = useRef<string>('');
   const mediaStreamRef          = useRef<MediaStream | null>(null);
   const interruptBufferRef      = useRef<string[]>([]);
-  const isSessionActiveRef      = useRef(false);   // mirrors state for use inside closures
-  const isStartingRef           = useRef(false);   // mirrors state for use inside closures
-  const isHoldingRef            = useRef(false);   // mirrors state for use inside closures
+  const isHoldingRef            = useRef(false);
+  // Stable ref to avoid startSession/endSession deps on conversation object
+  const convMethodsRef          = useRef<{ start: typeof conversation.startSession; end: typeof conversation.endSession } | null>(null);
 
-  // ── Interrupt UI ──────────────────────────────────────────────────────────
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
-  // ── Keep refs in sync with state ─────────────────────────────────────────
-  useEffect(() => { isSessionActiveRef.current = isSessionActive; }, [isSessionActive]);
-  useEffect(() => { isStartingRef.current = isStarting; }, [isStarting]);
   useEffect(() => { isHoldingRef.current = isHolding; }, [isHolding]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -128,8 +122,18 @@ const Conversation = () => {
     });
   };
 
-  // ── ElevenLabs ────────────────────────────────────────────────────────────
+  // ── ElevenLabs — clientTools instead of onToolCall ────────────────────────
   const conversation = useConversation({
+    clientTools: {
+      capture_note: (params: Record<string, unknown>) => {
+        handleAgentToolCall('capture_note', params);
+        return 'Note captured';
+      },
+      flag_action: (params: Record<string, unknown>) => {
+        handleAgentToolCall('flag_action', params);
+        return 'Action flagged';
+      },
+    },
     onMessage: (message: { source: string; message: string }) => {
       if (message.source === 'ai') {
         const cleaned = cleanClaraMessage(message.message);
@@ -147,7 +151,6 @@ const Conversation = () => {
       } else if (message.source === 'user') {
         const userText = message.message?.trim();
         if (!userText) return;
-        // Use ref (not state) to read isHolding — avoids stale closure
         if (isHoldingRef.current) {
           setLastUserMessage(userText);
           setInterruptNotice(null);
@@ -163,34 +166,30 @@ const Conversation = () => {
         }
       }
     },
-    onToolCall: (toolCall: { tool_name: string; parameters: Record<string, unknown> }) => {
-      handleAgentToolCall(toolCall.tool_name, toolCall.parameters);
-    },
     onError: (error: string) => {
       console.error('❌ ElevenLabs error:', error);
       setLastClaraMessage(`Connection error: ${error}`);
-      isStartingRef.current = false;
-      setIsStarting(false);
     },
     onConnect: () => {
       console.log('✅ Connected');
-      isStartingRef.current = false;
-      isSessionActiveRef.current = true;
-      setIsSessionActive(true);
-      setIsStarting(false);
       setHasStartedSession(true);
-      setMicActive(false); // always start muted
+      setMicActive(false);
     },
     onDisconnect: () => {
       console.log('🔌 Disconnected');
-      isSessionActiveRef.current = false;
-      isStartingRef.current = false;
-      setIsSessionActive(false);
-      setIsStarting(false);
       setIsHolding(false);
     },
   });
 
+  // Keep methods ref in sync
+  useEffect(() => {
+    convMethodsRef.current = { start: conversation.startSession, end: conversation.endSession };
+  });
+
+  // Derive state from conversation.status (source of truth)
+  const status = conversation.status; // 'connected' | 'connecting' | 'disconnected' | 'disconnecting'
+  const isSessionActive = status === 'connected';
+  const isStarting = status === 'connecting';
   const isAgentSpeaking = conversation.isSpeaking;
 
   const { displayed: typedMessage, isTyping } = useTypewriter(
@@ -201,13 +200,10 @@ const Conversation = () => {
 
   // ── Start session — called exactly once per session ───────────────────────
   const startSession = useCallback(async () => {
-    // Guard using refs so this check is never stale
-    if (isStartingRef.current || isSessionActiveRef.current) {
-      console.log('⚠️ startSession called but already starting/active — ignoring');
+    if (status !== 'disconnected') {
+      console.log('⚠️ startSession called but status is', status, '— ignoring');
       return;
     }
-    isStartingRef.current = true;
-    setIsStarting(true);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -220,7 +216,7 @@ const Conversation = () => {
         },
       });
       mediaStreamRef.current = stream;
-      stream.getAudioTracks().forEach(t => { t.enabled = false; }); // start muted
+      stream.getAudioTracks().forEach(t => { t.enabled = false; });
 
       const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
       const res = await fetch(
@@ -257,7 +253,7 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
     : ''
 }`;
 
-      await conversation.startSession({
+      await convMethodsRef.current!.start({
         signedUrl,
         overrides: { agent: { prompt: { prompt: toolInstructions } } },
       });
@@ -265,29 +261,23 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌', msg);
       setLastClaraMessage(`Could not start: ${msg}`);
-      isStartingRef.current = false;
-      setIsStarting(false);
-      // Clean up stream if it was acquired
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(t => t.stop());
         mediaStreamRef.current = null;
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentId, conversation]);  // conversation is stable from useConversation
+  }, [agentId, status]);
 
   const endSession = useCallback(async () => {
     setIsHolding(false);
     isHoldingRef.current = false;
     setMicActive(false);
-    isSessionActiveRef.current = false;
-    setIsSessionActive(false);
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(t => t.stop());
       mediaStreamRef.current = null;
     }
-    try { await conversation.endSession(); } catch (_) { /* ignore */ }
-  }, [conversation]);
+    try { await convMethodsRef.current?.end(); } catch (_) { /* ignore */ }
+  }, []);
 
   const handleEndChat = useCallback(() => {
     endSession();
@@ -297,24 +287,22 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
   // ── PTT handlers ──────────────────────────────────────────────────────────
   const handlePressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    if (!isSessionActiveRef.current) {
-      // First press — start the session (Clara will auto-introduce herself)
+    if (!isSessionActive) {
       startSession();
       return;
     }
-    // Session live — activate mic for PTT
     isHoldingRef.current = true;
     setIsHolding(true);
     setMicActive(true);
-  }, [startSession]);
+  }, [isSessionActive, startSession]);
 
   const handlePressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    if (!isSessionActiveRef.current) return;
+    if (!isSessionActive) return;
     isHoldingRef.current = false;
     setIsHolding(false);
     setMicActive(false);
-  }, []);
+  }, [isSessionActive]);
 
   const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
@@ -329,7 +317,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
   };
   const phase = getPhase();
 
-  // Greeting: only show before the very first session starts
   const showGreeting = !hasStartedSession && !isStarting;
 
   const dotColor =
@@ -353,7 +340,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
 
       <main style={styles.main}>
 
-        {/* Disclaimer — shown once session is live */}
         {isSessionActive && (
           <div style={styles.disclaimerBanner}>
             <span style={styles.disclaimerIcon}>💡</span>
@@ -363,7 +349,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </div>
         )}
 
-        {/* Greeting — only before first session */}
         {showGreeting && (
           <div style={styles.greetingCard}>
             <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
@@ -375,7 +360,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </div>
         )}
 
-        {/* Clara's message */}
         {lastClaraMessage && (
           <div style={styles.claraMessageCard}>
             <p style={styles.cardLabel}>Clara said:</p>
@@ -386,14 +370,12 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </div>
         )}
 
-        {/* Interrupt notice */}
         {interruptNotice && (
           <div style={styles.interruptCard}>
             <p style={styles.interruptText}>🎙 {interruptNotice}</p>
           </div>
         )}
 
-        {/* You said */}
         {lastUserMessage && !interruptNotice && (
           <div style={styles.userMessageCard}>
             <p style={styles.cardLabel}>You said:</p>
@@ -401,7 +383,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </div>
         )}
 
-        {/* Status row */}
         {(isSessionActive || isStarting) && (
           <div style={styles.statusRow}>
             <span style={{
@@ -460,13 +441,13 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
                 phase === 'clara_speaking' ? '#4a7c6b' :
                 phase === 'waiting'        ? '#f0a500' :
                 phase === 'connecting'     ? '#b0bec5' :
-                                             '#4a7c6b',
+                                              '#4a7c6b',
               cursor:    isStarting ? 'not-allowed' : 'pointer',
               transform: phase === 'holding' ? 'scale(1.08)' : 'scale(1)',
               boxShadow:
                 phase === 'holding' ? '0 10px 36px rgba(192,57,43,0.40)' :
                 phase === 'waiting' ? '0 8px 28px rgba(240,165,0,0.30)' :
-                                      '0 6px 20px rgba(0,0,0,0.16)',
+                                       '0 6px 20px rgba(0,0,0,0.16)',
               userSelect: 'none',
               WebkitUserSelect: 'none',
             } as React.CSSProperties}
@@ -478,7 +459,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
           </button>
         </div>
 
-        {/* Button label */}
         <p style={{ ...styles.micLabel, color: dotColor }}>
           {!hasStartedSession                               && 'Start Chat'}
           {hasStartedSession && phase === 'connecting'     && 'Connecting…'}
@@ -489,7 +469,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
 
       </main>
 
-      {/* ── Still to cover banner ── */}
       {!isSessionActive && (capturedItems.length > 0 || !!lastClaraMessage) && uncoveredAreas.length > 0 && (
         <div style={styles.stillToCoverBanner}>
           <div style={styles.stillToCoverDot} />
@@ -727,7 +706,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   stillToCoverText: {
     fontSize: 15, color: '#5c4200', margin: 0, lineHeight: 1.55,
-    fontFamily: "'Helvetetic Neue', sans-serif",
+    fontFamily: "'Helvetica Neue', sans-serif",
   },
   footer: {
     textAlign: 'center' as const, padding: '12px 24px 16px',
