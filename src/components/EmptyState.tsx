@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import logoImage from '@/assets/clearnest-logo.png';
+import { useSession } from '@/contexts/SessionContext';
 
 interface EmptyStateProps {
   section: string;
@@ -7,6 +8,7 @@ interface EmptyStateProps {
 
 export default function EmptyState({ section }: EmptyStateProps) {
   const navigate = useNavigate();
+  const { parentName } = useSession();
 
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -19,7 +21,7 @@ export default function EmptyState({ section }: EmptyStateProps) {
         Nothing captured here yet
       </h3>
       <p className="font-body text-muted-foreground max-w-xs mb-6">
-        Start a new conversation with Narayan to fill in their {section.toLowerCase()} details.
+        Start a new conversation with {parentName} to fill in their {section.toLowerCase()} details.
       </p>
       <button
         onClick={() => navigate('/conversation')}

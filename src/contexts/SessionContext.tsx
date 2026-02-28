@@ -34,6 +34,7 @@ export interface ClaraResponse {
 
 interface SessionContextType {
   parentName: string;
+  childName: string;
   capturedItems: CapturedItem[];
   actionItems: ActionItem[];
   sessions: SessionEntry[];
@@ -42,9 +43,8 @@ interface SessionContextType {
   lastUserMessage: string;
   isListening: boolean;
   isThinking: boolean;
-  // Notes Sarah can add manually to any captured item
   userNotes: Record<string, string>;
-  setUserNote: (itemId: string, note: string) => void;
+  demoStep: number;
   addCapturedItem: (item: CapturedItem) => void;
   addActionItem: (item: ActionItem) => void;
   updateActionStatus: (id: string, status: ActionItem['status']) => void;
@@ -52,7 +52,11 @@ interface SessionContextType {
   setThinking: (v: boolean) => void;
   setLastClaraMessage: (msg: string) => void;
   setLastUserMessage: (msg: string) => void;
+  setUserNote: (id: string, note: string) => void;
   simulateConversationTurn: () => void;
+  triggerDemoStep: () => void;
+  // Called by Conversation.tsx when ElevenLabs agent emits a tool_call
+  // with a structured note/action to add to the dashboard
   handleAgentToolCall: (toolName: string, parameters: Record<string, unknown>) => void;
 }
 
@@ -65,73 +69,85 @@ const MOCK_TURNS: {
   action?: Omit<ActionItem, 'id'>;
 }[] = [
   {
-    spoken: "That's really helpful, Arthur. So you have a current account with Barclays — and you keep the statements in a blue folder in the top drawer. Is that right?",
+    spoken: "That's really helpful, Narayan. So you have a current account with Barclays — and you keep the statements in a blue folder in the top drawer. Is that right?",
     note: { category: 'bank_accounts', content: 'Barclays current account mentioned. Statements in blue folder, top drawer of desk in study.', confidence: 'clear', flag: false },
   },
   {
-    spoken: "Thank you. Do you happen to remember if you set up a Power of Attorney with anyone — perhaps with Sarah or another family member?",
-    action: { title: 'Power of Attorney — Not confirmed', description: "Arthur hasn't confirmed whether a Lasting Power of Attorney is in place. Without this, the family may face Court of Protection proceedings — costing £20,000+ and taking 9+ months.", severity: 'red', status: 'todo', learnMoreUrl: 'https://www.gov.uk/power-of-attorney' },
+    spoken: "Thank you. Do you happen to remember if you set up a Power of Attorney with anyone — perhaps with Sunil or another family member?",
+    action: { title: 'Power of Attorney — Not confirmed', description: "Narayan hasn't confirmed whether a Lasting Power of Attorney is in place. Without this, the family may face Court of Protection proceedings — costing £20,000+ and taking 9+ months.", severity: 'red', status: 'todo', learnMoreUrl: 'https://www.gov.uk/power-of-attorney' },
   },
   {
     spoken: "I understand. Do you remember the name of your pension provider? You mentioned you had a council pension.",
     note: { category: 'financial_accounts', content: 'Council pension mentioned but provider unknown.', confidence: 'needs-follow-up', flag: true },
-    action: { title: 'Pension Provider — Unknown', description: "Arthur mentioned a council pension but couldn't recall the provider. Use the government's free Pension Tracing Service.", severity: 'amber', status: 'todo', learnMoreUrl: 'https://www.gov.uk/find-pension-contact-details' },
+    action: { title: 'Pension Provider — Unknown', description: "Narayan mentioned a council pension but couldn't recall the provider. Use the government's free Pension Tracing Service.", severity: 'amber', status: 'todo', learnMoreUrl: 'https://www.gov.uk/find-pension-contact-details' },
   },
   {
-    spoken: "That's perfectly fine. Do you have a will, Arthur? And do you know where it's kept?",
-    note: { category: 'documents', content: 'Will exists, drawn up by Henderson & Partners. Kept in a brown envelope in the filing cabinet.', confidence: 'clear', flag: false },
+    spoken: "That's perfectly fine. Do you have a will, Narayan? And do you know where it's kept?",
+    note: { category: 'documents', content: "Will exists, drawn up by Henderson & Partners. Kept in a brown envelope in the filing cabinet.", confidence: 'clear', flag: false },
   },
   {
     spoken: "Lovely. Is there anything you'd like your family to know about how you'd like to be cared for?",
-    note: { category: 'care_wishes', content: 'Arthur would prefer to stay at home as long as possible. Would like Sarah to manage things.', confidence: 'clear', flag: false },
+    note: { category: 'care_wishes', content: 'Narayan would prefer to stay at home as long as possible. Would like Sunil to manage things.', confidence: 'clear', flag: false },
   },
   {
-    spoken: "That's very clear, Arthur. Do you have any insurance policies? Life insurance, home insurance, anything like that?",
-    note: { category: 'documents', content: 'Home insurance with Aviva, renews in March. Life insurance policy exists but provider unknown.', confidence: 'needs-follow-up', flag: true },
-    action: { title: 'Life Insurance Provider — Unknown', description: "Arthur has a life insurance policy but can't recall the provider. Documents may be in the filing cabinet.", severity: 'amber', status: 'todo' },
+    spoken: "That's very clear, Narayan. Do you have any insurance policies? Life insurance, home insurance, anything like that?",
+    note: { category: 'documents', content: "Home insurance with Aviva, renews in March. Life insurance policy exists but provider unknown.", confidence: 'needs-follow-up', flag: true },
+    action: { title: 'Life Insurance Provider — Unknown', description: "Narayan has a life insurance policy but can't recall the provider. Documents may be in the filing cabinet.", severity: 'amber', status: 'todo' },
   },
 ];
 
-// ─── Pre-loaded demo data ─────────────────────────────────────────────────────
-const INITIAL_ITEMS: CapturedItem[] = [
-  { id: '1', category: 'bank_accounts', content: 'Barclays current account mentioned. Statements in blue folder, top drawer of desk in study.', confidence: 'clear', flag: false, timestamp: new Date(Date.now() - 600000) },
-  { id: '2', category: 'documents', content: 'Will exists, drawn up by Henderson & Partners solicitors on the High Street. Kept in a brown envelope in the filing cabinet.', confidence: 'clear', flag: false, timestamp: new Date(Date.now() - 480000) },
-  { id: '3', category: 'financial_accounts', content: 'Council pension mentioned but provider unknown. Arthur believes it may be through the local authority.', confidence: 'needs-follow-up', flag: true, timestamp: new Date(Date.now() - 360000) },
-  { id: '4', category: 'care_wishes', content: "Arthur would prefer to stay at home as long as possible. Doesn't want to go into a care home. Would like Sarah to manage things.", confidence: 'clear', flag: false, timestamp: new Date(Date.now() - 240000) },
-  { id: '5', category: 'documents', content: "Home insurance with Aviva, renews in March. Life insurance policy exists but Arthur can't remember the provider.", confidence: 'needs-follow-up', flag: true, timestamp: new Date(Date.now() - 120000) },
-  { id: '6', category: 'property', content: 'Family home owned outright, no mortgage. Deeds held by Henderson & Partners.', confidence: 'clear', flag: false, timestamp: new Date(Date.now() - 60000) },
-  { id: '7', category: 'key_contacts', content: 'GP is Dr. Patel at Meadowbank Surgery. NHS number in a letter in the kitchen drawer.', confidence: 'clear', flag: false, timestamp: new Date() },
-];
-
-const INITIAL_ACTIONS: ActionItem[] = [
-  { id: 'a1', title: 'Power of Attorney — Not confirmed', description: "Arthur hasn't confirmed whether a Lasting Power of Attorney is in place. Without this, the family may face Court of Protection proceedings — costing £20,000+ and taking 9+ months.", severity: 'red', status: 'todo', learnMoreUrl: 'https://www.gov.uk/power-of-attorney' },
-  { id: 'a2', title: 'Pension Provider — Unknown', description: "Arthur mentioned a council pension but couldn't recall the provider. Use the government's free Pension Tracing Service.", severity: 'amber', status: 'todo', learnMoreUrl: 'https://www.gov.uk/find-pension-contact-details' },
-  { id: 'a3', title: 'Life Insurance Provider — Unknown', description: "Arthur has a life insurance policy but can't recall the provider. Documents may be in the filing cabinet. Sarah should check.", severity: 'amber', status: 'todo' },
-];
-
-const INITIAL_SESSIONS: SessionEntry[] = [
-  { id: 's1', date: new Date(), duration: '8 minutes', itemsCaptured: 7, actionsFlagged: 3 },
+// ─── Demo sequence (Shift+D to trigger each step instantly) ──────────────────
+const DEMO_SEQUENCE: {
+  note?: Omit<CapturedItem, 'id' | 'timestamp'>;
+  action?: Omit<ActionItem, 'id'>;
+  claraMessage: string;
+}[] = [
+  {
+    claraMessage: "That's really helpful, Narayan. So you have a current account with Barclays — and you keep the statements in a blue folder in the top drawer. Is that right?",
+    note: { category: 'bank_accounts', content: 'Barclays current account mentioned. Statements in blue folder, top drawer of desk in study.', confidence: 'clear', flag: false },
+  },
+  {
+    claraMessage: "Thank you. Do you happen to remember if you set up a Power of Attorney with anyone — perhaps with Sunil or another family member?",
+    action: { title: 'Power of Attorney — Not confirmed', description: "Narayan hasn't confirmed whether a Lasting Power of Attorney is in place. Without this, the family may face Court of Protection proceedings — costing £20,000+ and taking 9+ months.", severity: 'red', status: 'todo', learnMoreUrl: 'https://www.gov.uk/power-of-attorney' },
+  },
+  {
+    claraMessage: "I understand. Do you remember the name of your pension provider? You mentioned you had a council pension.",
+    note: { category: 'financial_accounts', content: 'Council pension mentioned but provider unknown. Narayan believes it may be through the local authority.', confidence: 'needs-follow-up', flag: true },
+    action: { title: 'Pension Provider — Unknown', description: "Narayan mentioned a council pension but couldn't recall the provider. Use the government's free Pension Tracing Service.", severity: 'amber', status: 'todo', learnMoreUrl: 'https://www.gov.uk/find-pension-contact-details' },
+  },
+  {
+    claraMessage: "That's perfectly fine. Do you have a will, Narayan? And do you know where it's kept?",
+    note: { category: 'documents', content: "Will exists, drawn up by Henderson & Partners solicitors. Kept in a brown envelope in the filing cabinet.", confidence: 'clear', flag: false },
+  },
+  {
+    claraMessage: "Lovely. Is there anything you'd like your family to know about how you'd like to be cared for?",
+    note: { category: 'care_wishes', content: 'Narayan would prefer to stay at home as long as possible. Would like Sunil to manage things.', confidence: 'clear', flag: false },
+  },
+  {
+    claraMessage: "That's very clear, Narayan. Do you have any insurance policies? Life insurance, home insurance, anything like that?",
+    note: { category: 'documents', content: "Home insurance with Aviva, renews in March. Life insurance policy exists but provider unknown.", confidence: 'needs-follow-up', flag: true },
+    action: { title: 'Life Insurance Provider — Unknown', description: "Narayan has a life insurance policy but can't recall the provider. Documents may be in the filing cabinet. Sunil should check.", severity: 'amber', status: 'todo' },
+  },
 ];
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [parentName] = useState('Arthur');
-  const [capturedItems, setCapturedItems] = useState<CapturedItem[]>(INITIAL_ITEMS);
-  const [actionItems, setActionItems] = useState<ActionItem[]>(INITIAL_ACTIONS);
-  const [sessions] = useState<SessionEntry[]>(INITIAL_SESSIONS);
+  const [parentName] = useState('Narayan');
+  const [childName] = useState('Sunil');
+
+  // Start completely empty — no pre-loaded data.
+  const [capturedItems, setCapturedItems] = useState<CapturedItem[]>([]);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [sessions] = useState<SessionEntry[]>([]);
+
   const [claraResponses] = useState<ClaraResponse[]>([]);
   const [lastClaraMessage, setLastClaraMessage] = useState('');
   const [lastUserMessage, setLastUserMessage] = useState('');
   const [isListening, setListening] = useState(false);
   const [isThinking, setThinking] = useState(false);
   const [turnIndex, setTurnIndex] = useState(0);
-
-  // Sarah's manual notes keyed by captured item ID
   const [userNotes, setUserNotes] = useState<Record<string, string>>({});
-
-  const setUserNote = useCallback((itemId: string, note: string) => {
-    setUserNotes(prev => ({ ...prev, [itemId]: note }));
-  }, []);
+  const [demoStep, setDemoStep] = useState(0);
 
   const addCapturedItem = useCallback((item: CapturedItem) => {
     setCapturedItems(prev => [item, ...prev]);
@@ -143,6 +159,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const updateActionStatus = useCallback((id: string, status: ActionItem['status']) => {
     setActionItems(prev => prev.map(a => (a.id === id ? { ...a, status } : a)));
+  }, []);
+
+  const setUserNote = useCallback((id: string, note: string) => {
+    setUserNotes(prev => ({ ...prev, [id]: note }));
   }, []);
 
   // ─── ElevenLabs tool call handler ─────────────────────────────────────────
@@ -181,7 +201,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [addCapturedItem, addActionItem]
   );
 
-  // ─── Mock demo turns ──────────────────────────────────────────────────────
+  // ─── Instant demo step (Shift+D in Conversation page) ────────────────────
+  const triggerDemoStep = useCallback(() => {
+    const step = DEMO_SEQUENCE[demoStep % DEMO_SEQUENCE.length];
+    setLastClaraMessage(step.claraMessage);
+    if (step.note) {
+      addCapturedItem({ ...step.note, id: `item-${Date.now()}`, timestamp: new Date() });
+    }
+    if (step.action) {
+      addActionItem({ ...step.action, id: `action-${Date.now()}` });
+    }
+    setDemoStep(prev => prev + 1);
+  }, [demoStep, addCapturedItem, addActionItem]);
+
+  // ─── Mock demo turns (animated, with delays) ─────────────────────────────
   const simulateConversationTurn = useCallback(() => {
     const turn = MOCK_TURNS[turnIndex % MOCK_TURNS.length];
     setListening(true);
@@ -209,25 +242,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return (
     <SessionContext.Provider
       value={{
-        parentName,
-        capturedItems,
-        actionItems,
-        sessions,
-        claraResponses,
-        lastClaraMessage,
-        lastUserMessage,
-        isListening,
-        isThinking,
-        userNotes,
-        setUserNote,
-        addCapturedItem,
-        addActionItem,
-        updateActionStatus,
-        setListening,
-        setThinking,
-        setLastClaraMessage,
-        setLastUserMessage,
-        simulateConversationTurn,
+        parentName, childName, capturedItems, actionItems, sessions, claraResponses,
+        lastClaraMessage, lastUserMessage, isListening, isThinking, userNotes, demoStep,
+        addCapturedItem, addActionItem, updateActionStatus,
+        setListening, setThinking, setLastClaraMessage, setLastUserMessage, setUserNote,
+        simulateConversationTurn, triggerDemoStep,
         handleAgentToolCall,
       }}
     >

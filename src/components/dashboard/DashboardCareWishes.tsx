@@ -3,13 +3,13 @@ import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
 export default function DashboardCareWishes() {
-  const { capturedItems } = useSession();
+  const { capturedItems, parentName } = useSession();
   const wishes = capturedItems.filter(i => i.category === 'care_wishes');
 
   return (
     <div className="cn-stagger">
       <p className="font-display text-lg italic text-foreground mb-6 max-w-2xl leading-relaxed">
-        Narayan shared the following wishes during his conversation. These are his words, in his own voice.
+        {parentName} shared the following wishes during his conversation. These are his words, in his own voice.
       </p>
 
       {wishes.length === 0 ? (

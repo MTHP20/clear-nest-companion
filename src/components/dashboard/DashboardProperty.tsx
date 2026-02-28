@@ -3,13 +3,13 @@ import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
 export default function DashboardProperty() {
-  const { capturedItems } = useSession();
+  const { capturedItems, parentName } = useSession();
   const property = capturedItems.filter(i => i.category === 'property');
 
   return (
     <div className="cn-stagger">
       <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Property</h2>
-      <p className="font-body text-muted-foreground mb-6">Property information mentioned by Narayan</p>
+      <p className="font-body text-muted-foreground mb-6">Property information mentioned by {parentName}</p>
 
       {property.length === 0 ? (
         <EmptyState section="Property" />

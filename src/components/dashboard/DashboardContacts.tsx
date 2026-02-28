@@ -3,13 +3,13 @@ import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
 export default function DashboardContacts() {
-  const { capturedItems } = useSession();
+  const { capturedItems, parentName } = useSession();
   const contacts = capturedItems.filter(i => i.category === 'key_contacts');
 
   return (
     <div className="cn-stagger">
       <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Key Contacts</h2>
-      <p className="font-body text-muted-foreground mb-6">People mentioned by Narayan</p>
+      <p className="font-body text-muted-foreground mb-6">People mentioned by {parentName}</p>
 
       {contacts.length === 0 ? (
         <EmptyState section="Key Contacts" />
