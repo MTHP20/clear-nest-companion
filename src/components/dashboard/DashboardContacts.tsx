@@ -1,10 +1,26 @@
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import EmptyState from '@/components/EmptyState';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
 
-export default function DashboardContacts() {
+interface DashboardContactsProps {
+  query?: string;
+  confidenceFilter?: string;
+}
+
+export default function DashboardContacts({ query = '', confidenceFilter = 'all' }: DashboardContactsProps) {
   const { capturedItems, parentName } = useSession();
-  const contacts = capturedItems.filter(i => i.category === 'key_contacts');
+  const navigate = useNavigate();
+  const contacts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return capturedItems.filter((item) => {
+      if (item.category !== 'key_contacts') return false;
+      const matchesQuery = !q || item.content.toLowerCase().includes(q) || (item.sourceQuote ?? '').toLowerCase().includes(q);
+      const matchesConfidence = confidenceFilter === 'all' || item.confidence === confidenceFilter;
+      return matchesQuery && matchesConfidence;
+    });
+  }, [capturedItems, query, confidenceFilter]);
 
   return (
     <div className="cn-stagger">
@@ -29,8 +45,11 @@ export default function DashboardContacts() {
         </div>
       )}
 
-      <button className="mt-6 border-2 border-accent text-accent font-body font-medium py-2.5 px-5 rounded-lg hover:bg-accent/10 transition-colors">
-        + Add manually
+      <button
+        onClick={() => navigate('/conversation')}
+        className="mt-6 border-2 border-accent text-accent font-body font-medium py-2.5 px-5 rounded-lg hover:bg-accent/10 transition-colors"
+      >
+        Continue conversation
       </button>
     </div>
   );
