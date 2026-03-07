@@ -82,6 +82,7 @@ const Conversation = () => {
   const isHoldingRef            = useRef(false);
   const audioUnlockedRef        = useRef(false);
   const connectionTimeoutRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const permStreamRef           = useRef<MediaStream | null>(null);
 
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
@@ -262,41 +263,26 @@ const Conversation = () => {
 
     setErrorMessage(null);
 
-    // Pre-request mic permission BEFORE any network awaits.
-    // The ElevenLabs SDK calls getUserMedia() internally after the WebSocket connects,
-    // but by then we're outside the user gesture window on many browsers — causing a
-    // permission error that drops the session immediately after connect.
-    // Doing it here (first await, closest to the click) keeps us within the gesture window.
+    // Pre-grant mic permission within the user gesture window (before any await that
+    // could expire the gesture). We keep the stream alive — stopping it immediately
+    // can cause the audio device to close before ElevenLabs opens its own stream,
+    // resulting in an instant disconnect on some browsers.
     try {
-      const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      permStream.getTracks().forEach(t => t.stop());
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      permStreamRef.current = s;
     } catch {
       setErrorMessage('Microphone access is required. Please allow mic access and try again.');
       return;
     }
 
-    // Fix 3: 8-second connection timeout — prevents infinite "connecting" state
+    // 8-second connection timeout
     connectionTimeoutRef.current = setTimeout(() => {
-      console.warn('⏱ Connection timeout — ending session');
+      console.warn('⏱ Connection timeout');
       convMethodsRef.current?.end().catch(() => {});
       setErrorMessage('Clara took too long to connect. Please try again.');
     }, CONNECTION_TIMEOUT_MS);
 
-    try {
-      const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
-      const res = await fetch(
-        `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
-        { headers: { 'xi-api-key': apiKey } }
-      );
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`API error ${res.status}: ${t}`);
-      }
-      const data = await res.json();
-      const signedUrl: string = data.signed_url ?? data.conversation_token ?? data.token;
-      if (!signedUrl) throw new Error(`No URL in response: ${JSON.stringify(data)}`);
-
-      const toolInstructions = `You are Clara, a warm and gentle AI assistant for ClearNest, helping families plan ahead for eldercare. You are talking with Narayan.
+    const toolInstructions = `You are Clara, a warm and gentle AI assistant for ClearNest, helping families plan ahead for eldercare. You are talking with Narayan.
 
 CRITICAL — you MUST call the capture_note tool IMMEDIATELY whenever Narayan mentions ANYTHING about:
 • Which bank(s) he uses, account types, where bank cards/documents are kept → category: "bank_accounts"
@@ -318,8 +304,11 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
     : ''
 }`;
 
+    try {
+      // Agent auth is disabled — connect directly with agentId (no signed URL fetch needed).
+      // This removes a full network round-trip and its associated timing issues.
       await convMethodsRef.current!.start({
-        signedUrl,
+        agentId,
         overrides: { agent: { prompt: { prompt: toolInstructions } } },
       });
     } catch (err) {
@@ -327,6 +316,8 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
       }
+      permStreamRef.current?.getTracks().forEach(t => t.stop());
+      permStreamRef.current = null;
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌', msg);
       setErrorMessage('Clara couldn\'t connect. Please try again.');
@@ -340,13 +331,16 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
       clearTimeout(connectionTimeoutRef.current);
       connectionTimeoutRef.current = null;
     }
+    permStreamRef.current?.getTracks().forEach(t => t.stop());
+    permStreamRef.current = null;
     try { await convMethodsRef.current?.end(); } catch (_) { /* ignore */ }
   }, []);
 
-  // Fix 4: Cleanup on unmount — stop timeouts and end session
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+      permStreamRef.current?.getTracks().forEach(t => t.stop());
       convMethodsRef.current?.end().catch(() => {});
     };
   }, []);
