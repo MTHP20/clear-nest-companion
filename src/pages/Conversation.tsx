@@ -71,6 +71,7 @@ const Conversation = () => {
 
   // ── Session state ─────────────────────────────────────────────────────────
   const [isHolding, setIsHolding]             = useState(false);
+  const [isMicMuted, setIsMicMuted]           = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
   const [errorMessage, setErrorMessage]       = useState<string | null>(null);
 
@@ -120,15 +121,12 @@ const Conversation = () => {
   };
 
   // ── ElevenLabs — clientTools instead of onToolCall ────────────────────────
-  // Fix 1: micMuted controlled prop — SDK's built-in PTT support.
-  // IMPORTANT: must be `isSessionActive && !isHolding`, NOT just `!isHolding`.
-  // The SDK effect only fires when this value CHANGES. If we pass `true` from the
-  // start, it runs once with f.current=null (no-op), and never runs again on connect
-  // (value unchanged). By using `isSessionActive && !isHolding`, the value goes
-  // false→true at the moment the session connects, triggering setMicMuted(true)
-  // while f.current is now properly initialised.
+  // Fix 1: micMuted via explicit state — SDK's built-in PTT support.
+  // `isMicMuted` starts false (no session), is set true in onConnect (mute until hold),
+  // false on hold (unmute), true on release (mute again). This avoids the circular ref
+  // that would occur if we derived this from conversation.status before conversation exists.
   const conversation = useConversation({
-    micMuted: isSessionActive && !isHolding,
+    micMuted: isMicMuted,
     clientTools: {
       capture_note: (params: Record<string, unknown>) => {
         handleAgentToolCall('capture_note', params);
@@ -187,10 +185,12 @@ const Conversation = () => {
       }
       setHasStartedSession(true);
       setErrorMessage(null);
+      setIsMicMuted(true); // mute mic until user holds button
     },
     onDisconnect: () => {
       console.log('🔌 Disconnected');
       setIsHolding(false);
+      setIsMicMuted(false);
     },
   });
 
@@ -336,6 +336,7 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
     }
     isHoldingRef.current = true;
     setIsHolding(true);
+    setIsMicMuted(false); // unmute while holding
   }, [isSessionActive, startSession]);
 
   const handlePressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -343,6 +344,7 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
     if (!isSessionActive) return;
     isHoldingRef.current = false;
     setIsHolding(false);
+    setIsMicMuted(true); // mute again after releasing
   }, [isSessionActive]);
 
   const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
