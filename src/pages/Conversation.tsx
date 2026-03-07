@@ -5,6 +5,8 @@ import { Mic, PhoneOff, Volume2 } from 'lucide-react';
 import { useConversation } from '@11labs/react';
 import { useSession } from '@/contexts/SessionContext';
 
+const CONNECTION_TIMEOUT_MS = 8000;
+
 // ─── Typewriter hook ──────────────────────────────────────────────────────────
 function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 30) {
   const [displayed, setDisplayed] = useState('');
@@ -70,13 +72,15 @@ const Conversation = () => {
   // ── Session state ─────────────────────────────────────────────────────────
   const [isHolding, setIsHolding]             = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
+  const [errorMessage, setErrorMessage]       = useState<string | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const hasSpokenBefore         = useRef(false);
   const conversationSummary     = useRef<string>('');
-  const mediaStreamRef          = useRef<MediaStream | null>(null);
   const interruptBufferRef      = useRef<string[]>([]);
   const isHoldingRef            = useRef(false);
+  const audioUnlockedRef        = useRef(false);
+  const connectionTimeoutRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stable ref to avoid startSession/endSession deps on conversation object
   const convMethodsRef          = useRef<{ start: typeof conversation.startSession; end: typeof conversation.endSession } | null>(null);
 
@@ -115,15 +119,11 @@ const Conversation = () => {
     });
   };
 
-  const setMicActive = (active: boolean) => {
-    if (!mediaStreamRef.current) return;
-    mediaStreamRef.current.getAudioTracks().forEach(track => {
-      track.enabled = active;
-    });
-  };
-
   // ── ElevenLabs — clientTools instead of onToolCall ────────────────────────
+  // Fix 1: micMuted controlled prop — SDK's built-in PTT support.
+  // When the user is NOT holding the button, the mic is muted at the SDK level.
   const conversation = useConversation({
+    micMuted: !isHolding,
     clientTools: {
       capture_note: (params: Record<string, unknown>) => {
         handleAgentToolCall('capture_note', params);
@@ -168,12 +168,20 @@ const Conversation = () => {
     },
     onError: (error: string) => {
       console.error('❌ ElevenLabs error:', error);
-      setLastClaraMessage(`Connection error: ${error}`);
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      setErrorMessage('Clara couldn\'t connect. Please try again.');
     },
     onConnect: () => {
       console.log('✅ Connected');
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       setHasStartedSession(true);
-      setMicActive(false);
+      setErrorMessage(null);
     },
     onDisconnect: () => {
       console.log('🔌 Disconnected');
@@ -205,19 +213,16 @@ const Conversation = () => {
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl:  true,
-          sampleRate:       16000,
-          channelCount:     1,
-        },
-      });
-      mediaStreamRef.current = stream;
-      stream.getAudioTracks().forEach(t => { t.enabled = false; });
+    setErrorMessage(null);
 
+    // Fix 3: 8-second connection timeout — prevents infinite "connecting" state
+    connectionTimeoutRef.current = setTimeout(() => {
+      console.warn('⏱ Connection timeout — ending session');
+      convMethodsRef.current?.end().catch(() => {});
+      setErrorMessage('Clara took too long to connect. Please try again.');
+    }, CONNECTION_TIMEOUT_MS);
+
+    try {
       const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
       const res = await fetch(
         `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
@@ -258,25 +263,32 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
         overrides: { agent: { prompt: { prompt: toolInstructions } } },
       });
     } catch (err) {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌', msg);
-      setLastClaraMessage(`Could not start: ${msg}`);
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(t => t.stop());
-        mediaStreamRef.current = null;
-      }
+      setErrorMessage('Clara couldn\'t connect. Please try again.');
     }
   }, [agentId, status]);
 
   const endSession = useCallback(async () => {
     setIsHolding(false);
     isHoldingRef.current = false;
-    setMicActive(false);
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(t => t.stop());
-      mediaStreamRef.current = null;
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
     }
     try { await convMethodsRef.current?.end(); } catch (_) { /* ignore */ }
+  }, []);
+
+  // Fix 4: Cleanup on unmount — stop timeouts and end session
+  useEffect(() => {
+    return () => {
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+      convMethodsRef.current?.end().catch(() => {});
+    };
   }, []);
 
   const handleEndChat = useCallback(() => {
@@ -287,13 +299,25 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
   // ── PTT handlers ──────────────────────────────────────────────────────────
   const handlePressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+
+    // Fix 2: Unlock AudioContext synchronously in the user gesture, before any awaits.
+    // Browsers (especially Safari) suspend AudioContext created after async calls.
+    // Unlocking here ensures Clara's voice can play when ElevenLabs initialises audio.
+    if (!audioUnlockedRef.current) {
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        ctx.resume().then(() => ctx.close());
+        audioUnlockedRef.current = true;
+      } catch (_) { /* non-critical */ }
+    }
+
     if (!isSessionActive) {
       startSession();
       return;
     }
     isHoldingRef.current = true;
     setIsHolding(true);
-    setMicActive(true);
   }, [isSessionActive, startSession]);
 
   const handlePressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -301,7 +325,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
     if (!isSessionActive) return;
     isHoldingRef.current = false;
     setIsHolding(false);
-    setMicActive(false);
   }, [isSessionActive]);
 
   const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
@@ -357,6 +380,19 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
               I'm here for a gentle chat to help your family get organised.
               There are no wrong answers — we go at your pace.
             </p>
+          </div>
+        )}
+
+        {/* Fix 5: User-facing error with retry — never silently swallow errors */}
+        {errorMessage && (
+          <div style={styles.errorCard}>
+            <p style={styles.errorText}>⚠️ {errorMessage}</p>
+            <button
+              onClick={() => { setErrorMessage(null); startSession(); }}
+              style={styles.retryBtn}
+            >
+              Try again
+            </button>
           </div>
         )}
 
@@ -690,6 +726,28 @@ const styles: Record<string, React.CSSProperties> = {
   micLabel: {
     fontSize: 16, margin: 0, fontFamily: "'Helvetica Neue', sans-serif", fontWeight: 700,
     textAlign: 'center' as const, flexShrink: 0, transition: 'color 0.3s ease',
+  },
+  errorCard: {
+    background: '#fff3f3',
+    border: '1.5px solid #c0392b',
+    borderRadius: 14,
+    padding: '12px 18px',
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    animation: 'fadeIn 0.3s ease',
+    flexShrink: 0,
+  },
+  errorText: {
+    fontSize: 14, color: '#8b2020', fontFamily: "'Helvetica Neue', sans-serif",
+    margin: 0, lineHeight: 1.5, flex: 1,
+  },
+  retryBtn: {
+    background: '#c0392b', color: '#fff', border: 'none', borderRadius: 8,
+    padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+    fontFamily: "'Helvetica Neue', sans-serif", flexShrink: 0,
   },
   stillToCoverBanner: {
     display: 'flex',
