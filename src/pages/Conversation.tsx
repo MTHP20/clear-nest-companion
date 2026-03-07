@@ -121,9 +121,14 @@ const Conversation = () => {
 
   // ── ElevenLabs — clientTools instead of onToolCall ────────────────────────
   // Fix 1: micMuted controlled prop — SDK's built-in PTT support.
-  // When the user is NOT holding the button, the mic is muted at the SDK level.
+  // IMPORTANT: must be `isSessionActive && !isHolding`, NOT just `!isHolding`.
+  // The SDK effect only fires when this value CHANGES. If we pass `true` from the
+  // start, it runs once with f.current=null (no-op), and never runs again on connect
+  // (value unchanged). By using `isSessionActive && !isHolding`, the value goes
+  // false→true at the moment the session connects, triggering setMicMuted(true)
+  // while f.current is now properly initialised.
   const conversation = useConversation({
-    micMuted: !isHolding,
+    micMuted: isSessionActive && !isHolding,
     clientTools: {
       capture_note: (params: Record<string, unknown>) => {
         handleAgentToolCall('capture_note', params);
@@ -214,6 +219,19 @@ const Conversation = () => {
     }
 
     setErrorMessage(null);
+
+    // Pre-request mic permission BEFORE any network awaits.
+    // The ElevenLabs SDK calls getUserMedia() internally after the WebSocket connects,
+    // but by then we're outside the user gesture window on many browsers — causing a
+    // permission error that drops the session immediately after connect.
+    // Doing it here (first await, closest to the click) keeps us within the gesture window.
+    try {
+      const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      permStream.getTracks().forEach(t => t.stop());
+    } catch {
+      setErrorMessage('Microphone access is required. Please allow mic access and try again.');
+      return;
+    }
 
     // Fix 3: 8-second connection timeout — prevents infinite "connecting" state
     connectionTimeoutRef.current = setTimeout(() => {
