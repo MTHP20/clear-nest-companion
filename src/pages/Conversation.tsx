@@ -82,8 +82,6 @@ const Conversation = () => {
   const isHoldingRef            = useRef(false);
   const audioUnlockedRef        = useRef(false);
   const connectionTimeoutRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Stable ref to avoid startSession/endSession deps on conversation object
-  const convMethodsRef          = useRef<{ start: typeof conversation.startSession; end: typeof conversation.endSession } | null>(null);
 
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
@@ -120,81 +118,125 @@ const Conversation = () => {
     });
   };
 
-  // ── ElevenLabs — clientTools instead of onToolCall ────────────────────────
-  // Fix 1: micMuted via explicit state — SDK's built-in PTT support.
-  // `isMicMuted` starts false (no session), is set true in onConnect (mute until hold),
-  // false on hold (unmute), true on release (mute again). This avoids the circular ref
-  // that would occur if we derived this from conversation.status before conversation exists.
-  const conversation = useConversation({
-    micMuted: isMicMuted,
-    clientTools: {
-      capture_note: (params: Record<string, unknown>) => {
-        handleAgentToolCall('capture_note', params);
-        return 'Note captured';
-      },
-      flag_action: (params: Record<string, unknown>) => {
-        handleAgentToolCall('flag_action', params);
-        return 'Action flagged';
-      },
-    },
-    onMessage: (message: { source: string; message: string }) => {
-      if (message.source === 'ai') {
-        const cleaned = cleanClaraMessage(message.message);
-        if (cleaned) {
-          setLastClaraMessage(cleaned);
-          parseAndCaptureNote(message.message);
-          hasSpokenBefore.current = true;
-        }
-        if (interruptBufferRef.current.length > 0) {
-          const buffered = interruptBufferRef.current.join(' … ');
-          setLastUserMessage(buffered);
-          interruptBufferRef.current = [];
-          setInterruptNotice(null);
-        }
-      } else if (message.source === 'user') {
-        const userText = message.message?.trim();
-        if (!userText) return;
-        if (isHoldingRef.current) {
-          setLastUserMessage(userText);
-          setInterruptNotice(null);
-        } else {
-          interruptBufferRef.current.push(userText);
-          setInterruptNotice(`We caught: "${userText}" — Clara will take this into account.`);
-          handleAgentToolCall('capture_note', {
-            category:   'general',
-            content:    `Narayan said while Clara was speaking: "${userText}"`,
-            confidence: 'needs-follow-up',
-            flag:       true,
-          });
-        }
+  // ── Stable callback refs — prevent useConversation from tearing down on re-render ──
+  // The SDK watches its config object for changes. If we pass new function references
+  // on every render, the SDK tears down and reconnects — causing the instant disconnect.
+  // Solution: store all mutable logic in refs, pass stable callbacks to the hook.
+  const stableRefs = useRef({
+    setLastClaraMessage,
+    setLastUserMessage,
+    setInterruptNotice,
+    setHasStartedSession,
+    setErrorMessage,
+    setIsHolding,
+    setIsMicMuted,
+    handleAgentToolCall,
+    cleanClaraMessage,
+    parseAndCaptureNote,
+    connectionTimeoutRef,
+    interruptBufferRef,
+    isHoldingRef,
+    hasSpokenBefore,
+  });
+  // Keep refs in sync every render (no effect needed, just assignment)
+  stableRefs.current.setLastClaraMessage = setLastClaraMessage;
+  stableRefs.current.setLastUserMessage = setLastUserMessage;
+  stableRefs.current.setInterruptNotice = setInterruptNotice;
+  stableRefs.current.setHasStartedSession = setHasStartedSession;
+  stableRefs.current.setErrorMessage = setErrorMessage;
+  stableRefs.current.setIsHolding = setIsHolding;
+  stableRefs.current.setIsMicMuted = setIsMicMuted;
+  stableRefs.current.handleAgentToolCall = handleAgentToolCall;
+  stableRefs.current.cleanClaraMessage = cleanClaraMessage;
+  stableRefs.current.parseAndCaptureNote = parseAndCaptureNote;
+
+  // ── Stable callbacks for useConversation — created once, never change ──
+  const stableOnMessage = useCallback((message: { source: string; message: string }) => {
+    const r = stableRefs.current;
+    if (message.source === 'ai') {
+      const cleaned = r.cleanClaraMessage(message.message);
+      if (cleaned) {
+        r.setLastClaraMessage(cleaned);
+        r.parseAndCaptureNote(message.message);
+        r.hasSpokenBefore.current = true;
       }
-    },
-    onError: (error: string) => {
-      console.error('❌ ElevenLabs error:', error);
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
+      if (r.interruptBufferRef.current.length > 0) {
+        const buffered = r.interruptBufferRef.current.join(' … ');
+        r.setLastUserMessage(buffered);
+        r.interruptBufferRef.current = [];
+        r.setInterruptNotice(null);
       }
-      setErrorMessage('Clara couldn\'t connect. Please try again.');
-    },
-    onConnect: () => {
-      console.log('✅ Connected');
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
+    } else if (message.source === 'user') {
+      const userText = message.message?.trim();
+      if (!userText) return;
+      if (r.isHoldingRef.current) {
+        r.setLastUserMessage(userText);
+        r.setInterruptNotice(null);
+      } else {
+        r.interruptBufferRef.current.push(userText);
+        r.setInterruptNotice(`We caught: "${userText}" — Clara will take this into account.`);
+        r.handleAgentToolCall('capture_note', {
+          category: 'general',
+          content: `Narayan said while Clara was speaking: "${userText}"`,
+          confidence: 'needs-follow-up',
+          flag: true,
+        });
       }
-      setHasStartedSession(true);
-      setErrorMessage(null);
-      setIsMicMuted(true); // mute mic until user holds button
+    }
+  }, []);
+
+  const stableOnError = useCallback((error: string) => {
+    console.error('❌ ElevenLabs error:', error);
+    const r = stableRefs.current;
+    if (r.connectionTimeoutRef.current) {
+      clearTimeout(r.connectionTimeoutRef.current);
+      r.connectionTimeoutRef.current = null;
+    }
+    r.setErrorMessage('Clara couldn\'t connect. Please try again.');
+  }, []);
+
+  const stableOnConnect = useCallback(() => {
+    console.log('✅ Connected');
+    const r = stableRefs.current;
+    if (r.connectionTimeoutRef.current) {
+      clearTimeout(r.connectionTimeoutRef.current);
+      r.connectionTimeoutRef.current = null;
+    }
+    r.setHasStartedSession(true);
+    r.setErrorMessage(null);
+    r.setIsMicMuted(true);
+  }, []);
+
+  const stableOnDisconnect = useCallback(() => {
+    console.log('🔌 Disconnected');
+    const r = stableRefs.current;
+    r.setIsHolding(false);
+    r.setIsMicMuted(false);
+  }, []);
+
+  const stableClientTools = useRef({
+    capture_note: (params: Record<string, unknown>) => {
+      stableRefs.current.handleAgentToolCall('capture_note', params);
+      return 'Note captured';
     },
-    onDisconnect: () => {
-      console.log('🔌 Disconnected');
-      setIsHolding(false);
-      setIsMicMuted(false);
+    flag_action: (params: Record<string, unknown>) => {
+      stableRefs.current.handleAgentToolCall('flag_action', params);
+      return 'Action flagged';
     },
   });
 
-  // Keep methods ref in sync
+  // ── ElevenLabs hook — config object is now fully stable across renders ──
+  const conversation = useConversation({
+    micMuted: isMicMuted,
+    clientTools: stableClientTools.current,
+    onMessage: stableOnMessage,
+    onError: stableOnError,
+    onConnect: stableOnConnect,
+    onDisconnect: stableOnDisconnect,
+  });
+
+  // Stable ref for start/end methods
+  const convMethodsRef = useRef<{ start: typeof conversation.startSession; end: typeof conversation.endSession } | null>(null);
   useEffect(() => {
     convMethodsRef.current = { start: conversation.startSession, end: conversation.endSession };
   });
