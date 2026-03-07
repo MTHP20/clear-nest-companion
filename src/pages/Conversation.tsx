@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, PhoneOff, Volume2 } from 'lucide-react';
-import { useConversation } from '@11labs/react';
+import { useConversation } from '@elevenlabs/react';
 import { useSession } from '@/contexts/SessionContext';
 
 const CONNECTION_TIMEOUT_MS = 8000;
@@ -207,11 +207,14 @@ const Conversation = () => {
     r.setIsMicMuted(true);
   }, []);
 
-  const stableOnDisconnect = useCallback(() => {
-    console.log('🔌 Disconnected');
+  const stableOnDisconnect = useCallback((details?: { reason?: string; message?: string }) => {
+    console.log('🔌 Disconnected', details);
     const r = stableRefs.current;
     r.setIsHolding(false);
     r.setIsMicMuted(false);
+    if (details?.reason === 'error') {
+      r.setErrorMessage(`Clara disconnected: ${details.message || 'Connection error. Please try again.'}`);
+    }
   }, []);
 
   const stableClientTools = useRef({
