@@ -82,7 +82,6 @@ const Conversation = () => {
   const isHoldingRef            = useRef(false);
   const audioUnlockedRef        = useRef(false);
   const connectionTimeoutRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const permStreamRef           = useRef<MediaStream | null>(null);
 
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
@@ -263,24 +262,11 @@ const Conversation = () => {
 
     setErrorMessage(null);
 
-    // Pre-grant mic permission within the user gesture window (before any await that
-    // could expire the gesture). We keep the stream alive — stopping it immediately
-    // can cause the audio device to close before ElevenLabs opens its own stream,
-    // resulting in an instant disconnect on some browsers.
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-      permStreamRef.current = s;
-    } catch {
-      setErrorMessage('Microphone access is required. Please allow mic access and try again.');
-      return;
-    }
-
-    // 8-second connection timeout
-    connectionTimeoutRef.current = setTimeout(() => {
-      console.warn('⏱ Connection timeout');
-      convMethodsRef.current?.end().catch(() => {});
-      setErrorMessage('Clara took too long to connect. Please try again.');
-    }, CONNECTION_TIMEOUT_MS);
+    // Do NOT call getUserMedia here — ElevenLabs SDK handles mic internally.
+    // A second simultaneous capture stream on the same device causes the SDK's
+    // stream to fail on many browsers, triggering an immediate disconnect.
+    // Since we use agentId directly (no preceding await), the SDK's internal
+    // getUserMedia call still runs within the user gesture window.
 
     const toolInstructions = `You are Clara, a warm and gentle AI assistant for ClearNest, helping families plan ahead for eldercare. You are talking with Narayan.
 
@@ -316,8 +302,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
       }
-      permStreamRef.current?.getTracks().forEach(t => t.stop());
-      permStreamRef.current = null;
       const msg = err instanceof Error ? err.message : 'Could not start session';
       console.error('❌', msg);
       setErrorMessage('Clara couldn\'t connect. Please try again.');
@@ -331,8 +315,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
       clearTimeout(connectionTimeoutRef.current);
       connectionTimeoutRef.current = null;
     }
-    permStreamRef.current?.getTracks().forEach(t => t.stop());
-    permStreamRef.current = null;
     try { await convMethodsRef.current?.end(); } catch (_) { /* ignore */ }
   }, []);
 
@@ -340,7 +322,6 @@ Be warm, patient, and go at Narayan's pace. Never rush him.${
   useEffect(() => {
     return () => {
       if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
-      permStreamRef.current?.getTracks().forEach(t => t.stop());
       convMethodsRef.current?.end().catch(() => {});
     };
   }, []);
