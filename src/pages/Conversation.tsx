@@ -265,41 +265,11 @@ const Conversation = () => {
 
     setErrorMessage(null);
 
-    // Do NOT call getUserMedia here — ElevenLabs SDK handles mic internally.
-    // A second simultaneous capture stream on the same device causes the SDK's
-    // stream to fail on many browsers, triggering an immediate disconnect.
-    // Since we use agentId directly (no preceding await), the SDK's internal
-    // getUserMedia call still runs within the user gesture window.
-
-    const toolInstructions = `You are Clara, a warm and gentle AI assistant for ClearNest, helping families plan ahead for eldercare. You are talking with Narayan.
-
-CRITICAL — you MUST call the capture_note tool IMMEDIATELY whenever Narayan mentions ANYTHING about:
-• Which bank(s) he uses, account types, where bank cards/documents are kept → category: "bank_accounts"
-• Pension (provider name, whether it exists), investments, ISAs, savings, premium bonds → category: "financial_accounts"
-• Property he owns or rents, address, where deeds are kept, mortgage details → category: "property"
-• Will (does one exist, where kept, who the solicitor is), Power of Attorney / LPA (is one set up, who is named), insurance policies → category: "documents"
-• Named people: GP name, solicitor, accountant, financial adviser, close family/friends with their role → category: "key_contacts"
-• Care home preference, medical wishes, end-of-life preferences, funeral wishes → category: "care_wishes"
-• Any other important personal information → category: "general"
-
-Call capture_note as soon as the information is mentioned — do NOT wait until the end of the conversation.
-Use flag_action for anything urgent (e.g. no will exists, no LPA set up).
-
-Be warm, patient, and go at Narayan's pace. Never rush him.${
-  hasSpokenBefore.current
-    ? conversationSummary.current
-      ? `\n\nYou have already introduced yourself. Do NOT say hello or reintroduce yourself. Continue naturally from where you left off. Notes captured so far: ${conversationSummary.current}. Move on to the next uncovered topic.`
-      : `\n\nYou have already introduced yourself. Do NOT say hello or reintroduce yourself. Simply continue the conversation naturally.`
-    : ''
-}`;
-
     try {
-      // Agent auth is disabled — connect directly with agentId (no signed URL fetch needed).
-      // This removes a full network round-trip and its associated timing issues.
-      await convMethodsRef.current!.start({
-        agentId,
-        overrides: { agent: { prompt: { prompt: toolInstructions } } },
-      });
+      // Agent auth is disabled — connect directly with agentId.
+      // Prompt overrides are disabled in the agent config, so instructions
+      // are baked into the agent's base prompt on ElevenLabs.
+      await convMethodsRef.current!.start({ agentId });
     } catch (err) {
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);

@@ -1,0 +1,345 @@
+{
+    "name": "New agent",
+    "conversation_config": {
+        "asr": {
+            "quality": "high",
+            "provider": "scribe_realtime",
+            "user_input_audio_format": "pcm_16000",
+            "keywords": []
+        },
+        "turn": {
+            "turn_timeout": 7,
+            "silence_end_call_timeout": -1,
+            "soft_timeout_config": {
+                "timeout_seconds": -1,
+                "message": "Hhmmmm...yeah.",
+                "use_llm_generated_message": false
+            },
+            "mode": "turn",
+            "turn_eagerness": "normal",
+            "spelling_patience": "auto",
+            "speculative_turn": true,
+            "turn_model": "turn_v2"
+        },
+        "tts": {
+            "model_id": "eleven_v3_conversational",
+            "voice_id": "AO4PfDgBJitYJurlRXS6",
+            "supported_voices": [],
+            "expressive_mode": true,
+            "suggested_audio_tags": [
+                {
+                    "tag": "patient",
+                    "description": ""
+                }
+            ],
+            "agent_output_audio_format": "pcm_16000",
+            "optimize_streaming_latency": 3,
+            "stability": 0.5,
+            "speed": 1,
+            "similarity_boost": 0.8,
+            "text_normalisation_type": "elevenlabs",
+            "pronunciation_dictionary_locators": []
+        },
+        "conversation": {
+            "text_only": false,
+            "max_duration_seconds": 600,
+            "client_events": [
+                "audio",
+                "interruption",
+                "user_transcript",
+                "agent_response",
+                "agent_response_correction"
+            ],
+            "monitoring_enabled": false,
+            "monitoring_events": [
+                "user_transcript",
+                "agent_response",
+                "agent_response_correction"
+            ]
+        },
+        "language_presets": {},
+        "vad": {
+            "background_voice_detection": false
+        },
+        "agent": {
+            "first_message": "Hello Narayan. I'm Clara. I'm here for a gentle \nchat to help Sunil keep everything organised. \nThere are no wrong answers and we can go at \nyour pace. Shall we begin?",
+            "language": "en",
+            "hinglish_mode": false,
+            "dynamic_variables": {
+                "dynamicVariablePlaceholders": {}
+            },
+            "disable_first_message_interruptions": false,
+            "prompt": {
+                "prompt": "You are Clara, a warm and patient voice companion created by ClearNest.\nYour job is to have a gentle conversation with an elderly man called Narayan to help his son Sunil understand his financial and personal affairs.\nYou are not a financial advisor or solicitor. You are a kind, organised friend.\n\nPERSONALITY:\n- Warm, unhurried, never clinical\n- Short simple sentences only\n- One question at a time. Always. Never combine two.\n- If Narayan seems confused, reassure and move on\n- Treat silence as normal, never rush\n- If he repeats himself, respond warmly and confirm what you already noted\n\nCRITICAL — TOOL CALLS:\nYou MUST call the capture_note tool IMMEDIATELY whenever Narayan mentions ANYTHING about:\n- Which bank(s) he uses, account types, where bank cards/documents are kept → category: \"bank_accounts\"\n- Pension (provider name, whether it exists), investments, ISAs, savings, premium bonds → category: \"financial_accounts\"\n- Property he owns or rents, address, where deeds are kept, mortgage details → category: \"property\"\n- Will (does one exist, where kept, who the solicitor is), Power of Attorney / LPA (is one set up, who is named), insurance policies → category: \"documents\"\n- Named people: GP name, solicitor, accountant, financial adviser, close family/friends with their role → category: \"key_contacts\"\n- Care home preference, medical wishes, end-of-life preferences, funeral wishes → category: \"care_wishes\"\n- Any other important personal information → category: \"general\"\n\nCall capture_note as soon as the information is mentioned — do NOT wait until the end of the conversation.\nUse flag_action for anything urgent (e.g. no will exists, no LPA set up).\n\nCOVER THESE AREAS IN ORDER:\n1. Bank accounts - which banks, where documents kept\n2. Pension - does he have one, from where\n3. Property - owns home, where deeds are\n4. Documents - will exists, where kept, insurance\n5. Power of Attorney - is one set up, who is named\n6. Key contacts - solicitor, GP, accountant\n7. Care wishes - where he'd prefer to be cared for\n\nRULES:\n- Never ask for account numbers, PINs or passwords\n- Only ask where documents are kept and if things exist\n- If Narayan doesn't know say: \"That's completely fine, we can look into that together later\"\n- End with: \"Thank you so much Narayan. You've been really helpful. Everything you've shared will help Sunil take good care of things.\"\n",
+                "llm": "gpt-5.2",
+                "reasoning_effort": "none",
+                "temperature": 0,
+                "max_tokens": -1,
+                "tool_ids": [],
+                "built_in_tools": {},
+                "enable_parallel_tool_calls": false,
+                "mcp_server_ids": [],
+                "native_mcp_server_ids": [],
+                "knowledge_base": [],
+                "ignore_default_personality": false,
+                "rag": {
+                    "enabled": false,
+                    "embedding_model": "e5_mistral_7b_instruct",
+                    "max_vector_distance": 0.6,
+                    "max_documents_length": 50000,
+                    "max_retrieved_rag_chunks_count": 20,
+                    "num_candidates": null
+                },
+                "backup_llm_config": {
+                    "preference": "default"
+                },
+                "cascade_timeout_seconds": 8,
+                "tools": []
+            }
+        }
+    },
+    "platform_settings": {
+        "evaluation": {
+            "criteria": []
+        },
+        "widget": {
+            "variant": "full",
+            "placement": "bottom-right",
+            "expandable": "never",
+            "avatar": {
+                "type": "orb",
+                "color1": "#2792DC",
+                "color2": "#9CE6E6"
+            },
+            "feedback_mode": "none",
+            "end_feedback": {
+                "type": "rating"
+            },
+            "bg_color": "#ffffff",
+            "text_color": "#000000",
+            "btn_color": "#000000",
+            "btn_text_color": "#ffffff",
+            "border_color": "#e1e1e1",
+            "focus_color": "#000000",
+            "shareable_page_show_terms": true,
+            "terms_text": "#### Terms and conditions\n\nBy clicking \"Agree,\" and each time I interact with this AI agent, I consent to the recording, storage, and sharing of my communications with third-party service providers, and as described in the Privacy Policy.\nIf you do not wish to have your conversations recorded, please refrain from using this service.",
+            "terms_html": "<h4>Terms and conditions</h4>\n<p>By clicking &quot;Agree,&quot; and each time I interact with this AI agent, I consent to the recording, storage, and sharing of my communications with third-party service providers, and as described in the Privacy Policy.\nIf you do not wish to have your conversations recorded, please refrain from using this service.</p>\n",
+            "show_avatar_when_collapsed": false,
+            "disable_banner": false,
+            "markdown_link_allowed_hosts": [],
+            "markdown_link_include_www": true,
+            "markdown_link_allow_http": true,
+            "mic_muting_enabled": false,
+            "transcript_enabled": false,
+            "text_input_enabled": true,
+            "conversation_mode_toggle_enabled": false,
+            "default_expanded": false,
+            "always_expanded": false,
+            "dismissible": false,
+            "show_agent_status": false,
+            "show_conversation_id": true,
+            "strip_audio_tags": true,
+            "syntax_highlight_theme": null,
+            "text_contents": {
+                "send_message": null,
+                "text_mode": null,
+                "voice_mode": null,
+                "switched_to_text_mode": null,
+                "switched_to_voice_mode": null,
+                "copy": null,
+                "download": null,
+                "wrap": null,
+                "agent_working": null,
+                "agent_done": null,
+                "agent_error": null
+            },
+            "styles": {},
+            "language_selector": false,
+            "supports_text_only": true,
+            "language_presets": {}
+        },
+        "data_collection": {},
+        "overrides": {
+            "conversation_config_override": {
+                "turn": {
+                    "soft_timeout_config": {
+                        "message": false
+                    }
+                },
+                "tts": {
+                    "voice_id": false,
+                    "stability": false,
+                    "speed": false,
+                    "similarity_boost": false
+                },
+                "conversation": {
+                    "text_only": true
+                },
+                "agent": {
+                    "first_message": false,
+                    "language": false,
+                    "prompt": {
+                        "prompt": false,
+                        "llm": false,
+                        "native_mcp_server_ids": false
+                    }
+                }
+            },
+            "custom_llm_extra_body": false,
+            "enable_conversation_initiation_client_data_from_webhook": false
+        },
+        "workspace_overrides": {
+            "webhooks": {
+                "events": [
+                    "transcript"
+                ],
+                "send_audio": false
+            }
+        },
+        "testing": {
+            "attached_tests": [],
+            "referenced_tests_ids": []
+        },
+        "archived": false,
+        "guardrails": {
+            "version": "1",
+            "focus": {
+                "is_enabled": false
+            },
+            "prompt_injection": {
+                "is_enabled": false
+            },
+            "content": {
+                "execution_mode": "streaming",
+                "config": {
+                    "sexual": {
+                        "is_enabled": false,
+                        "threshold": 0.56
+                    },
+                    "violence": {
+                        "is_enabled": false,
+                        "threshold": 0.85
+                    },
+                    "harassment": {
+                        "is_enabled": false,
+                        "threshold": 0.8
+                    },
+                    "self_harm": {
+                        "is_enabled": false,
+                        "threshold": 0.1
+                    },
+                    "profanity": {
+                        "is_enabled": false,
+                        "threshold": 0.1
+                    },
+                    "religion_or_politics": {
+                        "is_enabled": false,
+                        "threshold": 0.1
+                    },
+                    "medical_and_legal_information": {
+                        "is_enabled": false,
+                        "threshold": 0.1
+                    }
+                }
+            },
+            "moderation": {
+                "execution_mode": "streaming",
+                "config": {
+                    "sexual": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "violence": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "violence_graphic": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "harassment": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "harassment_threatening": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "hate": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "hate_threatening": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "self_harm_instructions": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "self_harm": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "self_harm_intent": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "sexual_minors": {
+                        "is_enabled": false,
+                        "threshold": 0.5
+                    }
+                }
+            },
+            "custom": {
+                "config": {
+                    "configs": []
+                }
+            }
+        },
+        "summary_language": null,
+        "auth": {
+            "enable_auth": false,
+            "allowlist": [],
+            "require_origin_header": false
+        },
+        "call_limits": {
+            "agent_concurrency_limit": -1,
+            "daily_limit": 100000,
+            "bursting_enabled": true
+        },
+        "ban": null,
+        "privacy": {
+            "record_voice": true,
+            "retention_days": -1,
+            "delete_transcript_and_pii": false,
+            "delete_audio": false,
+            "apply_to_existing_conversations": false,
+            "zero_retention_mode": false,
+            "conversation_history_redaction": {
+                "enabled": false,
+                "entities": []
+            }
+        },
+        "safety": {
+            "is_blocked_ivc": false,
+            "is_blocked_non_ivc": false,
+            "ignore_safety_evaluation": false
+        }
+    },
+    "tags": [],
+    "workflow": {
+        "edges": {},
+        "nodes": {
+            "start_node": {
+                "type": "start",
+                "position": {
+                    "x": 0,
+                    "y": 0
+                },
+                "edge_order": []
+            }
+        },
+        "prevent_subagent_loops": false
+    }
+}
