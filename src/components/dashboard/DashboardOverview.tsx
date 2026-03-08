@@ -145,7 +145,7 @@ export default function DashboardOverview({
   const needsFollowUpCount = capturedItems.filter((i) => i.confidence === 'needs-follow-up').length;
   const verifiedCount = capturedItems.filter((i) => i.verificationStatus === 'verified').length;
   const disputedCount = capturedItems.filter((i) => i.verificationStatus === 'disputed').length;
-  const lastUpdated = capturedItems[0]?.timestamp;
+  const lastUpdated = capturedItems[0]?.timestamp ? new Date(capturedItems[0].timestamp) : undefined;
 
   const [checked, setChecked] = useState<Set<string>>(loadChecklist);
   const toggleDoc = (id: string) => {
