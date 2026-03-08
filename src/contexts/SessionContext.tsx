@@ -223,10 +223,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       console.log('🔧 Agent tool call:', toolName, parameters);
 
       if (toolName === 'capture_note') {
+        const content = (parameters.content as string) ?? '';
+        let category = normaliseCategory((parameters.category as string) ?? 'general');
+
+        // If still general, scan the content with keyword patterns to find a better category
+        if (category === 'general' && content) {
+          for (const { re, category: patternCategory } of KEYWORD_PATTERNS) {
+            if (re.test(content)) {
+              category = patternCategory;
+              break;
+            }
+          }
+        }
+
         const item: CapturedItem = {
           id: `item-${Date.now()}`,
-          category: normaliseCategory((parameters.category as string) ?? 'general'),
-          content: (parameters.content as string) ?? '',
+          category,
+          content,
           confidence: (parameters.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
           flag: (parameters.flag as boolean) ?? false,
           timestamp: new Date(),
