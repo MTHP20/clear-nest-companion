@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import type { ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
+import type { ReadinessSnapshot } from '@/contexts/SessionContext';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
-import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users } from 'lucide-react';
+import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, TrendingUp } from 'lucide-react';
 
 const CATEGORY_LABELS: Record<string, string> = {
   bank_accounts: 'Bank Accounts',
@@ -43,6 +44,120 @@ function loadChecklist(): Set<string> {
 
 function saveChecklist(checked: Set<string>) {
   localStorage.setItem('cn-doc-checklist', JSON.stringify([...checked]));
+}
+
+function ReadinessTrend({
+  history,
+  verifiedCount,
+  disputedCount,
+  checklistSize,
+  docTotal,
+  activeActions,
+}: {
+  history: ReadinessSnapshot[];
+  verifiedCount: number;
+  disputedCount: number;
+  checklistSize: number;
+  docTotal: number;
+  activeActions: number;
+}) {
+  const W = 280, H = 80, PAD = 8;
+
+  const points = useMemo(() => {
+    if (history.length < 2) return null;
+    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+    const scores = sorted.map(s => s.score);
+    const minS = Math.min(...scores, 0);
+    const maxS = Math.max(...scores, 100);
+    const range = maxS - minS || 1;
+    return sorted.map((s, i) => ({
+      x: PAD + (i / (sorted.length - 1)) * (W - PAD * 2),
+      y: H - PAD - ((s.score - minS) / range) * (H - PAD * 2),
+      score: s.score,
+      date: s.date,
+    }));
+  }, [history]);
+
+  const polyline = points
+    ? points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+    : null;
+
+  const latest = history.length > 0 ? history[history.length - 1].score : null;
+  const previous = history.length > 1 ? history[history.length - 2].score : null;
+  const delta = latest !== null && previous !== null ? latest - previous : null;
+
+  return (
+    <div className="cn-card">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="w-4 h-4 text-primary" />
+        <h2 className="font-display text-lg font-semibold text-foreground">Progress Momentum</h2>
+        {delta !== null && delta > 0 && (
+          <span className="ml-auto text-xs font-body font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+            +{delta}% this session
+          </span>
+        )}
+      </div>
+
+      {points ? (
+        <div className="mb-3 overflow-hidden rounded-lg bg-primary/5 p-2">
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} aria-label="Readiness score trend chart">
+            {/* Grid lines */}
+            {[0, 25, 50, 75, 100].map(pct => {
+              const y = H - PAD - (pct / 100) * (H - PAD * 2);
+              return (
+                <g key={pct}>
+                  <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="#e5e7eb" strokeWidth="0.5" />
+                  <text x={PAD + 2} y={y - 2} fontSize="7" fill="#9ca3af" fontFamily="system-ui">
+                    {pct}%
+                  </text>
+                </g>
+              );
+            })}
+            {/* Area fill */}
+            <polygon
+              points={`${PAD},${H - PAD} ${polyline} ${points[points.length - 1].x.toFixed(1)},${H - PAD}`}
+              fill="#4A7FA5"
+              opacity="0.10"
+            />
+            {/* Trend line */}
+            <polyline
+              points={polyline!}
+              fill="none"
+              stroke="#4A7FA5"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Data points */}
+            {points.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r="3" fill="#4A7FA5" stroke="#fff" strokeWidth="1.5">
+                <title>{p.date}: {p.score}%</title>
+              </circle>
+            ))}
+          </svg>
+        </div>
+      ) : (
+        <p className="font-body text-sm text-muted-foreground mb-3">
+          Complete more conversations to see your readiness trend here.
+        </p>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p className="font-display text-lg font-bold text-primary">{verifiedCount}</p>
+          <p className="font-body text-xs text-muted-foreground">Verified</p>
+        </div>
+        <div>
+          <p className="font-display text-lg font-bold text-foreground">{checklistSize}/{docTotal}</p>
+          <p className="font-body text-xs text-muted-foreground">Checklist</p>
+        </div>
+        <div>
+          <p className="font-display text-lg font-bold text-alert">{activeActions}</p>
+          <p className="font-body text-xs text-muted-foreground">Tasks open</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ProgressRing({ score }: { score: number }) {
@@ -96,6 +211,7 @@ export default function DashboardOverview({
     capturedItems,
     actionItems,
     sessions,
+    readinessHistory,
     parentName,
     childName,
     userNotes,
@@ -395,19 +511,7 @@ export default function DashboardOverview({
             </p>
           </div>
 
-          <div className="cn-card">
-            <h2 className="font-display text-lg font-semibold mb-3 text-foreground">Progress Momentum</h2>
-            <p className="font-body text-sm text-muted-foreground">
-              Verified facts: <span className="font-semibold text-foreground">{verifiedCount}</span> • Disputed facts:{' '}
-              <span className="font-semibold text-foreground">{disputedCount}</span>
-            </p>
-            <p className="font-body text-sm text-muted-foreground mt-1">
-              Critical checklist complete: <span className="font-semibold text-foreground">{checked.size}/{DOC_ITEMS.length}</span>
-            </p>
-            <p className="font-body text-sm text-muted-foreground mt-1">
-              Tasks remaining: <span className="font-semibold text-foreground">{activeActions}</span>
-            </p>
-          </div>
+          <ReadinessTrend history={readinessHistory} verifiedCount={verifiedCount} disputedCount={disputedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
         </div>
 
         <div className="lg:col-span-2 lg:sticky lg:top-24 h-fit">

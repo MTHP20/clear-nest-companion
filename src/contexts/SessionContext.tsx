@@ -44,12 +44,18 @@ export interface SyncResult {
   alreadySynced: boolean;
 }
 
+export interface ReadinessSnapshot {
+  date: string; // ISO date string 'YYYY-MM-DD'
+  score: number; // 0–100
+}
+
 interface SessionContextType {
   parentName: string;
   childName: string;
   capturedItems: CapturedItem[];
   actionItems: ActionItem[];
   sessions: SessionEntry[];
+  readinessHistory: ReadinessSnapshot[];
   claraResponses: ClaraResponse[];
   lastClaraMessage: string;
   lastUserMessage: string;
@@ -168,10 +174,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isListening, setListening] = useState(false);
   const [isThinking, setThinking] = useState(false);
   const [userNotes, setUserNotes] = useState<Record<string, string>>({});
+  const [readinessHistory, setReadinessHistory] = useState<ReadinessSnapshot[]>(() =>
+    loadLS<ReadinessSnapshot[]>('cn-readiness-history', [])
+  );
 
   // ── Persist to localStorage whenever items change ─────────────────────────
   useEffect(() => { saveLS('cn-captured-items', capturedItems); }, [capturedItems]);
   useEffect(() => { saveLS('cn-action-items', actionItems); }, [actionItems]);
+  useEffect(() => { saveLS('cn-readiness-history', readinessHistory); }, [readinessHistory]);
+
+  // ── Snapshot readiness score daily whenever capturedItems changes ─────────
+  useEffect(() => {
+    if (capturedItems.length === 0) return;
+    const ALL_CATS = ['bank_accounts', 'financial_accounts', 'property', 'documents', 'key_contacts', 'care_wishes'];
+    const coveredCats = new Set(capturedItems.map(i => i.category));
+    const score = Math.round((ALL_CATS.filter(c => coveredCats.has(c)).length / ALL_CATS.length) * 100);
+    const today = new Date().toISOString().slice(0, 10);
+    setReadinessHistory(prev => {
+      // Replace today's entry if it exists, otherwise append
+      const without = prev.filter(s => s.date !== today);
+      return [...without, { date: today, score }].slice(-30); // keep last 30 days
+    });
+  }, [capturedItems]);
 
   // Track which conversation IDs have been synced — versioned key resets on pattern updates
   const syncedIds = useRef<Set<string>>(
@@ -528,6 +552,7 @@ ${transcriptText.slice(0, 4000)}`,
         capturedItems,
         actionItems,
         sessions,
+        readinessHistory,
         claraResponses,
         lastClaraMessage,
         lastUserMessage,
