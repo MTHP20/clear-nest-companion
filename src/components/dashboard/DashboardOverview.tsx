@@ -263,6 +263,30 @@ export default function DashboardOverview({
   const disputedCount = capturedItems.filter((i) => i.verificationStatus === 'disputed').length;
   const lastUpdated = capturedItems[0]?.timestamp ? new Date(capturedItems[0].timestamp) : undefined;
 
+  // Change 3: readiness ring
+  const totalTopics = 7;
+  const coveredTopics = [
+    capturedItems.some(i => i.category === 'bank_accounts'),
+    capturedItems.some(i => i.category === 'financial_accounts'),
+    capturedItems.some(i => i.category === 'property'),
+    capturedItems.some(i => i.category === 'documents'),
+    capturedItems.some(i => i.category === 'documents' && (i.content?.toLowerCase().includes('power') || i.content?.toLowerCase().includes('lpa'))) || capturedItems.some(i => i.category === 'key_contacts'),
+    capturedItems.some(i => i.category === 'key_contacts'),
+    capturedItems.some(i => i.category === 'care_wishes'),
+  ].filter(Boolean).length;
+  const readinessPct = Math.round((coveredTopics / totalTopics) * 100);
+
+  // Change 4: topic progress
+  const topicProgress = [
+    { name: 'Bank Accounts', icon: '💷', category: 'bank_accounts' },
+    { name: 'Pension', icon: '🏦', category: 'financial_accounts' },
+    { name: 'Property', icon: '🏠', category: 'property' },
+    { name: 'Documents & Will', icon: '📄', category: 'documents' },
+    { name: 'Power of Attorney', icon: '⚖️', category: 'documents' },
+    { name: 'Key Contacts', icon: '📞', category: 'key_contacts' },
+    { name: 'Care Wishes', icon: '❤️', category: 'care_wishes' },
+  ];
+
   const [checked, setChecked] = useState<Set<string>>(loadChecklist);
   const toggleDoc = (id: string) => {
     setChecked((prev) => {
@@ -299,6 +323,24 @@ export default function DashboardOverview({
           </div>
         ))}
         <ProgressRing score={score} />
+        <div className="readiness-card lg:col-span-2">
+          <div className="readiness-ring">
+            <svg viewBox="0 0 64 64" width="64" height="64" style={{transform: 'rotate(-90deg)'}}>
+              <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.12)" strokeWidth="5" fill="none"/>
+              <circle cx="32" cy="32" r="26" stroke="#F4A261" strokeWidth="5" fill="none"
+                strokeLinecap="round"
+                strokeDasharray="163"
+                strokeDashoffset={163 - (163 * readinessPct / 100)}
+                style={{transition: 'stroke-dashoffset 1.2s ease'}}
+              />
+            </svg>
+            <div className="readiness-pct">{readinessPct}%</div>
+          </div>
+          <div className="readiness-text">
+            <h3>Family Readiness</h3>
+            <p>Your family is {readinessPct}% prepared.</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-5 gap-7">
@@ -335,7 +377,7 @@ export default function DashboardOverview({
                 </button>
               </div>
             ) : (
-              <div className="space-y-4 cn-stagger">
+              <div className={viewMode === 'timeline' ? 'bg-white rounded-xl shadow-sm border border-border overflow-hidden cn-stagger' : 'space-y-4 cn-stagger'}>
                 {filteredCaptured.slice(0, 10).map((item) => {
                   const quoteOpen = expandedQuote === item.id;
                   const detailOpen = expandedItem === item.id;
@@ -344,17 +386,25 @@ export default function DashboardOverview({
                   const summary = item.content.split('.').filter(Boolean)[0] ? `${item.content.split('.').filter(Boolean)[0]}.` : item.content;
                   const notePreview = userNotes[item.id];
 
+                  if (viewMode === 'timeline') {
+                    const catClass = item.category?.includes('bank') || item.category?.includes('financial') ? 'cat-financial' : item.category?.includes('property') ? 'cat-property' : item.category?.includes('document') ? 'cat-legal' : 'cat-general';
+                    return (
+                      <div key={item.id} className="timeline-item">
+                        <div className="timeline-date">{item.timestamp.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'})}</div>
+                        <div className={`timeline-body ${catClass}`}>
+                          <p className="text-sm font-body text-foreground">{item.content}</p>
+                          <span className="text-xs text-muted-foreground capitalize">{item.category?.replace(/_/g, ' ')}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={item.id}
-                      className={`cn-card cn-card-hover cn-slide-in ${viewMode === 'timeline' ? 'relative pl-10' : ''}`}
+                      className="cn-card cn-card-hover cn-slide-in"
                     >
-                      {viewMode === 'timeline' && (
-                        <>
-                          <div className="absolute left-3 top-0 bottom-0 w-px bg-border/70" />
-                          <div className="absolute left-[7px] top-8 w-3 h-3 rounded-full bg-primary border border-card" />
-                        </>
-                      )}
+                      {/* cards mode — no timeline decorators */}
 
                       <div className="flex items-center justify-between mb-3">
                         <span className={`inline-flex items-center gap-1.5 text-xs font-body font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${style.chip}`}>
@@ -421,6 +471,14 @@ export default function DashboardOverview({
                         )}
                       </div>
 
+                      {/* Change 6: verified stamp */}
+                      {item.confidence === 'clear' && (
+                        <div className="verified-stamp">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                          Confirmed clear
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                         <button
                           onClick={() => updateCapturedVerification(item.id, 'verified')}
@@ -476,6 +534,46 @@ export default function DashboardOverview({
               </button>
             </div>
           )}
+
+          {/* Change 4: Topic Progress panel */}
+          <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display text-base font-semibold text-foreground">Topic Progress</h3>
+            </div>
+            {/* Change 5: POA urgency callout */}
+            {capturedItems.filter(i =>
+              i.category === 'documents' &&
+              (i.content?.toLowerCase().includes('power') || i.content?.toLowerCase().includes('lpa') || i.content?.toLowerCase().includes('attorney'))
+            ).length === 0 && (
+              <div className="poa-urgent">
+                <span>⚠️</span>
+                <div>
+                  <strong>Power of Attorney — act now</strong>
+                  <p>Without LPA, Court of Protection costs £20,000+. Takes 20 weeks to register.</p>
+                </div>
+              </div>
+            )}
+            {topicProgress.map((topic) => {
+              const total = capturedItems.filter(i => i.category === topic.category).length;
+              const clear = capturedItems.filter(i => i.category === topic.category && i.confidence === 'clear').length;
+              const pct = total === 0 ? 0 : Math.round((clear / total) * 100);
+              const barColor = pct === 0 ? '#E5E7EB' : pct === 100 ? '#4CAF7D' : '#F4A261';
+              return (
+                <div key={topic.name} className="topic-item">
+                  <div className="topic-icon bg-muted">{topic.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-body text-foreground">{topic.name}</span>
+                      <span className="topic-pct" style={{color: barColor}}>{pct}%</span>
+                    </div>
+                    <div className="topic-bar-wrap">
+                      <div className="topic-bar" style={{width: `${pct}%`, background: barColor}}></div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <div className="cn-card">
             <h2 className="font-display text-lg font-semibold mb-4 text-foreground">Critical Documents</h2>

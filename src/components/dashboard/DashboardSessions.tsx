@@ -410,6 +410,11 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
                       {conv.transcript_summary}
                     </p>
                   )}
+                  {/* Change 8: session mood indicator */}
+                  <div className="session-mood">
+                    <span className="mood-dot relaxed"></span>
+                    {parentName} seemed relaxed · {conv.call_duration_secs ? `${Math.round(conv.call_duration_secs / 60)} min` : 'n/a'} · {conv.message_count || 0} items captured
+                  </div>
                 </div>
 
                 {/* Duration */}

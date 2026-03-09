@@ -105,6 +105,15 @@ const Dashboard = () => {
           <ClearNestLogo variant="white" href="/" />
         </div>
 
+        <div className="sidebar-person">
+          <div className="sidebar-person-photo-placeholder">👴</div>
+          <div className="sidebar-person-info">
+            <div className="sidebar-person-name">{parentName}</div>
+            <div className="sidebar-person-role">Your family member</div>
+            <div className="sidebar-person-badge">Active profile</div>
+          </div>
+        </div>
+
         <nav className="flex-1 py-4">
           {NAV_ITEMS.map((item) => (
             <button
