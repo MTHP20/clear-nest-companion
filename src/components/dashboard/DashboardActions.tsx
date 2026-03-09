@@ -193,7 +193,14 @@ export default function DashboardActions({ query = '' }: DashboardActionsProps) 
   return (
     <div className="cn-stagger">
       <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Tasks</h2>
-      <p className="font-body text-muted-foreground mb-8">Prioritised by urgency. Red items first, then amber.</p>
+      <p className="font-body text-muted-foreground mb-4">Prioritised by urgency. Red items first, then amber.</p>
+
+      <div className="mb-8 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
+        <span className="text-amber-500 text-base mt-0.5 shrink-0" aria-hidden="true">ℹ</span>
+        <p className="font-body text-xs text-amber-800 leading-relaxed">
+          <strong>Not legal or financial advice.</strong> These tasks are organisational reminders only. Always seek independent legal advice for matters relating to wills, Power of Attorney, and estate planning. Always seek independent financial advice for financial decisions. Pannonl Ltd is not a law firm or FCA-authorised adviser.
+        </p>
+      </div>
 
       <div className="relative">
         <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-border" />
