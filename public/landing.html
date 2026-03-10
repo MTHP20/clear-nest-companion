@@ -367,7 +367,11 @@
     <h1 class="hero-headline">The conversation<br>your family needs to<br><em>have before it's too late</em></h1>
     <p class="hero-sub">Clara, our voice AI companion, gently talks with your elderly parent and captures everything your family needs to know — bank accounts, pension, Power of Attorney, care wishes — organised in real time.</p>
     <div class="hero-actions">
-      <a href="#waitlist" class="btn-primary">Get early access <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <form class="waitlist-form" id="hero-waitlist-form" onsubmit="submitHeroWaitlist(event)" style="margin: 0; max-width: 420px;">
+        <input type="email" class="waitlist-input" id="hero-waitlist-email" placeholder="your@email.com" required />
+        <button type="submit" class="waitlist-submit">Get early access →</button>
+      </form>
+      <div id="hero-waitlist-success" class="waitlist-success" style="display:none; margin: 0;">✓ You're on the list — we'll be in touch before launch.</div>
       <button class="btn-voice" id="hear-clara-btn" onclick="playClara(this)">
         <svg class="voice-play-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 5.5l4 2.5-4 2.5V5.5Z" fill="currentColor"/></svg>
         <svg class="voice-stop-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><rect x="5.5" y="5.5" width="2" height="5" rx="0.5" fill="currentColor"/><rect x="8.5" y="5.5" width="2" height="5" rx="0.5" fill="currentColor"/></svg>
@@ -375,10 +379,6 @@
       </button>
       <a href="#how" class="btn-secondary">See how it works <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
-    <button class="play-demo-btn" id="play-demo-btn" onclick="playDemo(this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Hear Clara's voice
-    </button>
     <audio id="clara-demo" src="clara-demo.mp3" preload="auto"></audio>
     <div class="hero-trust">
       <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6L8 1Z" fill="#5B8DB8"/></svg>No data stored on our servers</div>
@@ -680,6 +680,14 @@
     document.getElementById('waitlist-success').style.display = 'block';
     updateCount();
     closeExitPopup();
+  }
+
+  function submitHeroWaitlist(e) {
+    e.preventDefault();
+    saveEmail(document.getElementById('hero-waitlist-email').value);
+    document.getElementById('hero-waitlist-form').style.display = 'none';
+    document.getElementById('hero-waitlist-success').style.display = 'block';
+    updateCount();
   }
 
   function submitExitPopup(e) {
