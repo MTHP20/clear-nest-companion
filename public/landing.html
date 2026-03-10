@@ -659,44 +659,58 @@
   function toggleMobileNav() { document.getElementById('nav-mobile').classList.toggle('open'); }
   function closeMobileNav() { document.getElementById('nav-mobile').classList.remove('open'); }
 
-  // WAITLIST
-  function getEmails() { return JSON.parse(localStorage.getItem('cn-waitlist') || '[]'); }
-  function saveEmail(email) {
-    const list = getEmails();
-    if (!list.includes(email)) { list.push(email); localStorage.setItem('cn-waitlist', JSON.stringify(list)); }
-    return list.length;
+  // WAITLIST — Supabase backend
+  var SUPA_URL = 'https://btgjwnqvyqjtsqaolsdt.supabase.co';
+  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0Z2p3bnF2eXFqdHNxYW9sc2R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTY3NjgsImV4cCI6MjA4ODczMjc2OH0.0mQ9oGlCmFn8zdoxTwYqt16jrGm2ZYsWCkpoEE2sliQ';
+
+  function saveEmail(email, source) {
+    return fetch(SUPA_URL + '/rest/v1/waitlist', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ email: email, source: source || 'landing' })
+    });
   }
-  function updateCount() {
-    const n = getEmails().length;
-    const el = document.getElementById('waitlist-count');
-    if (el && n > 0) el.textContent = n + ' ' + (n === 1 ? 'person' : 'people') + ' already joined the waitlist';
+
+  function showSuccess(formId, successId) {
+    document.getElementById(formId).style.display = 'none';
+    document.getElementById(successId).style.display = 'block';
   }
-  updateCount();
 
   function submitWaitlist(e) {
     e.preventDefault();
-    saveEmail(document.getElementById('waitlist-email').value);
-    document.getElementById('waitlist-form').style.display = 'none';
-    document.getElementById('waitlist-success').style.display = 'block';
-    updateCount();
-    closeExitPopup();
+    var email = document.getElementById('waitlist-email').value;
+    var btn = e.target.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Joining...';
+    saveEmail(email, 'cta').finally(function() {
+      showSuccess('waitlist-form', 'waitlist-success');
+      closeExitPopup();
+    });
   }
 
   function submitHeroWaitlist(e) {
     e.preventDefault();
-    saveEmail(document.getElementById('hero-waitlist-email').value);
-    document.getElementById('hero-waitlist-form').style.display = 'none';
-    document.getElementById('hero-waitlist-success').style.display = 'block';
-    updateCount();
+    var email = document.getElementById('hero-waitlist-email').value;
+    var btn = e.target.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Joining...';
+    saveEmail(email, 'hero').finally(function() {
+      showSuccess('hero-waitlist-form', 'hero-waitlist-success');
+    });
   }
 
   function submitExitPopup(e) {
     e.preventDefault();
-    saveEmail(document.getElementById('exit-email').value);
-    document.getElementById('exit-form').style.display = 'none';
-    document.getElementById('exit-popup-success').style.display = 'block';
-    updateCount();
-    setTimeout(closeExitPopup, 2000);
+    var email = document.getElementById('exit-email').value;
+    var btn = e.target.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Joining...';
+    saveEmail(email, 'exit').finally(function() {
+      showSuccess('exit-form', 'exit-popup-success');
+      setTimeout(closeExitPopup, 2000);
+    });
   }
 
   // CLARA VOICE DEMO
@@ -748,7 +762,7 @@
   // EXIT INTENT
   let exitShown = false;
   document.addEventListener('mouseleave', (e) => {
-    if (e.clientY < 20 && !exitShown && !sessionStorage.getItem('cn-exit') && getEmails().length === 0) {
+    if (e.clientY < 20 && !exitShown && !sessionStorage.getItem('cn-exit')) {
       exitShown = true;
       document.getElementById('exit-popup').classList.add('show');
     }
