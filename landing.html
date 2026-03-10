@@ -660,8 +660,8 @@
   function closeMobileNav() { document.getElementById('nav-mobile').classList.remove('open'); }
 
   // WAITLIST — Supabase backend
-  var SUPA_URL = 'https://btgjwnqvyqjtsqaolsdt.supabase.co';
-  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0Z2p3bnF2eXFqdHNxYW9sc2R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTY3NjgsImV4cCI6MjA4ODczMjc2OH0.0mQ9oGlCmFn8zdoxTwYqt16jrGm2ZYsWCkpoEE2sliQ';
+  var SUPA_URL = '%VITE_SUPA_URL%';
+  var SUPA_KEY = '%VITE_SUPA_KEY%';
 
   function saveEmail(email, source) {
     return fetch(SUPA_URL + '/rest/v1/waitlist', {
