@@ -3,30 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
     <title>ClearNest — A gentle way to get organised</title>
+    <link rel="icon" type="image/png" href="/clearnest-logo.png" />
     <meta name="description" content="ClearNest helps adult children organise their elderly parent's finances and personal affairs during the early stages of memory loss." />
     <meta name="author" content="ClearNest" />
 
     <meta property="og:title" content="ClearNest — A gentle way to get organised" />
     <meta property="og:description" content="A voice-first companion for families navigating memory loss." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="/clearnest-logo.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@ClearNest" />
+    <meta name="twitter:image" content="/clearnest-logo.png" />
   </head>
 
   <body>
     <script>
-      // On the live domain, show the waitlist landing page instead of the app
-      (function () {
-        var h = window.location.hostname;
-        if (h !== 'localhost' && h !== '127.0.0.1') {
-          window.location.replace('/landing.html');
-        }
-      })();
+      if ('%VITE_SET_WAITLIST%' === 'true') {
+        window.location.replace('/landing.html');
+      }
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
