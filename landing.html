@@ -59,7 +59,10 @@
   [data-theme="dark"] .nav-mobile { background: var(--cream); }
   .nav-mobile.open { display: block; }
   .nav-mobile ul { list-style: none; display: flex; flex-direction: column; }
-  .nav-mobile a { display: block; padding: 14px 0; text-decoration: none; color: var(--text-mid); font-size: 16px; border-bottom: 1px solid var(--border); }
+  .nav-mobile a { display: block; padding: 16px 12px; text-decoration: none; color: var(--text-mid); font-size: 17px; font-weight: 500; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; transition: color 0.2s, border-left-color 0.2s, padding-left 0.2s; min-height: 44px; display: flex; align-items: center; }
+  .nav-mobile a:hover { color: var(--navy); border-left-color: var(--blue); padding-left: 18px; }
+  [data-theme="dark"] .nav-mobile a:hover { color: var(--text); border-left-color: var(--blue); }
+  .nav-mobile li:last-child a { color: var(--blue); font-weight: 600; border-left-color: var(--blue); }
 
   /* HERO */
   .hero { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; align-items: center; padding: 120px 48px 80px; gap: 80px; position: relative; overflow: hidden; }
@@ -248,6 +251,19 @@
   .waitlist-count { font-size: 13px; color: var(--text-soft); margin-bottom: 8px; min-height: 20px; }
   .cta-note { font-size: 13px; color: var(--text-soft); margin-top: 8px; }
 
+  /* SHARE PROMPT */
+  .waitlist-share { display: none; margin: 12px auto 0; max-width: 480px; background: rgba(91,141,184,0.07); border: 1px solid rgba(91,141,184,0.2); border-radius: 12px; padding: 16px 20px; text-align: left; }
+  .waitlist-share-text { font-size: 14px; color: var(--text-mid); margin-bottom: 12px; line-height: 1.5; }
+  .waitlist-share-text strong { color: var(--navy); }
+  [data-theme="dark"] .waitlist-share-text strong { color: var(--text); }
+  .share-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .share-btn-copy { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--navy); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; min-height: 36px; }
+  .share-btn-copy:hover { background: var(--navy-light); }
+  .share-btn-copy.copied { background: #4CAF50; }
+  .share-btn-whatsapp { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: #25D366; color: white; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: background 0.2s; min-height: 36px; font-family: 'DM Sans', sans-serif; }
+  .share-btn-whatsapp:hover { background: #1ebe5c; }
+  [data-theme="dark"] .waitlist-share { background: rgba(123,167,196,0.08); border-color: rgba(123,167,196,0.2); }
+
   /* FOOTER */
   footer { background: var(--navy); padding: 48px; display: flex; align-items: center; justify-content: space-between; }
   .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
@@ -322,6 +338,12 @@
     .nav-hamburger { display: flex; }
     .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; gap: 48px; min-height: auto; }
     .hero-right { display: none; }
+    .hero-sub { font-size: 17px; max-width: 100%; }
+    .hero-actions { flex-direction: column; align-items: stretch; gap: 12px; }
+    .hero-actions .waitlist-form { max-width: 100% !important; }
+    .hero-actions .btn-voice { justify-content: center; }
+    .hero-actions .btn-secondary { justify-content: center; padding: 12px 0; }
+    .hero-trust { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
     .stats-strip { grid-template-columns: repeat(2, 1fr); padding: 48px 24px; gap: 24px; }
     .how-steps { grid-template-columns: 1fr; gap: 20px; }
     .how-steps::before { display: none; }
@@ -335,19 +357,33 @@
     .privacy { padding: 48px 24px; }
     footer { flex-direction: column; gap: 20px; padding: 40px 24px; text-align: center; }
     .footer-links { justify-content: center; }
-    .nhs-callout { margin: 0 24px; padding: 20px 24px; }
+    .nhs-callout { margin: 0 24px; padding: 20px 24px; flex-direction: column; gap: 12px; }
     .waitlist-form { flex-direction: column; }
+    .waitlist-input { font-size: 16px; } /* prevent iOS zoom on focus */
+    .waitlist-submit { width: 100%; justify-content: center; }
+    .waitlist-share { max-width: 100%; }
+    .share-buttons { flex-direction: column; }
+    .share-btn-copy, .share-btn-whatsapp { justify-content: center; width: 100%; }
     .quote-section { padding: 64px 24px; }
     .cta-section { padding: 64px 24px; }
     .hero-divider { display: none; }
+    .supported-by-strip { padding: 32px 24px; }
+    .section-headline { letter-spacing: -0.3px; }
   }
   @media (max-width: 480px) {
-    .hero-headline { font-size: 38px; }
+    .hero-headline { font-size: 34px; letter-spacing: -0.5px; }
     .stats-strip { grid-template-columns: 1fr; }
     .stat-number { font-size: 36px; }
     .built-by-section { margin: 0 16px; padding: 32px 20px; }
     .nhs-callout { margin: 0 16px; }
     .theme-toggle .theme-label { display: none; }
+    .section-headline { font-size: clamp(26px, 7vw, 36px); }
+    .cta-section .section-headline { font-size: clamp(28px, 8vw, 40px); }
+    .founder-card { flex-direction: column; text-align: center; }
+    .persona-card { flex-direction: column; }
+    .covers-grid { gap: 12px; }
+    .cover-item { padding: 18px; }
+    .privacy-inner { padding: 32px 20px; }
   }
 </style>
 </head>
@@ -407,6 +443,13 @@
         <button type="submit" class="waitlist-submit">Get early access →</button>
       </form>
       <div id="hero-waitlist-success" class="waitlist-success" style="display:none; margin: 0;">✓ You're on the list — we'll be in touch before launch.</div>
+      <div id="hero-waitlist-share" class="waitlist-share">
+        <div class="waitlist-share-text"><strong>Know someone caring for an ageing parent?</strong> Share ClearNest — it could make all the difference.</div>
+        <div class="share-buttons">
+          <button class="share-btn-copy" onclick="copyShareLink(this)">📋 Copy link</button>
+          <a class="share-btn-whatsapp" id="hero-share-wa" href="#" target="_blank" rel="noopener">💬 Share on WhatsApp</a>
+        </div>
+      </div>
       <button class="btn-voice" id="hear-clara-btn" onclick="playClara(this)">
         <svg class="voice-play-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 5.5l4 2.5-4 2.5V5.5Z" fill="currentColor"/></svg>
         <svg class="voice-stop-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><rect x="5.5" y="5.5" width="2" height="5" rx="0.5" fill="currentColor"/><rect x="8.5" y="5.5" width="2" height="5" rx="0.5" fill="currentColor"/></svg>
@@ -599,6 +642,13 @@
     <h2 class="section-headline">The window is open.<br><em style="font-style:italic; color: var(--blue-mid);">Don't wait for a crisis.</em></h2>
     <p class="section-sub">Join families getting organised while there's still time. Free during beta — no credit card required.</p>
     <div id="waitlist-success" class="waitlist-success">✓ You're on the list — we'll be in touch before launch.</div>
+    <div id="waitlist-share" class="waitlist-share">
+      <div class="waitlist-share-text"><strong>Know someone caring for an ageing parent?</strong> Share ClearNest — it could make all the difference.</div>
+      <div class="share-buttons">
+        <button class="share-btn-copy" onclick="copyShareLink(this)">📋 Copy link</button>
+        <a class="share-btn-whatsapp" id="cta-share-wa" href="#" target="_blank" rel="noopener">💬 Share on WhatsApp</a>
+      </div>
+    </div>
     <form class="waitlist-form" id="waitlist-form" onsubmit="submitWaitlist(event)">
       <input type="email" class="waitlist-input" id="waitlist-email" placeholder="your@email.com" required />
       <button type="submit" class="waitlist-submit">Join waitlist →</button>
@@ -625,6 +675,13 @@
     <h3>Before you go — the conversation matters.</h3>
     <p>Leave your email and we'll let you know the moment ClearNest launches. No spam, no pressure.</p>
     <div id="exit-popup-success" class="waitlist-success">✓ You're on the list.</div>
+    <div id="exit-popup-share" class="waitlist-share" style="text-align:left;">
+      <div class="waitlist-share-text"><strong>Know someone in the same boat?</strong> Share ClearNest with them.</div>
+      <div class="share-buttons">
+        <button class="share-btn-copy" onclick="copyShareLink(this)">📋 Copy link</button>
+        <a class="share-btn-whatsapp" id="exit-share-wa" href="#" target="_blank" rel="noopener">💬 WhatsApp</a>
+      </div>
+    </div>
     <form class="waitlist-form" id="exit-form" onsubmit="submitExitPopup(event)">
       <input type="email" class="waitlist-input" id="exit-email" placeholder="your@email.com" required />
       <button type="submit" class="waitlist-submit">Notify me →</button>
@@ -717,9 +774,26 @@
     });
   }
 
-  function showSuccess(formId, successId) {
+  function getShareUrl() { return window.location.origin + window.location.pathname; }
+  function getWaUrl() { return 'https://wa.me/?text=' + encodeURIComponent('I just joined the ClearNest waitlist — a voice AI that helps families get organised before it\'s too late. Worth a look: ' + getShareUrl()); }
+
+  function showSuccess(formId, successId, shareId, waLinkId) {
     document.getElementById(formId).style.display = 'none';
     document.getElementById(successId).style.display = 'block';
+    if (shareId) {
+      var shareEl = document.getElementById(shareId);
+      shareEl.style.display = 'block';
+      if (waLinkId) document.getElementById(waLinkId).href = getWaUrl();
+    }
+  }
+
+  function copyShareLink(btn) {
+    navigator.clipboard.writeText(getShareUrl()).then(function() {
+      var orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+    });
   }
 
   function submitWaitlist(e) {
@@ -728,7 +802,7 @@
     var btn = e.target.querySelector('button');
     btn.disabled = true; btn.textContent = 'Joining...';
     saveEmail(email, 'cta').finally(function() {
-      showSuccess('waitlist-form', 'waitlist-success');
+      showSuccess('waitlist-form', 'waitlist-success', 'waitlist-share', 'cta-share-wa');
       closeExitPopup();
     });
   }
@@ -739,7 +813,7 @@
     var btn = e.target.querySelector('button');
     btn.disabled = true; btn.textContent = 'Joining...';
     saveEmail(email, 'hero').finally(function() {
-      showSuccess('hero-waitlist-form', 'hero-waitlist-success');
+      showSuccess('hero-waitlist-form', 'hero-waitlist-success', 'hero-waitlist-share', 'hero-share-wa');
     });
   }
 
@@ -749,8 +823,8 @@
     var btn = e.target.querySelector('button');
     btn.disabled = true; btn.textContent = 'Joining...';
     saveEmail(email, 'exit').finally(function() {
-      showSuccess('exit-form', 'exit-popup-success');
-      setTimeout(closeExitPopup, 2000);
+      showSuccess('exit-form', 'exit-popup-success', 'exit-popup-share', 'exit-share-wa');
+      setTimeout(closeExitPopup, 3000);
     });
   }
 
