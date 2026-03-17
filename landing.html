@@ -65,10 +65,10 @@
   .nav-mobile li:last-child a { color: var(--blue); font-weight: 600; border-left-color: var(--blue); }
 
   /* HERO */
-  .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 120px 48px 80px; position: relative; overflow: hidden; text-align: center; }
+  .hero { min-height: 100vh; display: grid; grid-template-columns: 1fr 320px; align-items: center; padding: 120px 48px 80px; gap: 60px; position: relative; overflow: hidden; }
   .hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 700px; height: 700px; background: radial-gradient(circle, rgba(155,123,200,0.08) 0%, transparent 70%); pointer-events: none; }
   .hero::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(232,147,90,0.06) 0%, transparent 70%); pointer-events: none; }
-  .hero-left { position: relative; z-index: 1; max-width: 600px; width: 100%; }
+  .hero-left { position: relative; z-index: 1; }
   .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(155,123,200,0.1); border: 1px solid rgba(155,123,200,0.2); color: var(--blue-mid); padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 500; margin-bottom: 28px; opacity: 0; animation: fadeUp 0.6s ease 0.1s forwards; }
   .hero-badge-dot { width: 6px; height: 6px; background: var(--blue); border-radius: 50%; }
   .hero-headline { font-family: 'Playfair Display', serif; font-size: clamp(42px, 5vw, 62px); font-weight: 600; line-height: 1.12; letter-spacing: -1px; color: var(--navy); margin-bottom: 24px; opacity: 0; animation: fadeUp 0.6s ease 0.2s forwards; }
@@ -108,8 +108,8 @@
   .clara-floating.playing { border-color: rgba(155,123,200,0.4); box-shadow: 0 8px 32px rgba(155,123,200,0.22); }
   .play-demo-btn { display: inline-flex; align-items: center; gap: 8px; background: white; border: 1.5px solid var(--navy); border-radius: 30px; padding: 10px 22px; font-size: 13px; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; margin-top: 16px; }
   .play-demo-btn:hover { background: var(--navy); color: white; }
-  .hero-trust { margin-top: 48px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.6s ease 0.5s forwards; }
-  .hero-trust-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-soft); }
+  .hero-trust { margin-top: 28px; display: flex; flex-direction: column; gap: 10px; opacity: 0; animation: fadeUp 0.6s ease 0.5s forwards; }
+  .hero-trust-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #9B7BC8; opacity: 0.8; }
   .hero-trust-icon { width: 16px; height: 16px; color: var(--blue); }
   .hero-divider { width: 1px; height: 20px; background: var(--border); }
 
@@ -360,7 +360,8 @@
     nav { padding: 16px 24px; }
     .nav-links { display: none; }
     .nav-hamburger { display: flex; }
-    .hero { padding: 100px 24px 60px; min-height: auto; }
+    .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; min-height: auto; gap: 40px; }
+    .hero-right { display: none; }
     .hero-sub { font-size: 17px; max-width: 100%; }
     .hero-actions { flex-direction: column; align-items: stretch; gap: 12px; }
     .hero-actions .waitlist-form { max-width: 100% !important; }
@@ -443,6 +444,7 @@
 </div>
 
 <section class="hero">
+  <!-- LEFT COLUMN -->
   <div class="hero-left">
     <div class="hero-badge"><div class="hero-badge-dot"></div>ElevenLabs Hackathon Winner · London 2026</div>
     <h1 class="hero-headline">The conversation<br>your family needs to<br><em>have before it's too late</em></h1>
@@ -458,110 +460,127 @@
         <a class="share-btn-whatsapp" id="hero-share-wa" href="#" target="_blank" rel="noopener">💬 Share on WhatsApp</a>
       </div>
     </div>
+    <audio id="clara-demo" src="clara-demo.mp3" preload="auto"></audio>
+    <div class="hero-trust">
+      <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6L8 1Z" fill="#9B7BC8"/></svg>No data stored on our servers</div>
+      <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="#9B7BC8" stroke-width="1.5"/><path d="M5 7V5a3 3 0 016 0v2" stroke="#9B7BC8" stroke-width="1.5" stroke-linecap="round"/></svg>Everything stays with your family</div>
+      <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#9B7BC8" stroke-width="1.5"/><path d="M5.5 8l2 2 3-3" stroke="#9B7BC8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Free 14-day trial</div>
+    </div>
+  </div>
 
-    <div style="display:flex;flex-direction:column;align-items:center;margin:36px 0 32px;">
-
-      <style>
-        @keyframes cn-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-        @keyframes cn-pulse{0%{transform:scale(1);opacity:0.45}100%{transform:scale(1.75);opacity:0}}
-        @keyframes cn-pulse2{0%{transform:scale(1);opacity:0.22}100%{transform:scale(2.0);opacity:0}}
-        @keyframes cn-rot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-        @keyframes cn-rot-rev{0%{transform:rotate(0deg)}100%{transform:rotate(-360deg)}}
-        @keyframes cn-smoke1{0%,100%{transform:translate(0,0) scale(1);opacity:0.65}50%{transform:translate(-10px,-22px) scale(1.45);opacity:0.28}}
-        @keyframes cn-smoke2{0%,100%{transform:translate(0,0) scale(1);opacity:0.5}50%{transform:translate(13px,-17px) scale(1.35);opacity:0.2}}
-        @keyframes cn-core{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-18px,10px) scale(1.2)}66%{transform:translate(10px,-18px) scale(0.9)}}
-        @keyframes cn-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
-        @keyframes cn-bar{0%,100%{height:3px}50%{height:20px}}
-        @keyframes cn-glow-pulse{0%,100%{opacity:0.25}50%{opacity:0.55}}
-        #cn-float-wrap{animation:cn-float 4.2s ease-in-out infinite}
-        #cn-ring1{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(155,123,200,0.45);animation:cn-pulse 2.6s ease-out infinite}
-        #cn-ring2{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(155,123,200,0.2);animation:cn-pulse2 2.6s ease-out infinite 1s}
-        #cn-shell{position:absolute;inset:12px;border-radius:50%;overflow:hidden;animation:cn-breathe 4s ease-in-out infinite}
-        #cn-bg{position:absolute;inset:0;border-radius:50%;background:#120818}
-        #cn-layer1{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.55) 25%,rgba(200,170,255,0.35) 50%,rgba(100,60,180,0.45) 75%,rgba(155,123,200,0) 100%);animation:cn-rot 12s linear infinite;filter:blur(5px)}
-        #cn-layer2{position:absolute;inset:6px;border-radius:50%;background:conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.45) 30%,rgba(80,40,160,0.35) 60%,rgba(180,150,230,0) 100%);animation:cn-rot-rev 8s linear infinite;filter:blur(7px)}
-        #cn-s1{position:absolute;width:120px;height:82px;border-radius:50%;background:radial-gradient(ellipse,rgba(196,168,232,0.75) 0%,rgba(155,123,200,0.35) 50%,transparent 70%);top:24px;left:14px;animation:cn-smoke1 6.5s ease-in-out infinite;filter:blur(11px)}
-        #cn-s2{position:absolute;width:95px;height:70px;border-radius:50%;background:radial-gradient(ellipse,rgba(220,200,255,0.65) 0%,rgba(120,80,200,0.3) 50%,transparent 70%);top:68px;left:36px;animation:cn-smoke2 8.5s ease-in-out infinite 2.2s;filter:blur(13px)}
-        #cn-core-el{position:absolute;width:68px;height:68px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,245,255,0.85) 0%,rgba(180,140,240,0.55) 50%,transparent 70%);top:38px;left:44px;animation:cn-core 5.5s ease-in-out infinite 1s;filter:blur(6px)}
-        #cn-rim{position:absolute;inset:12px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);pointer-events:none;z-index:10}
-        #cn-highlight{position:absolute;top:18px;left:26px;width:40%;height:28%;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,0.5) 0%,transparent 70%);z-index:9;pointer-events:none}
-        #cn-shadow{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:50%;height:12px;background:radial-gradient(ellipse,rgba(155,123,200,0.35) 0%,transparent 70%);border-radius:50%;filter:blur(5px)}
-        #cn-glow-bg{position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(155,123,200,0.1) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;animation:cn-glow-pulse 4s ease-in-out infinite}
-        #cn-state-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-family:Arial,sans-serif;color:#9B7BC8;margin-top:14px;text-align:center}
-        #cn-bars{display:none;justify-content:center;gap:3px;align-items:flex-end;height:20px;margin-top:8px}
-        #cn-bars.cn-active{display:flex}
-        .cn-b{width:3px;background:#9B7BC8;border-radius:2px;height:3px}
-        .cn-b:nth-child(1){animation:cn-bar 0.85s ease-in-out infinite 0.00s}
-        .cn-b:nth-child(2){animation:cn-bar 0.85s ease-in-out infinite 0.12s}
-        .cn-b:nth-child(3){animation:cn-bar 0.85s ease-in-out infinite 0.24s}
-        .cn-b:nth-child(4){animation:cn-bar 0.85s ease-in-out infinite 0.12s}
-        .cn-b:nth-child(5){animation:cn-bar 0.85s ease-in-out infinite 0.04s}
-      </style>
-
-      <div style="position:relative;width:200px;height:200px;cursor:pointer" onclick="cnCycle()">
-        <div id="cn-glow-bg"></div>
-        <div id="cn-float-wrap" style="position:absolute;inset:0">
-          <div id="cn-ring1"></div>
-          <div id="cn-ring2"></div>
-          <div id="cn-shell">
-            <div id="cn-bg"></div>
-            <div id="cn-layer1"></div>
-            <div id="cn-layer2"></div>
-            <div id="cn-s1"></div>
-            <div id="cn-s2"></div>
-            <div id="cn-core-el"></div>
+  <!-- RIGHT COLUMN -->
+  <div class="hero-right">
+    <!-- Sphere -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:14px">
+      <div id="cn-hero-sphere" style="position:relative;width:110px;height:110px;cursor:pointer" onclick="cnHeroCycle()">
+        <style>
+          @keyframes cnh-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+          @keyframes cnh-pulse{0%{transform:scale(1);opacity:0.4}100%{transform:scale(1.75);opacity:0}}
+          @keyframes cnh-pulse2{0%{transform:scale(1);opacity:0.2}100%{transform:scale(2.0);opacity:0}}
+          @keyframes cnh-rot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+          @keyframes cnh-rot2{0%{transform:rotate(0deg)}100%{transform:rotate(-360deg)}}
+          @keyframes cnh-smoke1{0%,100%{transform:translate(0,0) scale(1);opacity:0.65}50%{transform:translate(-8px,-18px) scale(1.4);opacity:0.28}}
+          @keyframes cnh-smoke2{0%,100%{transform:translate(0,0) scale(1);opacity:0.5}50%{transform:translate(10px,-14px) scale(1.3);opacity:0.2}}
+          @keyframes cnh-core{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-14px,8px) scale(1.2)}66%{transform:translate(8px,-14px) scale(0.9)}}
+          @keyframes cnh-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+          @keyframes cnh-bar{0%,100%{height:3px}50%{height:18px}}
+          #cnh-float{animation:cnh-float 4s ease-in-out infinite}
+          #cnh-r1{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(155,123,200,0.4);animation:cnh-pulse 2.5s ease-out infinite}
+          #cnh-r2{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(155,123,200,0.2);animation:cnh-pulse2 2.5s ease-out infinite 1s}
+          #cnh-shell{position:absolute;inset:8px;border-radius:50%;overflow:hidden;animation:cnh-breathe 4s ease-in-out infinite}
+          #cnh-bg{position:absolute;inset:0;border-radius:50%;background:#120818}
+          #cnh-l1{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.55) 25%,rgba(200,170,255,0.35) 50%,rgba(100,60,180,0.45) 75%,rgba(155,123,200,0) 100%);animation:cnh-rot 12s linear infinite;filter:blur(4px)}
+          #cnh-l2{position:absolute;inset:4px;border-radius:50%;background:conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.45) 30%,rgba(80,40,160,0.35) 60%,rgba(180,150,230,0) 100%);animation:cnh-rot2 8s linear infinite;filter:blur(5px)}
+          #cnh-s1{position:absolute;width:65px;height:44px;border-radius:50%;background:radial-gradient(ellipse,rgba(196,168,232,0.75) 0%,rgba(155,123,200,0.35) 50%,transparent 70%);top:10px;left:7px;animation:cnh-smoke1 6.5s ease-in-out infinite;filter:blur(9px)}
+          #cnh-s2{position:absolute;width:52px;height:38px;border-radius:50%;background:radial-gradient(ellipse,rgba(220,200,255,0.65) 0%,rgba(120,80,200,0.3) 50%,transparent 70%);top:36px;left:20px;animation:cnh-smoke2 8.5s ease-in-out infinite 2s;filter:blur(10px)}
+          #cnh-core{position:absolute;width:36px;height:36px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,245,255,0.85) 0%,rgba(180,140,240,0.55) 50%,transparent 70%);top:20px;left:22px;animation:cnh-core 5.5s ease-in-out infinite 1s;filter:blur(5px)}
+          #cnh-rim{position:absolute;inset:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);pointer-events:none;z-index:10}
+          #cnh-hl{position:absolute;top:12px;left:16px;width:36%;height:26%;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,0.5) 0%,transparent 70%);z-index:9;pointer-events:none}
+          #cnh-shadow{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:48%;height:10px;background:radial-gradient(ellipse,rgba(155,123,200,0.35) 0%,transparent 70%);border-radius:50%;filter:blur(4px)}
+          #cnh-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-family:Arial,sans-serif;color:#9B7BC8;text-align:center;margin-top:10px}
+          #cnh-bars{display:none;justify-content:center;gap:3px;align-items:flex-end;height:18px;margin-top:6px}
+          #cnh-bars.active{display:flex}
+          .cnh-b{width:3px;background:#9B7BC8;border-radius:2px;height:3px}
+          .cnh-b:nth-child(1){animation:cnh-bar 0.85s ease-in-out infinite 0.00s}
+          .cnh-b:nth-child(2){animation:cnh-bar 0.85s ease-in-out infinite 0.12s}
+          .cnh-b:nth-child(3){animation:cnh-bar 0.85s ease-in-out infinite 0.24s}
+          .cnh-b:nth-child(4){animation:cnh-bar 0.85s ease-in-out infinite 0.12s}
+          .cnh-b:nth-child(5){animation:cnh-bar 0.85s ease-in-out infinite 0.04s}
+        </style>
+        <div id="cnh-float">
+          <div id="cnh-r1"></div>
+          <div id="cnh-r2"></div>
+          <div id="cnh-shell">
+            <div id="cnh-bg"></div>
+            <div id="cnh-l1"></div>
+            <div id="cnh-l2"></div>
+            <div id="cnh-s1"></div>
+            <div id="cnh-s2"></div>
+            <div id="cnh-core"></div>
           </div>
-          <div id="cn-rim"></div>
-          <div id="cn-highlight"></div>
-          <div id="cn-shadow"></div>
+          <div id="cnh-rim"></div>
+          <div id="cnh-hl"></div>
+          <div id="cnh-shadow"></div>
         </div>
       </div>
-
-      <div id="cn-state-label">Clara · Ready</div>
-      <div id="cn-bars">
-        <div class="cn-b"></div>
-        <div class="cn-b"></div>
-        <div class="cn-b"></div>
-        <div class="cn-b"></div>
-        <div class="cn-b"></div>
+      <div id="cnh-label">Clara · Ready</div>
+      <div id="cnh-bars">
+        <div class="cnh-b"></div>
+        <div class="cnh-b"></div>
+        <div class="cnh-b"></div>
+        <div class="cnh-b"></div>
+        <div class="cnh-b"></div>
       </div>
-
     </div>
 
     <script>
-    var cnS = 0;
-    function cnCycle() {
-      cnS = (cnS + 1) % 3;
-      var lbl = document.getElementById('cn-state-label');
-      var bars = document.getElementById('cn-bars');
-      var l1 = document.getElementById('cn-layer1');
-      if (cnS === 0) {
+    var cnhState = 0;
+    function cnHeroCycle() {
+      cnhState = (cnhState + 1) % 3;
+      var lbl = document.getElementById('cnh-label');
+      var bars = document.getElementById('cnh-bars');
+      var l1 = document.getElementById('cnh-l1');
+      if (cnhState === 0) {
         lbl.textContent = 'Clara · Ready';
-        bars.classList.remove('cn-active');
+        bars.classList.remove('active');
         l1.style.animationDuration = '12s';
-      } else if (cnS === 1) {
+      } else if (cnhState === 1) {
         lbl.textContent = 'Clara · Listening...';
-        bars.classList.add('cn-active');
+        bars.classList.add('active');
         l1.style.animationDuration = '3.5s';
       } else {
         lbl.textContent = 'Clara · Speaking';
-        bars.classList.remove('cn-active');
+        bars.classList.remove('active');
         l1.style.animationDuration = '5s';
       }
     }
     </script>
 
-    <div class="hero-actions">
-      <a href="#how" class="btn-secondary">See how it works <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <!-- Chat mockup card -->
+    <div class="hero-card" style="width:100%">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="clara-avatar">C</div>
+          <div><div class="card-name">Clara</div><div class="card-subtitle">Talking with your parent</div></div>
+        </div>
+        <div class="score-ring-container"><div class="score-label">Readiness</div><div class="score-val" id="score-val">0%</div></div>
+      </div>
+      <div class="hero-anim" id="bubble-clara">
+        <div class="bubble-label clara-label">Clara</div>
+        <div class="conversation-bubble">"That's really helpful. Do you know whether you have a Power of Attorney in place for your family?"</div>
+        <div class="voice-wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+      </div>
+      <div class="hero-anim" id="bubble-user" style="margin-top: 16px;">
+        <div class="bubble-label" style="text-align:right;">Your parent</div>
+        <div class="conversation-bubble user">"I think my son sorted that out. The papers might be with the solicitor."</div>
+      </div>
+      <div class="captured-items">
+        <div class="hero-anim captured-item" id="item-1"><div class="captured-item-left"><div class="item-dot green"></div><span class="item-name">Barclays current account</span></div><span class="item-badge badge-clear">Clear</span></div>
+        <div class="hero-anim captured-item" id="item-2"><div class="captured-item-left"><div class="item-dot amber"></div><span class="item-name">Council pension — provider unknown</span></div><span class="item-badge badge-followup">Follow up</span></div>
+        <div class="hero-anim captured-item" id="item-3"><div class="captured-item-left"><div class="item-dot red"></div><span class="item-name">Power of Attorney — not confirmed</span></div><span class="item-badge badge-urgent">Urgent</span></div>
+      </div>
     </div>
-    <audio id="clara-demo" src="clara-demo.mp3" preload="auto"></audio>
-    <div class="hero-trust">
-      <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6L8 1Z" fill="#9B7BC8"/></svg>No data stored on our servers</div>
-      <div class="hero-divider"></div>
-      <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="#9B7BC8" stroke-width="1.5"/><path d="M5 7V5a3 3 0 016 0v2" stroke="#9B7BC8" stroke-width="1.5" stroke-linecap="round"/></svg>Everything stays with your family</div>
-      <div class="hero-divider"></div>
-      <div class="hero-trust-item"><svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#9B7BC8" stroke-width="1.5"/><path d="M5.5 8l2 2 3-3" stroke="#9B7BC8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Free 14-day trial</div>
-    </div>
+    <div class="floating-notif"><div class="notif-icon">⚠️</div><div class="notif-text"><strong>Action needed</strong><span>LPA not yet confirmed — act now</span></div></div>
   </div>
 </section>
 
