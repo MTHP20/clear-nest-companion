@@ -516,6 +516,27 @@ const Landing = () => {
         ClearNest never stores your information on our servers. Everything stays with your family.
       </p>
 
+      {/* Legal footer */}
+      <footer className="mt-6 text-center font-body">
+        <p className="text-xs text-muted-foreground mb-1">
+          Not legal or financial advice. ClearNest is an organisational tool only.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          © 2026 Pannonl Ltd ·{' '}
+          <a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+            Privacy Policy
+          </a>
+          {' '}·{' '}
+          <a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+            Terms of Service
+          </a>
+          {' '}·{' '}
+          <a href="/safeguarding-policy.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+            Safeguarding
+          </a>
+        </p>
+      </footer>
+
     </div>
   );
 };

@@ -271,8 +271,50 @@ const Dashboard = () => {
           </>
         )}
 
-        <main className="p-6">{renderPage()}</main>
+        <main className="p-6 pb-20 lg:pb-6">{renderPage()}</main>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-sidebar border-t border-sidebar-border flex items-stretch"
+        style={{ height: 60 }}
+        aria-label="Mobile navigation"
+      >
+        {([
+          { id: 'overview',  label: 'Overview', icon: LayoutDashboard },
+          { id: 'actions',   label: 'Tasks',    icon: AlertTriangle,  badge: true },
+          { id: 'sessions',  label: 'Chats',    icon: Clock },
+        ] as const).map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleNavClick(item.id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 font-body text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              activePage === item.id ? 'text-white' : 'text-sidebar-foreground/50'
+            }`}
+            aria-label={`${'badge' in item && item.badge && activeActions > 0 ? `${item.label}, ${activeActions} open` : item.label}`}
+            aria-current={activePage === item.id ? 'page' : undefined}
+          >
+            <div className="relative">
+              <item.icon className="w-5 h-5" />
+              {'badge' in item && item.badge && activeActions > 0 && (
+                <span className="absolute -top-1 -right-1.5 bg-amber-500 text-white font-bold leading-none min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] px-0.5">
+                  {activeActions}
+                </span>
+              )}
+            </div>
+            <span>{item.label}</span>
+          </button>
+        ))}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 font-body text-xs text-sidebar-foreground/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="More navigation options"
+          aria-expanded={mobileMenuOpen}
+        >
+          <Menu className="w-5 h-5" />
+          <span>More</span>
+        </button>
+      </nav>
     </div>
   );
 };

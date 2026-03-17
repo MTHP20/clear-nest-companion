@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import type { ReadinessSnapshot } from '@/contexts/SessionContext';
 import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
-import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, TrendingUp } from 'lucide-react';
+import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, TrendingUp, ArrowRight } from 'lucide-react';
 
 const CATEGORY_LABELS: Record<string, string> = {
   bank_accounts: 'Bank Accounts',
@@ -299,6 +299,32 @@ export default function DashboardOverview({
 
   return (
     <div className="cn-stagger">
+      {capturedItems.length > 0 && (
+        <div
+          className="rounded-xl p-5 mb-7 flex items-center justify-between gap-4"
+          style={{ background: '#F4A261' }}
+        >
+          <div className="min-w-0">
+            <p className="font-body font-semibold text-white text-lg leading-snug">
+              {needsFollowUpCount > 0
+                ? `Continue with ${parentName}`
+                : `Start a new session with ${parentName}`}
+            </p>
+            <p className="font-body text-white/80 text-sm mt-0.5">
+              {capturedItems.length} topic{capturedItems.length !== 1 ? 's' : ''} captured
+              {needsFollowUpCount > 0 && ` · ${needsFollowUpCount} need follow-up`}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/conversation')}
+            className="shrink-0 bg-white text-amber-700 font-body font-semibold py-3 px-5 rounded-lg text-sm hover:bg-amber-50 transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <ArrowRight className="w-4 h-4" />
+            Continue
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-9">
         {[
           { label: 'Items Captured', value: capturedItems.length },
@@ -519,21 +545,6 @@ export default function DashboardOverview({
             )}
           </div>
 
-          {capturedItems.length > 0 && (
-            <div className="bg-primary/10 border border-primary/20 rounded-xl p-5">
-              <p className="font-body text-foreground mb-1">
-                <span className="font-semibold">Ready to continue?</span>{' '}
-                {parentName} covered {capturedItems.length} topic{capturedItems.length !== 1 ? 's' : ''} so far.
-                {needsFollowUpCount > 0 && ` ${needsFollowUpCount} still need follow-up.`}
-              </p>
-              <button
-                onClick={() => navigate('/conversation')}
-                className="mt-3 bg-primary text-primary-foreground font-body font-medium py-2 px-4 rounded-lg text-sm hover:opacity-90 transition-opacity"
-              >
-                Continue Conversation
-              </button>
-            </div>
-          )}
 
           {/* Change 4: Topic Progress panel */}
           <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">

@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
-import { Mic, Volume2 } from 'lucide-react';
+import { Mic, Volume2, Radio, Loader2 } from 'lucide-react';
 import { useConversation } from '@elevenlabs/react';
 import { useSession } from '@/contexts/SessionContext';
 
 // ─── Typewriter hook ──────────────────────────────────────────────────────────
-function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 30) {
+function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 18) {
   const [displayed, setDisplayed] = useState('');
   const indexRef    = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -16,6 +16,12 @@ function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 30)
     indexRef.current = 0;
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (!fullText) return;
+    // Skip animation if user prefers reduced motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayed(fullText);
+      indexRef.current = fullText.length;
+      return;
+    }
     intervalRef.current = setInterval(() => {
       indexRef.current += 1;
       setDisplayed(fullText.slice(0, indexRef.current));
@@ -91,19 +97,20 @@ const Conversation = () => {
   const isHoldingRef         = useRef(false);
   const audioUnlockedRef     = useRef(false);
   const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const disclaimerTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firstHoldDoneRef     = useRef(false);
 
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
 
   useEffect(() => { isHoldingRef.current = isHolding; }, [isHolding]);
 
-  // Disclaimer shows once on connect, auto-hides after 6s
+  // Dismiss disclaimer after user completes their first hold-and-release
   useEffect(() => {
-    if (showDisclaimer) {
-      disclaimerTimerRef.current = setTimeout(() => setShowDisclaimer(false), 6000);
-      return () => { if (disclaimerTimerRef.current) clearTimeout(disclaimerTimerRef.current); };
+    if (isHolding) {
+      firstHoldDoneRef.current = true;
+    } else if (firstHoldDoneRef.current && showDisclaimer) {
+      setShowDisclaimer(false);
     }
-  }, [showDisclaimer]);
+  }, [isHolding, showDisclaimer]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const cleanClaraMessage = (raw: string): string =>
@@ -335,7 +342,6 @@ const Conversation = () => {
   useEffect(() => {
     return () => {
       if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
-      if (disclaimerTimerRef.current) clearTimeout(disclaimerTimerRef.current);
       convMethodsRef.current?.end().catch(() => {});
     };
   }, []);
@@ -453,6 +459,24 @@ const Conversation = () => {
           </div>
         )}
 
+        {/* Progress pills — visible from session start, update live as topics are captured */}
+        {hasStartedSession && (
+          <div style={styles.progressPillsWrapper}>
+            <div style={styles.progressPills} role="group" aria-label="Topic coverage">
+              {COVERAGE_AREAS.map((area) => (
+                <div
+                  key={area.category}
+                  style={{ ...styles.progressPill, background: coveredCategories.has(area.category) ? '#5B8DB8' : '#E5E7EB' }}
+                  title={area.label}
+                />
+              ))}
+            </div>
+            <p style={styles.progressPillsLabel}>
+              {coveredCategories.size} of {COVERAGE_AREAS.length} topics covered
+            </p>
+          </div>
+        )}
+
         {showGreeting && (
           <div style={styles.greetingCard}>
             <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
@@ -519,7 +543,7 @@ const Conversation = () => {
                 phase === 'holding'        ? 'dotPop 0.9s ease-in-out infinite' :
                 phase === 'clara_speaking' ? 'dotFade 1.4s ease-in-out infinite' : 'none',
             }} />
-            <div style={styles.statusTextBlock}>
+            <div style={styles.statusTextBlock} aria-live="polite" aria-atomic="true">
               <p style={{ ...styles.statusMain, color: dotColor }}>
                 {phase === 'connecting'     && 'Connecting to Clara…'}
                 {phase === 'clara_speaking' && 'Clara is speaking'}
@@ -579,9 +603,10 @@ const Conversation = () => {
               WebkitUserSelect: 'none',
             } as React.CSSProperties}
           >
-            {phase === 'clara_speaking'
-              ? <Volume2 size={56} color="#fff" />
-              : <Mic    size={56} color="#fff" />
+            {phase === 'connecting'     ? <Loader2 size={56} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> :
+             phase === 'clara_speaking' ? <Volume2 size={56} color="#fff" /> :
+             phase === 'holding'        ? <Radio   size={56} color="#fff" /> :
+                                          <Mic     size={56} color="#fff" />
             }
           </button>
         </div>
@@ -624,6 +649,10 @@ const Conversation = () => {
       )}
 
       <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
         @keyframes elderPulse {
           0%   { transform: scale(1);   opacity: 0.5; }
           70%  { transform: scale(2.2); opacity: 0; }
@@ -935,6 +964,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     cursor: 'pointer',
     fontFamily: DM_SANS,
+  },
+
+  // Progress pills
+  progressPillsWrapper: {
+    width: '100%', flexShrink: 0,
+  },
+  progressPills: {
+    display: 'flex', gap: 6, width: '100%',
+  },
+  progressPill: {
+    flex: 1, height: 8, borderRadius: 999, transition: 'background 0.5s ease',
+  },
+  progressPillsLabel: {
+    fontSize: 13, color: '#6B7280', fontFamily: "'DM Sans', system-ui, sans-serif",
+    textAlign: 'center' as const, margin: '5px 0 0',
   },
 
   // Goodbye screen
