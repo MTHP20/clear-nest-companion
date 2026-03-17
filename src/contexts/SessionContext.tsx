@@ -153,9 +153,21 @@ function saveLS(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota exceeded */ }
 }
 
+function loadProfileNames(): { parentName: string; childName: string } {
+  try {
+    const raw = localStorage.getItem('cn-user-profile');
+    if (!raw) return { parentName: 'You', childName: 'Family' };
+    const p = JSON.parse(raw) as { elderlyName?: string; trustedContactName?: string };
+    return {
+      parentName: p.elderlyName?.trim() || 'You',
+      childName: p.trustedContactName?.trim() || 'Family',
+    };
+  } catch { return { parentName: 'You', childName: 'Family' }; }
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [parentName] = useState('Narayan');
-  const [childName] = useState('Sunil');
+  const [parentName] = useState(() => loadProfileNames().parentName);
+  const [childName] = useState(() => loadProfileNames().childName);
 
   // ── Persisted state — survives page refresh via localStorage ──────────────
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>(() =>
@@ -293,10 +305,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const liveExtract = useCallback(async (recentTranscript: string): Promise<void> => {
     if (!recentTranscript.trim()) return;
 
+    const speakerPrefix = `${parentName}:`;
     const narayanLines = recentTranscript
       .split('\n')
-      .filter(l => l.startsWith('Narayan:'))
-      .map(l => l.replace(/^Narayan:\s*/i, '').trim())
+      .filter(l => l.startsWith(speakerPrefix))
+      .map(l => l.replace(new RegExp(`^${parentName}:\\s*`, 'i'), '').trim())
       .filter(l => l.length > 8);
 
     if (narayanLines.length === 0) return;
@@ -317,7 +330,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [addCapturedItem]);
+  }, [addCapturedItem, parentName]);
 
   // ─── Sync a past ElevenLabs conversation into the dashboard ──────────────
   // Fetches the transcript, extracts Clara's stored tool_calls AND runs
@@ -389,7 +402,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
     const transcriptText = ((data.transcript ?? []) as RawTurn[])
       .filter(t => t.message && t.message.trim())
-      .map(t => `${t.role === 'agent' ? 'Clara' : 'Narayan'}: ${t.message}`)
+      .map(t => `${t.role === 'agent' ? 'Clara' : parentName}: ${t.message}`)
       .join('\n');
 
     if (anthropicKey && transcriptText.length > 50) {
@@ -464,11 +477,11 @@ ${transcriptText.slice(0, 4000)}`,
       }
     } else if (transcriptText.length > 50 && items === 0) {
       // No tool_calls and no Anthropic key (or key failed) — use shared KEYWORD_PATTERNS
-      // to extract factual statements from Narayan's side of the conversation.
+      // to extract factual statements from the elderly person's side of the conversation.
       const narayanLines = transcriptText
         .split('\n')
-        .filter(l => l.startsWith('Narayan:'))
-        .map(l => l.replace(/^Narayan:\s*/i, '').trim())
+        .filter(l => l.startsWith(`${parentName}:`))
+        .map(l => l.replace(new RegExp(`^${parentName}:\\s*`, 'i'), '').trim())
         .filter(l => l.length > 8);
 
       for (const text of narayanLines) {
@@ -497,7 +510,7 @@ ${transcriptText.slice(0, 4000)}`,
     }
     console.log(`✅ Synced conversation ${conversationId}: ${items} items, ${actions} actions`);
     return { items, actions, alreadySynced: false };
-  }, [addCapturedItem, addActionItem]);
+  }, [addCapturedItem, addActionItem, parentName]);
 
   // ─── Auto-sync all unsynced ElevenLabs conversations ────────────────────
   // Fetches the last 20 conversations and syncs any that haven't been seen yet.

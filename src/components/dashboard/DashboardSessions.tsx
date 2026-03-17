@@ -336,7 +336,7 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
         <TranscriptView
           conv={selected}
           onBack={() => setSelected(null)}
-          parentName={parentName || 'Narayan'}
+          parentName={parentName || 'You'}
           syncFromConversation={syncFromConversation}
         />
       </div>
@@ -350,7 +350,7 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
         Conversations
       </h2>
       <p className="font-body text-sm text-muted-foreground mb-6">
-        All Clara sessions with {parentName || 'Narayan'}. Click any row to read the full transcript.
+        All Clara sessions with {parentName || 'you'}. Click any row to read the full transcript.
       </p>
 
       {loading && (

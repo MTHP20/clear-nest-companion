@@ -303,7 +303,14 @@ const Conversation = () => {
     setErrorMessage(null);
     const context = buildContextSummary();
     try {
-      await convMethodsRef.current!.start({ agentId, dynamicVariables: { context } });
+      await convMethodsRef.current!.start({
+        agentId,
+        dynamicVariables: {
+          context,
+          elderly_name: parentName,
+          trusted_contact_name: childName,
+        },
+      });
     } catch (err) {
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
@@ -313,7 +320,7 @@ const Conversation = () => {
       console.error('❌', msg);
       setErrorMessage("Clara couldn't connect. Please try again.");
     }
-  }, [agentId, status, buildContextSummary]);
+  }, [agentId, status, buildContextSummary, parentName, childName]);
 
   const endSession = useCallback(async () => {
     setIsHolding(false);
