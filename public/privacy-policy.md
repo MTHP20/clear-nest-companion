@@ -50,11 +50,14 @@ When you use ClearNest, your voice and conversation data is processed by the fol
 
 | Processor | Purpose | Data processed |
 |-----------|---------|----------------|
-| **ElevenLabs** (ElevenLabs Inc.) | Provides the Clara voice AI agent | Your voice audio and conversation transcript |
+| **ElevenLabs** (ElevenLabs Inc.) | Provides the Clara voice AI agent and real-time speech recognition | Your voice audio and conversation transcript |
+| **OpenAI** (OpenAI, LLC) | Powers the Clara conversational AI (language model) via ElevenLabs | Conversation transcript text |
 | **Anthropic** (Anthropic PBC) | Optional enhanced extraction from transcripts | Conversation transcript text (up to 4,000 characters) |
 | **Vercel Inc.** | Hosts and serves the ClearNest web application | Server logs, IP address |
 
 ElevenLabs stores conversation transcripts on their own infrastructure. Their retention and deletion policies are governed by their own Privacy Policy, available at elevenlabs.io. We have a Data Processing Agreement in place with ElevenLabs.
+
+OpenAI processes conversation data as a sub-processor of ElevenLabs to power Clara's language understanding. Their Privacy Policy is available at openai.com.
 
 Anthropic processes transcript text for the purpose of extracting structured notes and action items. Their Privacy Policy is available at anthropic.com.
 
@@ -110,7 +113,7 @@ Pannonl Ltd does not retain personal data on our servers. Data stored in your br
 
 ## 8. International Transfers
 
-ElevenLabs and Anthropic are US-based companies. Your data may be transferred to and processed in the United States. Both companies are subject to appropriate safeguards under UK GDPR (Standard Contractual Clauses or equivalent). Details are available in their respective privacy policies.
+ElevenLabs, OpenAI, and Anthropic are US-based companies. Your data may be transferred to and processed in the United States. All three companies are subject to appropriate safeguards under UK GDPR (Standard Contractual Clauses or equivalent). Details are available in their respective privacy policies.
 
 ---
 

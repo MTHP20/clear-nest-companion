@@ -41,7 +41,7 @@
   nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; background: rgba(253,250,245,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); transition: background 0.3s, transform 0.3s; }
   [data-theme="dark"] nav { background: rgba(14,12,10,0.97); }
   .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .nav-logo-icon { width: 32px; height: 32px; }
+  .nav-logo-icon { width: 32px; height: 32px; object-fit: contain; }
   .nav-logo-text { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
   [data-theme="dark"] .nav-logo-text { color: var(--text); }
   .nav-right { display: flex; align-items: center; gap: 16px; }
@@ -287,6 +287,7 @@
   /* FOOTER */
   footer { background: var(--navy); padding: 48px; display: flex; align-items: center; justify-content: space-between; }
   .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .footer-logo-icon { width: 28px; height: 28px; object-fit: contain; }
   .footer-logo-text { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--white); }
   .footer-center { text-align: center; }
   .footer-copy { font-size: 13px; color: rgba(255,255,255,0.4); }
@@ -412,20 +413,7 @@
 <div id="scroll-progress"></div>
 <nav>
   <a href="#" class="nav-logo">
-    <svg class="nav-logo-icon" width="36" height="36" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="23" cy="23" r="21" fill="#1C3A5E"/>
-      <path d="M9 32 Q23 24 37 32" stroke="#F4A261" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-      <path d="M7 36 Q23 27 39 36" stroke="#F4A261" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0.45"/>
-      <line x1="9" y1="32" x2="10" y2="37" stroke="#F4A261" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-      <line x1="37" y1="32" x2="36" y2="37" stroke="#F4A261" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-      <ellipse cx="23" cy="22" rx="7" ry="5.5" fill="white"/>
-      <path d="M30 21 Q36 18 34 25 Q31 23 30 21Z" fill="white"/>
-      <path d="M17 23 Q19 17 24 21" stroke="#5B8DB8" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      <circle cx="17" cy="17" r="4.5" fill="white"/>
-      <circle cx="16.2" cy="16.5" r="1.1" fill="#1C3A5E"/>
-      <circle cx="16.5" cy="16.2" r="0.4" fill="white"/>
-      <path d="M13.5 17 L11 16 L13.5 15.4" fill="#F4A261"/>
-    </svg>
+    <img src="/clearnest-logo.png" alt="ClearNest logo" class="nav-logo-icon" />
     <span class="nav-logo-text">ClearNest</span>
   </a>
   <div class="nav-right">
@@ -433,7 +421,7 @@
       <li><a href="#how">How it works</a></li>
       <li><a href="#covers">What Clara covers</a></li>
       <li><a href="#privacy">Privacy</a></li>
-      <li><a href="#waitlist" class="nav-cta">Get early access</a></li>
+      <li><a href="#waitlist" class="nav-cta">Priority access</a></li>
     </ul>
     <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
       <span id="theme-icon">🌙</span><span class="theme-label" id="theme-label">Dark</span>
@@ -659,7 +647,7 @@
 
 <section class="cta-section" id="waitlist">
   <div class="cta-inner animate-in">
-    <div class="section-label">Get early access</div>
+    <div class="section-label">Priority access</div>
     <h2 class="section-headline">The window is open.<br><em style="font-style:italic; color: var(--blue-mid);">Don't wait for a crisis.</em></h2>
     <p class="section-sub">Join families getting organised while there's still time. Free during beta — no credit card required.</p>
     <div id="waitlist-success" class="waitlist-success">✓ You're on the list — we'll be in touch before launch.</div>
@@ -672,20 +660,29 @@
     </div>
     <form class="waitlist-form" id="waitlist-form" onsubmit="submitWaitlist(event)">
       <input type="email" class="waitlist-input" id="waitlist-email" placeholder="your@email.com" required />
-      <button type="submit" class="waitlist-submit">Join waitlist →</button>
+      <button type="submit" class="waitlist-submit">Priority access when Clara launches in your region →</button>
     </form>
     <div class="waitlist-count" id="waitlist-count"></div>
-    <div class="cta-note">Free during beta · No credit card · Data never leaves your device</div>
+    <div class="cta-note">We’ll invite you when Clara is ready in your region, share simple setup guidance, and early case studies. Free during beta · No credit card · Data never leaves your device.</div>
   </div>
 </section>
 
 <footer>
-  <a href="#" class="footer-logo"><span class="footer-logo-text">ClearNest</span></a>
+  <a href="#" class="footer-logo">
+    <img src="/clearnest-logo.png" alt="ClearNest logo" class="footer-logo-icon" />
+    <span class="footer-logo-text">ClearNest</span>
+  </a>
   <div class="footer-center">
-    <div class="footer-copy">© 2026 ClearNest · Pannon Ltd. A gentle way to get organised.</div>
+    <div class="footer-copy">© 2026 ClearNest · Pannonl Ltd. A gentle way to get organised.</div>
     <div class="footer-privacy-badge">🔒 No cookies. No tracking. Built on privacy.</div>
+    <div class="footer-privacy-badge" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.22);">Not legal or financial advice. ClearNest is an organisational tool only.</div>
   </div>
-  <ul class="footer-links"><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li><li><a href="#">Contact</a></li></ul>
+  <ul class="footer-links">
+    <li><a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer">Privacy</a></li>
+    <li><a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer">Terms</a></li>
+    <li><a href="/safeguarding-policy.md" target="_blank" rel="noopener noreferrer">Safeguarding</a></li>
+    <li><a href="mailto:hello@clearnest.co.uk">Contact</a></li>
+  </ul>
 </footer>
 
 <!-- EXIT INTENT POPUP -->
@@ -705,7 +702,7 @@
     </div>
     <form class="waitlist-form" id="exit-form" onsubmit="submitExitPopup(event)">
       <input type="email" class="waitlist-input" id="exit-email" placeholder="your@email.com" required />
-      <button type="submit" class="waitlist-submit">Notify me →</button>
+      <button type="submit" class="waitlist-submit">Priority access when Clara launches in your region →</button>
     </form>
   </div>
 </div>

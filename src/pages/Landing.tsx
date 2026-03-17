@@ -3,16 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, LayoutDashboard, CheckCircle2, Loader2, X } from 'lucide-react';
 
-const CONSENT_KEY = 'cn-consent-v1';
-
-function hasGivenConsent(): boolean {
-  try { return localStorage.getItem(CONSENT_KEY) === 'true'; } catch { return false; }
-}
-
-function saveConsent() {
-  try { localStorage.setItem(CONSENT_KEY, 'true'); } catch { /* ignore */ }
-}
-
 function ConsentModal({ onAccept, onClose }: { onAccept: () => void; onClose: () => void }) {
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
@@ -94,7 +84,6 @@ function ConsentModal({ onAccept, onClose }: { onAccept: () => void; onClose: ()
         <button
           onClick={() => {
             if (!canProceed) return;
-            saveConsent();
             onAccept();
           }}
           disabled={!canProceed}
@@ -127,13 +116,7 @@ const Landing = () => {
   // UX #8 — show connecting state before navigating so user knows something is happening
   const handleStartTalking = () => {
     if (connecting) return;
-    // Skip consent modal if user has already accepted in a previous session
-    if (hasGivenConsent()) {
-      setConnecting(true);
-      setTimeout(() => navigate('/conversation'), 900);
-    } else {
-      setShowConsent(true);
-    }
+    setShowConsent(true);
   };
 
   return (
@@ -277,6 +260,27 @@ const Landing = () => {
       <p className="mt-6 text-base text-muted-foreground text-center max-w-sm leading-relaxed font-body">
         ClearNest never stores your information on our servers. Everything stays with your family.
       </p>
+
+      {/* Legal footer */}
+      <footer className="mt-6 text-center font-body">
+        <p className="text-xs text-muted-foreground mb-1">
+          Not legal or financial advice. ClearNest is an organisational tool only.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          © 2026 Pannonl Ltd ·{' '}
+          <a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+            Privacy Policy
+          </a>
+          {' '}·{' '}
+          <a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+            Terms of Service
+          </a>
+          {' '}·{' '}
+          <a href="/safeguarding-policy.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+            Safeguarding
+          </a>
+        </p>
+      </footer>
 
     </div>
   );
