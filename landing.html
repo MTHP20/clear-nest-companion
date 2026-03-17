@@ -81,12 +81,32 @@
   .btn-secondary { color: var(--navy); font-size: 15px; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: gap 0.2s; font-family: 'DM Sans', sans-serif; }
   .btn-secondary:hover { gap: 10px; }
   [data-theme="dark"] .btn-secondary { color: var(--text); }
-  .btn-voice { background: rgba(91,141,184,0.1); border: 1.5px solid rgba(91,141,184,0.35); color: var(--blue-mid); padding: 14px 22px; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
-  .btn-voice:hover { background: rgba(91,141,184,0.18); transform: translateY(-1px); }
-  .btn-voice.playing { background: rgba(91,141,184,0.2); border-color: var(--blue); }
-  .voice-stop-icon { display: none; }
-  .btn-voice.playing .voice-play-icon { display: none; }
-  .btn-voice.playing .voice-stop-icon { display: inline; }
+  /* Clara voice button — pill design */
+  .btn-voice { background: #FFFFFF; border: 1.5px solid rgba(28,58,94,0.12); color: var(--text); padding: 8px 20px 8px 8px; border-radius: 100px; font-size: 15px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: all 0.2s; font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 12px rgba(28,58,94,0.08); }
+  .btn-voice:hover { box-shadow: 0 4px 20px rgba(28,58,94,0.14); transform: translateY(-1px); }
+  .btn-voice.playing { border-color: rgba(91,141,184,0.4); box-shadow: 0 4px 20px rgba(91,141,184,0.2); }
+  .voice-play-icon, .voice-stop-icon { display: none !important; }
+  /* Clara orb */
+  .clara-orb { width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 35% 28%, #A8D4F5 0%, #5B8DB8 42%, #1C3A5E 100%); box-shadow: inset -2px -3px 6px rgba(0,0,0,0.22), inset 2px 2px 5px rgba(255,255,255,0.35), 0 2px 10px rgba(91,141,184,0.35); flex-shrink: 0; position: relative; overflow: hidden; transition: box-shadow 0.3s; }
+  .clara-orb::after { content: ''; position: absolute; top: 7px; left: 9px; width: 11px; height: 7px; background: rgba(255,255,255,0.55); border-radius: 50%; transform: rotate(-25deg); }
+  .btn-voice.playing .clara-orb, .clara-floating.playing .clara-orb { animation: orb-pulse 1.2s ease-in-out infinite; }
+  @keyframes orb-pulse { 0%, 100% { box-shadow: inset -2px -3px 6px rgba(0,0,0,0.22), inset 2px 2px 5px rgba(255,255,255,0.35), 0 2px 10px rgba(91,141,184,0.35); } 50% { box-shadow: inset -2px -3px 6px rgba(0,0,0,0.22), inset 2px 2px 5px rgba(255,255,255,0.35), 0 0 0 8px rgba(91,141,184,0.12), 0 2px 10px rgba(91,141,184,0.35); } }
+  /* Sound bars */
+  .clara-sound-bars { display: none; align-items: center; gap: 2.5px; height: 16px; margin-left: 2px; }
+  .clara-sound-bars span { width: 3px; border-radius: 3px; background: var(--blue-mid); }
+  .clara-sound-bars span:nth-child(1) { height: 6px; animation: sound-bar 0.7s ease-in-out infinite 0s; }
+  .clara-sound-bars span:nth-child(2) { height: 11px; animation: sound-bar 0.7s ease-in-out infinite 0.1s; }
+  .clara-sound-bars span:nth-child(3) { height: 16px; animation: sound-bar 0.7s ease-in-out infinite 0.2s; }
+  .clara-sound-bars span:nth-child(4) { height: 11px; animation: sound-bar 0.7s ease-in-out infinite 0.1s; }
+  .clara-sound-bars span:nth-child(5) { height: 6px; animation: sound-bar 0.7s ease-in-out infinite 0s; }
+  @keyframes sound-bar { 0%, 100% { transform: scaleY(0.45); opacity: 0.6; } 50% { transform: scaleY(1); opacity: 1; } }
+  .btn-voice.playing .clara-sound-bars, .clara-floating.playing .clara-sound-bars { display: flex; }
+  .btn-voice.playing .btn-voice-label, .clara-floating.playing .btn-voice-label { display: none; }
+  /* Floating Clara button (mobile sticky) */
+  .clara-floating { display: none; position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(88px); z-index: 990; background: #FFFFFF; border: 1.5px solid rgba(28,58,94,0.12); border-radius: 100px; padding: 8px 22px 8px 8px; align-items: center; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--text); cursor: pointer; box-shadow: 0 8px 32px rgba(28,58,94,0.18); transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; opacity: 0; white-space: nowrap; }
+  .clara-floating.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .clara-floating.playing { border-color: rgba(91,141,184,0.4); box-shadow: 0 8px 32px rgba(91,141,184,0.22); }
+  @media (max-width: 900px) { .clara-floating { display: inline-flex; } }
   .play-demo-btn { display: inline-flex; align-items: center; gap: 8px; background: white; border: 1.5px solid var(--navy); border-radius: 30px; padding: 10px 22px; font-size: 13px; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; margin-top: 16px; }
   .play-demo-btn:hover { background: var(--navy); color: white; }
   .hero-trust { margin-top: 48px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.6s ease 0.5s forwards; }
@@ -301,8 +321,9 @@
   [data-theme="dark"] .footer-logo-text { color: #F5F0E8; }
   [data-theme="dark"] .play-demo-btn { background: #1A1612; color: var(--text); border-color: #2E2820; }
   [data-theme="dark"] .play-demo-btn:hover { background: #252018; color: var(--text); }
-  [data-theme="dark"] .btn-voice { background: rgba(123,167,196,0.15); border-color: rgba(123,167,196,0.4); color: #7BA7C4; }
-  [data-theme="dark"] .btn-voice:hover { background: rgba(123,167,196,0.25); }
+  [data-theme="dark"] .btn-voice { background: #1A1612; border-color: rgba(123,167,196,0.25); color: var(--text); }
+  [data-theme="dark"] .btn-voice:hover { background: #252018; }
+  [data-theme="dark"] .clara-floating { background: #1A1612; border-color: rgba(123,167,196,0.25); }
   [data-theme="dark"] .badge-clear { background: rgba(76,175,80,0.15); color: #81C784; }
   [data-theme="dark"] .badge-followup { background: rgba(244,162,97,0.18); color: #F4A261; }
   [data-theme="dark"] .badge-urgent { background: rgba(229,57,53,0.18); color: #EF9A9A; }
@@ -341,7 +362,7 @@
     .hero-sub { font-size: 17px; max-width: 100%; }
     .hero-actions { flex-direction: column; align-items: stretch; gap: 12px; }
     .hero-actions .waitlist-form { max-width: 100% !important; }
-    .hero-actions .btn-voice { justify-content: center; }
+    .hero-actions .btn-voice { justify-content: center; align-self: center; }
     .hero-actions .btn-secondary { justify-content: center; padding: 12px 0; }
     .hero-trust { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
     .stats-strip { grid-template-columns: repeat(2, 1fr); padding: 48px 24px; gap: 24px; }
@@ -451,9 +472,9 @@
         </div>
       </div>
       <button class="btn-voice" id="hear-clara-btn" onclick="playClara(this)">
-        <svg class="voice-play-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 5.5l4 2.5-4 2.5V5.5Z" fill="currentColor"/></svg>
-        <svg class="voice-stop-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><rect x="5.5" y="5.5" width="2" height="5" rx="0.5" fill="currentColor"/><rect x="8.5" y="5.5" width="2" height="5" rx="0.5" fill="currentColor"/></svg>
-        Hear Clara
+        <div class="clara-orb"></div>
+        <span class="btn-voice-label">Hear Clara</span>
+        <span class="clara-sound-bars"><span></span><span></span><span></span><span></span><span></span></span>
       </button>
       <a href="#how" class="btn-secondary">See how it works <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
@@ -832,10 +853,11 @@
   function playClara(btn) {
     const claraAudio = document.getElementById('clara-demo');
     if (!claraAudio) return;
+    const allBtns = document.querySelectorAll('.btn-voice, .clara-floating');
     if (claraAudio.paused) {
       claraAudio.play().then(() => {
-        btn.classList.add('playing');
-        claraAudio.onended = () => btn.classList.remove('playing');
+        allBtns.forEach(b => b.classList.add('playing'));
+        claraAudio.onended = () => allBtns.forEach(b => b.classList.remove('playing'));
       }).catch(() => {
         const orig = btn.innerHTML;
         btn.textContent = '🎙 Audio coming soon';
@@ -844,9 +866,21 @@
     } else {
       claraAudio.pause();
       claraAudio.currentTime = 0;
-      btn.classList.remove('playing');
+      allBtns.forEach(b => b.classList.remove('playing'));
     }
   }
+
+  // FLOATING CLARA — show on mobile after scrolling past hero
+  (function() {
+    var floatingBtn = document.getElementById('clara-floating-btn');
+    var hero = document.querySelector('.hero');
+    if (!floatingBtn || !hero) return;
+    function checkScroll() {
+      if (window.innerWidth > 900) return;
+      floatingBtn.classList.toggle('visible', hero.getBoundingClientRect().bottom < -40);
+    }
+    window.addEventListener('scroll', checkScroll, { passive: true });
+  })();
 
   // Share the same audio instance between both buttons so they stay in sync
   var _sharedAudio = document.getElementById('clara-demo');
@@ -890,5 +924,12 @@
     if (e.target.id === 'exit-popup') closeExitPopup();
   });
 </script>
+
+<!-- Floating Clara button — mobile sticky -->
+<button class="clara-floating" id="clara-floating-btn" onclick="playClara(this)">
+  <div class="clara-orb"></div>
+  <span class="btn-voice-label">Hear Clara</span>
+  <span class="clara-sound-bars"><span></span><span></span><span></span><span></span><span></span></span>
+</button>
 </body>
 </html>
