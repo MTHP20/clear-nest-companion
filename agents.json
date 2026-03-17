@@ -1,0 +1,10 @@
+{
+    "agents": [
+        {
+            "config": "agent_configs/New-agent.json",
+            "id": "agent_4301kjj87vz5f4yag2djdq7e0ryj",
+            "version_id": "agtvrsn_8101kk5mmwzae1dbk60tynch8sa2",
+            "branch_id": "agtbrch_8201kjj87y0seskawzx43ghzd7h1"
+        }
+    ]
+}
