@@ -101,16 +101,16 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
         {page === 1 ? (
           <>
             <h2 id="onboarding-title" className="font-display text-xl font-semibold text-foreground mb-2">
-              Let's get to know you
+              Tell us about your loved one
             </h2>
             <p className="font-body text-sm text-muted-foreground mb-5 leading-relaxed">
-              This helps Clara personalise the conversation and remember you for next time.
+              This helps Clara personalise the conversation for the person she'll be speaking with.
             </p>
 
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block font-body text-sm font-medium text-foreground mb-1.5">
-                  Your name <span className="text-red-400">*</span>
+                  Their name <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -124,7 +124,7 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
 
               <div>
                 <label className="block font-body text-sm font-medium text-foreground mb-1.5">
-                  Age <span className="text-red-400">*</span>
+                  Their age <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="number"
@@ -139,7 +139,7 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
 
               <div>
                 <label className="block font-body text-sm font-medium text-foreground mb-1.5">
-                  Gender
+                  Their gender
                 </label>
                 <select
                   value={gender}
@@ -154,10 +154,10 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
 
               <div>
                 <label className="block font-body text-sm font-medium text-foreground mb-1">
-                  Trusted contact's name
+                  Your name
                 </label>
                 <p className="font-body text-xs text-muted-foreground mb-1.5">
-                  The family member who will review this information (e.g. your son or daughter)
+                  You're the family member who will review what Clara captures
                 </p>
                 <input
                   type="text"
