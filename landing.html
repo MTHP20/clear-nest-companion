@@ -221,18 +221,58 @@
   .quote-text { font-family: 'Playfair Display', serif; font-size: clamp(22px, 3vw, 32px); color: var(--white); line-height: 1.4; font-weight: 400; font-style: italic; margin-bottom: 32px; }
   .quote-text strong { font-style: normal; color: var(--amber-light); }
   .quote-attr { font-size: 14px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
-  .covers { background: var(--cream-dark); }
-  .covers-inner { max-width: 1200px; margin: 0 auto; }
-  .covers-header { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; margin-bottom: 64px; }
-  .covers-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  .cover-item { background: var(--white); border-radius: 14px; padding: 24px; display: flex; gap: 16px; align-items: flex-start; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 1px 8px rgba(61,31,138,0.05); }
-  [data-theme="dark"] .cover-item { background: #1A1612; }
-  .cover-item:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(61,31,138,0.1); }
-  .cover-emoji { font-size: 24px; flex-shrink: 0; width: 44px; height: 44px; background: var(--cream); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-  [data-theme="dark"] .cover-emoji { background: #252018; }
-  .cover-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
-  [data-theme="dark"] .cover-title { color: var(--text); }
-  .cover-desc { font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+  /* COVERS — 12-topic interactive grid */
+  .covers { padding: 100px 48px; background: var(--cream); }
+  [data-theme="dark"] .covers { background: var(--cream-dark); }
+  .covers-inner { max-width: 960px; margin: 0 auto; }
+  .covers .section-headline { margin-bottom: 16px; }
+  .covers .section-sub { margin-bottom: 28px; }
+  /* Filter tabs */
+  .covers-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+  .ctab { background: transparent; border: 0.5px solid #E0D0F0; color: #9A8ABA; border-radius: 20px; padding: 5px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.18s; }
+  .ctab:hover { border-color: #9B7BC8; color: #9B7BC8; }
+  .ctab-active { background: #3D1F8A !important; color: #fff !important; border-color: #3D1F8A !important; }
+  /* Grid */
+  .covers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* Card at rest */
+  .ccard { background: #fff; border: 1px solid #EDE0FF; border-radius: 12px; padding: 14px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; overflow: hidden; }
+  [data-theme="dark"] .ccard { background: #1A1612; border-color: rgba(155,123,200,0.2); }
+  .ccard:hover { border-color: #C4A8E8; box-shadow: 0 2px 12px rgba(155,123,200,0.1); }
+  /* Card open */
+  .ccard.open { grid-column: span 3; border-color: #9B7BC8; background: #FAF7FF; }
+  [data-theme="dark"] .ccard.open { background: #1E0A30; }
+  /* Card header row */
+  .ccard-header { display: flex; align-items: center; gap: 12px; }
+  .ccard-icon { font-size: 20px; width: 32px; height: 32px; background: #F0E8FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ccard-text { flex: 1; min-width: 0; }
+  .ccard-title { font-size: 14px; font-weight: 600; color: var(--navy); line-height: 1.3; }
+  [data-theme="dark"] .ccard-title { color: var(--text); }
+  .ccard-sub { font-size: 12px; color: var(--text-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ccard-chevron { font-size: 20px; color: #C4A8E8; transition: transform 0.25s; flex-shrink: 0; line-height: 1; }
+  .ccard.open .ccard-chevron { transform: rotate(90deg); }
+  /* Demo panel */
+  .ccard-demo { display: none; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #EDE0FF; }
+  .ccard.open .ccard-demo { display: grid; }
+  [data-theme="dark"] .ccard-demo { border-top-color: rgba(155,123,200,0.15); }
+  .cdemo-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #9B7BC8; margin-bottom: 8px; }
+  .cdemo-bubble { font-size: 12px; line-height: 1.55; padding: 10px 12px; border-radius: 8px; }
+  .cdemo-clara { background: #EDE0FF; color: #3D1F8A; font-style: italic; border-radius: 8px 8px 8px 2px; }
+  .cdemo-parent { background: #9B7BC8; color: #fff; border-radius: 8px 8px 2px 8px; margin-left: 16px; }
+  .cdemo-rows { display: flex; flex-direction: column; gap: 6px; }
+  .cdemo-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .cdemo-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .cdemo-dot.green { background: #22C55E; }
+  .cdemo-dot.amber { background: #F59E0B; }
+  .cdemo-dot.red { background: #EF4444; }
+  .cdemo-rowtext { flex: 1; color: var(--text-mid); font-size: 12px; }
+  [data-theme="dark"] .cdemo-rowtext { color: var(--text-soft); }
+  .cdemo-pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 100px; white-space: nowrap; flex-shrink: 0; }
+  .pill-green { background: #DCFCE7; color: #166534; }
+  .pill-amber { background: #FEF3C7; color: #92400E; }
+  .pill-red { background: #FEE2E2; color: #991B1B; }
+  .cdemo-tip { margin-top: 10px; background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #92400E; line-height: 1.5; }
+  /* Hidden card */
+  .ccard.hidden { display: none; }
 
   /* BUILT BY */
   .built-by-section { background: linear-gradient(135deg, #3D1F8A 0%, #6B3FA0 100%); border-radius: 20px; padding: 56px; margin: 0 48px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 60px; align-items: start; }
@@ -391,8 +431,12 @@
     .timeline-track { left: 25px; }
     section { padding: 64px 24px; }
     .who-inner { grid-template-columns: 1fr; gap: 40px; }
-    .covers-header { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
+    .covers { padding: 60px 20px; }
     .covers-grid { grid-template-columns: 1fr; }
+    .ccard.open { grid-column: span 1; }
+    .ccard-demo { grid-template-columns: 1fr; }
+    .cdemo-parent { margin-left: 0; }
+    .ccard-sub { white-space: normal; }
     .built-by-section { grid-template-columns: 1fr; padding: 40px 24px; margin: 0 24px; gap: 40px; }
     .privacy-inner { grid-template-columns: 1fr; padding: 40px 24px; gap: 32px; }
     .privacy-points { grid-template-columns: 1fr; }
@@ -423,8 +467,7 @@
     .cta-section .section-headline { font-size: clamp(28px, 8vw, 40px); }
     .founder-card { flex-direction: column; text-align: center; }
     .persona-card { flex-direction: column; }
-    .covers-grid { gap: 12px; }
-    .cover-item { padding: 18px; }
+    .covers-grid { gap: 8px; }
     .privacy-inner { padding: 32px 20px; }
   }
 </style>
@@ -717,25 +760,369 @@
 </div>
 
 <section class="covers" id="covers">
-  <div class="covers-inner">
-    <div class="covers-header">
-      <div class="animate-in">
-        <div class="section-label">What Clara covers</div>
-        <h2 class="section-headline">Seven topics. One gentle conversation.</h2>
-        <p class="section-sub">Clara works through everything your family needs — in order, at the right pace, with warmth throughout.</p>
+  <div class="covers-inner animate-in">
+    <div class="section-label">What Clara covers</div>
+    <h2 class="section-headline">Twelve topics.<br>One gentle conversation.</h2>
+    <p class="section-sub">Tap any topic to see the exact question Clara asks, a sample response, and what appears on your dashboard.</p>
+
+    <!-- Filter tabs -->
+    <div class="covers-tabs" id="covers-tabs">
+      <button class="ctab ctab-active" data-filter="all">All 12</button>
+      <button class="ctab" data-filter="financial">Financial</button>
+      <button class="ctab" data-filter="legal">Legal</button>
+      <button class="ctab" data-filter="care">Care &amp; wishes</button>
+      <button class="ctab" data-filter="digital">Digital &amp; other</button>
+    </div>
+
+    <!-- Topic grid -->
+    <div class="covers-grid" id="covers-grid">
+
+      <!-- 1 Bank Accounts -->
+      <div class="ccard" data-topic="0" data-cat="financial">
+        <div class="ccard-header" onclick="toggleCCard(0)">
+          <div class="ccard-icon">🏦</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Bank accounts</div>
+            <div class="ccard-sub">Which banks, where statements are kept</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Which bank do you mainly use day-to-day, and do you know where your statements are kept?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Barclays. I've been with them for years. Statements come in the post — they're in the drawer in the study."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Barclays current account</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div></div>
-    </div>
-    <div class="covers-grid animate-in">
-      <div class="cover-item"><div class="cover-emoji">🏦</div><div><div class="cover-title">Bank Accounts</div><div class="cover-desc">Which banks, where statements are kept, what accounts exist</div></div></div>
-      <div class="cover-item"><div class="cover-emoji">💼</div><div><div class="cover-title">Pension Details</div><div class="cover-desc">Provider, type, whether workplace or state pension</div></div></div>
-      <div class="cover-item"><div class="cover-emoji">🏠</div><div><div class="cover-title">Property</div><div class="cover-desc">Ownership, where deeds are kept, mortgage status</div></div></div>
-      <div class="cover-item"><div class="cover-emoji">📄</div><div><div class="cover-title">Will & Documents</div><div class="cover-desc">Whether a will exists, where it's kept, insurance documents</div></div></div>
-      <div class="cover-item"><div class="cover-emoji">⚖️</div><div><div class="cover-title">Power of Attorney</div><div class="cover-desc">Whether an LPA is in place, who is named, where stored</div></div></div>
-      <div class="cover-item"><div class="cover-emoji">👤</div><div><div class="cover-title">Key Contacts</div><div class="cover-desc">Solicitor, GP, accountant, financial advisor details</div></div></div>
-      <div class="cover-item"><div class="cover-emoji">💙</div><div><div class="cover-title">Care Wishes</div><div class="cover-desc">Where they'd prefer to be cared for, what matters to them</div></div></div>
-      <div class="cover-item" style="background: var(--navy); border: none;"><div class="cover-emoji" style="background: rgba(255,255,255,0.1);">✓</div><div><div class="cover-title" style="color: white;">All in one conversation</div><div class="cover-desc" style="color: rgba(255,255,255,0.6);">Clara remembers across sessions and picks up where she left off</div></div></div>
-    </div>
+
+      <!-- 2 Pension -->
+      <div class="ccard" data-topic="1" data-cat="financial">
+        <div class="ccard-header" onclick="toggleCCard(1)">
+          <div class="ccard-icon">💼</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Pension details</div>
+            <div class="ccard-sub">Provider, type, workplace or state pension</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you receive a pension, and do you know who it's with — is it a workplace pension or the state pension?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"I get my state pension. I think there's also one from the council from when I worked there, but I'm not sure who runs it now."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">State pension</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+              <div class="cdemo-row"><span class="cdemo-dot amber"></span><span class="cdemo-rowtext">Council pension — provider unknown</span><span class="cdemo-pill pill-amber">Follow up</span></div>
+            </div>
+            <div class="cdemo-tip">💡 Clara will prompt the family to locate the council pension provider in the next session.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Property -->
+      <div class="ccard" data-topic="2" data-cat="financial">
+        <div class="ccard-header" onclick="toggleCCard(2)">
+          <div class="ccard-icon">🏠</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Property</div>
+            <div class="ccard-sub">Ownership, where deeds are kept, mortgage</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you own your home, and do you know where the deeds are kept?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Yes, we own it outright. Paid off the mortgage years ago. The deeds are with Clifford &amp; Sons, our solicitor."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Property — owned outright</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Deeds — Clifford &amp; Sons solicitors</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Investments -->
+      <div class="ccard" data-topic="3" data-cat="financial">
+        <div class="ccard-header" onclick="toggleCCard(3)">
+          <div class="ccard-icon">📈</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Investments &amp; savings</div>
+            <div class="ccard-sub">ISAs, Premium Bonds, shares, savings accounts</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you have any savings beyond your current account — like an ISA, Premium Bonds, or any shares?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Yes, I've got some Premium Bonds. About £5,000 I think. And there's an ISA somewhere — Halifax I believe."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Premium Bonds — approx. £5,000</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+              <div class="cdemo-row"><span class="cdemo-dot amber"></span><span class="cdemo-rowtext">Halifax ISA — amount unknown</span><span class="cdemo-pill pill-amber">Follow up</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 Debts -->
+      <div class="ccard" data-topic="4" data-cat="financial">
+        <div class="ccard-header" onclick="toggleCCard(4)">
+          <div class="ccard-icon">💳</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Debts &amp; liabilities</div>
+            <div class="ccard-sub">Outstanding loans, credit cards, hire purchase</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Are there any regular payments going out that aren't bills — like a loan or credit card balance you're paying off?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"No, nothing like that. I don't believe in debt. The car's paid for."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">No outstanding debts reported</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 Will -->
+      <div class="ccard" data-topic="5" data-cat="legal">
+        <div class="ccard-header" onclick="toggleCCard(5)">
+          <div class="ccard-icon">📄</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Will &amp; documents</div>
+            <div class="ccard-sub">Whether a will exists, where it's kept</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you have a will in place, and do you know where the original is kept?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Yes, I made one about three years ago. It's with the solicitor — Clifford's. My son has a copy too."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Will — Clifford &amp; Sons + copy with son</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7 Power of Attorney -->
+      <div class="ccard" data-topic="6" data-cat="legal">
+        <div class="ccard-header" onclick="toggleCCard(6)">
+          <div class="ccard-icon">⚖️</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Power of Attorney</div>
+            <div class="ccard-sub">Whether an LPA is in place, who is named</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you have a Lasting Power of Attorney in place — someone legally authorised to manage things if you ever couldn't?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"I think my son sorted that out. The papers might be with the solicitor."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot red"></span><span class="cdemo-rowtext">LPA — not confirmed, unregistered?</span><span class="cdemo-pill pill-red">Urgent</span></div>
+            </div>
+            <div class="cdemo-tip">💡 55,000 LPA applications were rejected in 2025. Clara will prompt the family to verify registration with the OPG.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8 Key Contacts -->
+      <div class="ccard" data-topic="7" data-cat="legal">
+        <div class="ccard-header" onclick="toggleCCard(7)">
+          <div class="ccard-icon">👤</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Key contacts</div>
+            <div class="ccard-sub">Solicitor, GP, accountant, financial adviser</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Who is your main doctor, and do you have a solicitor or accountant you use regularly?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Dr Patel at the Highgate surgery. And Clifford &amp; Sons for legal. No accountant, I do my own tax."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">GP — Dr Patel, Highgate surgery</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Solicitor — Clifford &amp; Sons</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9 Care Wishes -->
+      <div class="ccard" data-topic="8" data-cat="care">
+        <div class="ccard-header" onclick="toggleCCard(8)">
+          <div class="ccard-icon">💙</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Care wishes</div>
+            <div class="ccard-sub">Where they'd prefer to be cared for</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"If there ever came a time when you needed extra support day-to-day, would you want to stay at home, or would you be open to a care home?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Home, definitely. As long as possible. I'd want to be in my own house, near my things."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Care preference — remain at home</span><span class="cdemo-pill pill-green">Captured</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10 Funeral -->
+      <div class="ccard" data-topic="9" data-cat="care">
+        <div class="ccard-header" onclick="toggleCCard(9)">
+          <div class="ccard-icon">🕊️</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Funeral &amp; end of life</div>
+            <div class="ccard-sub">Pre-paid plans, burial wishes, what matters</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Have you ever thought about or noted down any wishes for when you're no longer here? Some people have pre-paid plans or preferences."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"I'd want to be buried, not cremated. There's a plot near where Margaret is. And I've written some things down — it's in the blue folder."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Burial preference — noted</span><span class="cdemo-pill pill-green">Captured</span></div>
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Written wishes — blue folder at home</span><span class="cdemo-pill pill-green">Captured</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11 Digital -->
+      <div class="ccard" data-topic="10" data-cat="digital">
+        <div class="ccard-header" onclick="toggleCCard(10)">
+          <div class="ccard-icon">🔐</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Digital accounts</div>
+            <div class="ccard-sub">Email, online banking, key passwords stored</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you do anything online — like online banking or email — and is there anywhere your family could find your login details if they ever needed to?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"I do my banking online. My son knows the general password I use. It's written in the back of my address book."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot amber"></span><span class="cdemo-rowtext">Online banking — password in address book</span><span class="cdemo-pill pill-amber">Review</span></div>
+            </div>
+            <div class="cdemo-tip">💡 Clara flags this as a security risk and suggests a more secure storage method — without capturing the password itself.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12 Insurance -->
+      <div class="ccard" data-topic="11" data-cat="digital">
+        <div class="ccard-header" onclick="toggleCCard(11)">
+          <div class="ccard-icon">🛡️</div>
+          <div class="ccard-text">
+            <div class="ccard-title">Insurance policies</div>
+            <div class="ccard-sub">Home, life, health, car insurance providers</div>
+          </div>
+          <div class="ccard-chevron">›</div>
+        </div>
+        <div class="ccard-demo">
+          <div class="cdemo-col">
+            <div class="cdemo-label">Clara asks</div>
+            <div class="cdemo-bubble cdemo-clara">"Do you have home or life insurance, and do you know which company it's with?"</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Parent responds</div>
+            <div class="cdemo-bubble cdemo-parent">"Home insurance is with Aviva — it renews in March. Life insurance I had through work but I think it ended when I retired."</div>
+          </div>
+          <div class="cdemo-col">
+            <div class="cdemo-label">Dashboard shows</div>
+            <div class="cdemo-rows">
+              <div class="cdemo-row"><span class="cdemo-dot green"></span><span class="cdemo-rowtext">Home insurance — Aviva, renews March</span><span class="cdemo-pill pill-green">Confirmed</span></div>
+              <div class="cdemo-row"><span class="cdemo-dot amber"></span><span class="cdemo-rowtext">Life insurance — possibly lapsed</span><span class="cdemo-pill pill-amber">Follow up</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /covers-grid -->
   </div>
 </section>
 
@@ -1086,6 +1473,37 @@
     }
     window.addEventListener('scroll', update, { passive: true });
     update();
+  })();
+
+  // COVERS — filter tabs + expand/collapse cards
+  (function() {
+    var activeCard = null;
+    window.toggleCCard = function(idx) {
+      var cards = document.querySelectorAll('.ccard');
+      var card = cards[idx];
+      if (!card) return;
+      if (activeCard && activeCard !== card) {
+        activeCard.classList.remove('open');
+      }
+      card.classList.toggle('open');
+      activeCard = card.classList.contains('open') ? card : null;
+    };
+    document.querySelectorAll('.ctab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.ctab').forEach(function(t) { t.classList.remove('ctab-active'); });
+        tab.classList.add('ctab-active');
+        var filter = tab.dataset.filter;
+        // Collapse open card
+        if (activeCard) { activeCard.classList.remove('open'); activeCard = null; }
+        document.querySelectorAll('.ccard').forEach(function(card) {
+          if (filter === 'all' || card.dataset.cat === filter) {
+            card.classList.remove('hidden');
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+      });
+    });
   })();
 
   // Share the same audio instance between both buttons so they stay in sync
