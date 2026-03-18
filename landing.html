@@ -185,15 +185,25 @@
   .how { background: var(--cream-dark); }
   .how-inner { max-width: 1200px; margin: 0 auto; }
   .how-header { margin-bottom: 72px; }
-  .how-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; position: relative; }
-  .how-steps::before { content: ''; position: absolute; top: 36px; left: calc(16.66% + 20px); right: calc(16.66% + 20px); height: 1px; background: linear-gradient(90deg, var(--blue) 0%, var(--amber) 100%); opacity: 0.3; }
-  .step { text-align: center; padding: 40px 32px; background: var(--white); border-radius: 20px; box-shadow: 0 2px 20px rgba(61,31,138,0.06); position: relative; transition: transform 0.3s, box-shadow 0.3s; }
-  [data-theme="dark"] .step { background: #1A1612; }
-  .step:hover { transform: translateY(-4px); box-shadow: 0 8px 40px rgba(61,31,138,0.12); }
-  .step-number { width: 52px; height: 52px; background: var(--navy); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--white); }
-  .step-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 12px; }
+  /* VERTICAL TIMELINE */
+  .how-steps { display: flex; flex-direction: column; gap: 0; max-width: 640px; margin: 0 auto; position: relative; }
+  .timeline-track { position: absolute; left: 25px; top: 26px; bottom: 26px; width: 2px; background: rgba(155,123,200,0.15); overflow: hidden; }
+  .timeline-fill { width: 100%; height: 0%; background: linear-gradient(180deg, #9B7BC8 0%, #F4A261 100%); transition: height 0.05s linear; border-radius: 2px; }
+  .step { display: flex; gap: 28px; align-items: flex-start; padding: 0 0 52px 0; position: relative; background: none; box-shadow: none; border-radius: 0; text-align: left; }
+  .step:last-child { padding-bottom: 0; }
+  .step-node { flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(155,123,200,0.3); background: var(--cream-dark); display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; transition: border-color 0.4s, background 0.4s, box-shadow 0.4s; }
+  [data-theme="dark"] .step-node { background: #1A1612; }
+  .step-node svg { opacity: 0.4; transition: opacity 0.4s; }
+  .step.tl-active .step-node { border-color: #9B7BC8; background: linear-gradient(135deg, #3D1F8A, #9B7BC8); box-shadow: 0 0 0 6px rgba(155,123,200,0.15), 0 4px 20px rgba(155,123,200,0.3); }
+  .step.tl-active .step-node svg { opacity: 1; filter: brightness(10); }
+  .step-body { padding-top: 10px; }
+  .step-number { display: none; }
+  .step-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 8px; transition: color 0.4s; }
   [data-theme="dark"] .step-title { color: var(--text); }
-  .step-desc { font-size: 15px; color: var(--text-soft); line-height: 1.6; }
+  .step.tl-active .step-title { color: var(--navy); }
+  .step-desc { font-size: 15px; color: var(--text-soft); line-height: 1.6; max-width: 460px; }
+  .step-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #9B7BC8; margin-bottom: 8px; opacity: 0; transition: opacity 0.4s 0.15s; }
+  .step.tl-active .step-tag { opacity: 1; }
   .who-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
   .who-persona { display: flex; flex-direction: column; gap: 20px; }
   .persona-card { background: var(--white); border-radius: 16px; padding: 28px; box-shadow: 0 2px 16px rgba(61,31,138,0.06); display: flex; gap: 20px; align-items: flex-start; border-left: 4px solid transparent; transition: border-color 0.3s, transform 0.3s; }
@@ -327,7 +337,6 @@
   [data-theme="dark"] .nav-cta:hover { background: #7B4DB8 !important; }
   [data-theme="dark"] .nav-links a:hover { color: var(--text); }
   [data-theme="dark"] .btn-primary { color: white; }
-  [data-theme="dark"] .step-number { color: white; }
   [data-theme="dark"] .quote-text { color: #F5F0E8; }
   [data-theme="dark"] .quote-attr { color: rgba(245,240,232,0.45); }
   [data-theme="dark"] .footer-logo-text { color: #F5F0E8; }
@@ -378,8 +387,8 @@
     .hero-actions .btn-secondary { justify-content: center; padding: 12px 0; }
     .hero-trust { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
     .stats-strip { grid-template-columns: repeat(2, 1fr); padding: 48px 24px; gap: 24px; }
-    .how-steps { grid-template-columns: 1fr; gap: 20px; }
-    .how-steps::before { display: none; }
+    .how-steps { max-width: 100%; }
+    .timeline-track { left: 25px; }
     section { padding: 64px 24px; }
     .who-inner { grid-template-columns: 1fr; gap: 40px; }
     .covers-header { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
@@ -629,10 +638,50 @@
       <h2 class="section-headline">Three steps.<br>Everything covered.</h2>
       <p class="section-sub">Clara does the hard part. You get an organised dashboard ready to act on.</p>
     </div>
-    <div class="how-steps">
-      <div class="step animate-in"><div class="step-number">1</div><div class="step-title">You set it up</div><div class="step-desc">Takes two minutes. Add your parent's name, pick a time, and ClearNest does the rest. No technical knowledge needed.</div></div>
-      <div class="step animate-in"><div class="step-number">2</div><div class="step-title">Clara calls your mum or dad</div><div class="step-desc">A warm, unhurried voice call — no apps, no smartphones required. Clara covers seven essential topics at their own pace.</div></div>
-      <div class="step animate-in"><div class="step-number">3</div><div class="step-title">Dashboard updates live</div><div class="step-desc">Everything captured is organised instantly. Urgent gaps are flagged. A sharable Family Report is generated automatically.</div></div>
+    <div class="how-steps" id="how-timeline">
+      <div class="timeline-track"><div class="timeline-fill" id="tl-fill"></div></div>
+
+      <div class="step" data-tl="0">
+        <div class="step-node">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <circle cx="11" cy="11" r="4" fill="white"/>
+            <path d="M11 3v2M11 17v2M3 11h2M17 11h2" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="step-body">
+          <div class="step-tag">Step 1</div>
+          <div class="step-title">You set it up</div>
+          <div class="step-desc">Takes two minutes. Add your parent's name, pick a time, and ClearNest does the rest. No technical knowledge needed.</div>
+        </div>
+      </div>
+
+      <div class="step" data-tl="1">
+        <div class="step-node">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <path d="M4 4.5C4 4.5 6 3 11 3s7 1.5 7 1.5V14c0 2-2 3.5-7 3.5S4 16 4 14V4.5z" stroke="white" stroke-width="1.6"/>
+            <path d="M8 8.5c1-1 5-1 6 0M8 11.5h6" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="step-body">
+          <div class="step-tag">Step 2</div>
+          <div class="step-title">Clara calls your mum or dad</div>
+          <div class="step-desc">A warm, unhurried voice call — no apps, no smartphones required. Clara covers seven essential topics at their own pace.</div>
+        </div>
+      </div>
+
+      <div class="step" data-tl="2">
+        <div class="step-node">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <rect x="3" y="5" width="16" height="12" rx="2" stroke="white" stroke-width="1.6"/>
+            <path d="M7 10l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="step-body">
+          <div class="step-tag">Step 3</div>
+          <div class="step-title">Dashboard updates live</div>
+          <div class="step-desc">Everything captured is organised instantly. Urgent gaps are flagged. A sharable Family Report is generated automatically.</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1009,6 +1058,34 @@
       });
     }, { threshold: 0.35 });
     observer.observe(strip);
+  })();
+
+  // VERTICAL TIMELINE — draw line + light up nodes on scroll
+  (function() {
+    var timeline = document.getElementById('how-timeline');
+    var fill = document.getElementById('tl-fill');
+    if (!timeline || !fill) return;
+    var steps = Array.from(timeline.querySelectorAll('.step'));
+    function update() {
+      var tlRect = timeline.getBoundingClientRect();
+      var vh = window.innerHeight;
+      // How far the timeline has travelled through the viewport (0→1)
+      var progress = Math.max(0, Math.min(1, (vh - tlRect.top) / (tlRect.height + vh * 0.3)));
+      fill.style.height = (progress * 100) + '%';
+      // Light up each node when its centre crosses 65% down the viewport
+      steps.forEach(function(step) {
+        var node = step.querySelector('.step-node');
+        if (!node) return;
+        var nodeTop = node.getBoundingClientRect().top;
+        if (nodeTop < vh * 0.72) {
+          step.classList.add('tl-active');
+        } else {
+          step.classList.remove('tl-active');
+        }
+      });
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
   })();
 
   // Share the same audio instance between both buttons so they stay in sync
