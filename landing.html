@@ -159,6 +159,22 @@
   .hero-anim { opacity: 0; transform: translateY(8px); transition: opacity 0.45s ease, transform 0.45s ease; }
   .hero-anim.visible { opacity: 1; transform: translateY(0); }
 
+  /* DEMO CHAT INTERACTIVE */
+  .demo-chat { max-height: 190px; overflow-y: auto; scrollbar-width: none; margin-bottom: 12px; }
+  .demo-chat::-webkit-scrollbar { display: none; }
+  @keyframes demo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .demo-bwrap { margin-bottom: 11px; animation: demo-in 0.35s ease forwards; }
+  .demo-footer { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(155,123,200,0.18); }
+  .demo-dots { display: flex; gap: 4px; margin-bottom: 5px; }
+  .demo-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(155,123,200,0.22); transition: background 0.3s; }
+  .demo-dot.active { background: #9B7BC8; }
+  .demo-hint { font-size: 10px; color: rgba(196,168,232,0.40); letter-spacing: 0.2px; }
+  .demo-next-btn { display: inline-flex; align-items: center; gap: 5px; background: #9B7BC8; color: #fff; border: none; border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; font-family: 'DM Sans', sans-serif; flex-shrink: 0; }
+  .demo-next-btn:hover { background: #7B5BA8; }
+  .demo-next-btn:active { transform: scale(0.96); }
+  .demo-next-btn.restart { background: rgba(155,123,200,0.18); color: #C4A8E8; }
+  .demo-next-btn.restart:hover { background: rgba(155,123,200,0.28); }
+
   /* STATS */
   .stats-strip { background: var(--navy); padding: 60px 48px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; }
   .stat-item { opacity: 0; animation: fadeUp 0.5s ease forwards; }
@@ -628,31 +644,32 @@
     }
     </script>
 
-    <!-- Chat mockup card -->
+    <!-- Chat mockup card — interactive demo -->
     <div class="hero-card" style="width:100%">
       <div class="card-header">
         <div class="card-header-left">
           <div class="clara-avatar">C</div>
-          <div><div class="card-name">Clara</div><div class="card-subtitle">Talking with your parent</div></div>
+          <div><div class="card-name">Clara</div><div class="card-subtitle" id="demo-subtitle">Live conversation demo</div></div>
         </div>
         <div class="score-ring-container"><div class="score-label">Readiness</div><div class="score-val" id="score-val">0%</div></div>
       </div>
-      <div class="hero-anim" id="bubble-clara">
-        <div class="bubble-label clara-label">Clara</div>
-        <div class="conversation-bubble">"That's really helpful. Do you know whether you have a Power of Attorney in place for your family?"</div>
-        <div class="voice-wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
-      </div>
-      <div class="hero-anim" id="bubble-user" style="margin-top: 16px;">
-        <div class="bubble-label" style="text-align:right;">Your parent</div>
-        <div class="conversation-bubble user">"I think my son sorted that out. The papers might be with the solicitor."</div>
-      </div>
-      <div class="captured-items">
-        <div class="hero-anim captured-item" id="item-1"><div class="captured-item-left"><div class="item-dot green"></div><span class="item-name">Barclays current account</span></div><span class="item-badge badge-clear">Clear</span></div>
-        <div class="hero-anim captured-item" id="item-2"><div class="captured-item-left"><div class="item-dot amber"></div><span class="item-name">Council pension — provider unknown</span></div><span class="item-badge badge-followup">Follow up</span></div>
-        <div class="hero-anim captured-item" id="item-3"><div class="captured-item-left"><div class="item-dot red"></div><span class="item-name">Power of Attorney — not confirmed</span></div><span class="item-badge badge-urgent">Urgent</span></div>
+      <div class="demo-chat" id="demo-chat"></div>
+      <div class="captured-items" id="demo-dashboard"></div>
+      <div class="demo-footer">
+        <div>
+          <div class="demo-dots" id="demo-dots">
+            <span class="demo-dot active"></span>
+            <span class="demo-dot"></span>
+            <span class="demo-dot"></span>
+            <span class="demo-dot"></span>
+            <span class="demo-dot"></span>
+          </div>
+          <div class="demo-hint">Space or click to advance</div>
+        </div>
+        <button class="demo-next-btn" id="demo-next-btn" onclick="demoAdvance()">Next ›</button>
       </div>
     </div>
-    <div class="floating-notif"><div class="notif-icon">⚠️</div><div class="notif-text"><strong>Action needed</strong><span>LPA not yet confirmed — act now</span></div></div>
+    <div class="floating-notif" id="demo-notif" style="opacity:0;pointer-events:none;transition:opacity 0.5s ease"><div class="notif-icon">⚠️</div><div class="notif-text"><strong>Action needed</strong><span>LPA not yet confirmed — act now</span></div></div>
   </div>
 </section>
 
@@ -1547,6 +1564,131 @@
   document.getElementById('exit-popup').addEventListener('click', (e) => {
     if (e.target.id === 'exit-popup') closeExitPopup();
   });
+
+  /* ── HERO CARD DEMO ── */
+  (function(){
+    var STEPS = [
+      {
+        clara: '"Hi Margaret — I\'m Clara. Let\'s make sure everything important is captured. To start: do you have a will in place?"',
+        score: 0, newItems: []
+      },
+      {
+        parent: '"Yes, it\'s with Clifford & Sons — our solicitor. Made it about five years ago."',
+        clara: '"That\'s a great start. Do you have a Lasting Power of Attorney set up — for health decisions or finances?"',
+        score: 25,
+        newItems: [{ dot:'green', name:'Will — Clifford & Sons', badge:'badge-clear', label:'Confirmed' }]
+      },
+      {
+        parent: '"I think my son sorted something out — the papers are probably at the solicitor too."',
+        clara: '"Good to know. Which bank do you mainly use day-to-day, and do you know where your statements are kept?"',
+        score: 50,
+        newItems: [{ dot:'amber', name:'LPA — location unconfirmed', badge:'badge-followup', label:'Follow up' }]
+      },
+      {
+        parent: '"Barclays. Been with them over forty years. Statements come in the post — they\'re in the study drawer."',
+        clara: '"Nearly there. Do you receive any pension beyond the state pension?"',
+        score: 72,
+        newItems: [{ dot:'green', name:'Barclays current account', badge:'badge-clear', label:'Confirmed' }]
+      },
+      {
+        parent: '"There might be one from when I worked at the council — but I\'m not sure who runs it now."',
+        score: 85,
+        newItems: [
+          { dot:'green', name:'State pension', badge:'badge-clear', label:'Confirmed' },
+          { dot:'amber', name:'Council pension — provider unknown', badge:'badge-followup', label:'Follow up' }
+        ],
+        final: true
+      }
+    ];
+
+    var chatEl = document.getElementById('demo-chat');
+    var dashEl = document.getElementById('demo-dashboard');
+    var scoreEl = document.getElementById('score-val');
+    var nextBtn = document.getElementById('demo-next-btn');
+    var dotsEl = document.getElementById('demo-dots');
+    var notif  = document.getElementById('demo-notif');
+    var step = 0;
+
+    function makeBubble(type, text) {
+      var wrap = document.createElement('div');
+      wrap.className = 'demo-bwrap';
+      var label = document.createElement('div');
+      label.className = 'bubble-label' + (type === 'clara' ? ' clara-label' : '');
+      label.style.textAlign = type === 'parent' ? 'right' : 'left';
+      label.textContent = type === 'clara' ? 'Clara' : 'Your parent';
+      var bubble = document.createElement('div');
+      bubble.className = 'conversation-bubble' + (type === 'parent' ? ' user' : '');
+      bubble.textContent = text;
+      wrap.appendChild(label);
+      wrap.appendChild(bubble);
+      chatEl.appendChild(wrap);
+      setTimeout(function(){ chatEl.scrollTop = chatEl.scrollHeight; }, 50);
+    }
+
+    function makeItem(item) {
+      var el = document.createElement('div');
+      el.className = 'captured-item demo-bwrap';
+      el.innerHTML = '<div class="captured-item-left"><div class="item-dot ' + item.dot + '"></div><span class="item-name">' + item.name + '</span></div><span class="item-badge ' + item.badge + '">' + item.label + '</span>';
+      dashEl.appendChild(el);
+    }
+
+    function animScore(target) {
+      var current = parseInt(scoreEl.textContent, 10) || 0;
+      var start = performance.now();
+      (function tick(now) {
+        var p = Math.min((now - start) / 600, 1);
+        scoreEl.textContent = Math.round(current + (target - current) * (1 - Math.pow(1 - p, 3))) + '%';
+        if (p < 1) requestAnimationFrame(tick);
+      })(performance.now());
+    }
+
+    function updateDots() {
+      dotsEl.querySelectorAll('.demo-dot').forEach(function(d, i) {
+        d.classList.toggle('active', i <= step);
+      });
+    }
+
+    function init() {
+      chatEl.innerHTML = '';
+      dashEl.innerHTML = '';
+      scoreEl.textContent = '0%';
+      step = 0;
+      nextBtn.textContent = 'Next ›';
+      nextBtn.classList.remove('restart');
+      if (notif) { notif.style.opacity = '0'; notif.style.pointerEvents = 'none'; }
+      makeBubble('clara', STEPS[0].clara);
+      updateDots();
+    }
+
+    window.demoAdvance = function() {
+      if (step >= STEPS.length - 1) { init(); return; }
+      step++;
+      var s = STEPS[step];
+      if (s.parent) makeBubble('parent', s.parent);
+      if (s.clara) setTimeout(function(){ makeBubble('clara', s.clara); }, 520);
+      if (s.newItems && s.newItems.length) {
+        s.newItems.forEach(function(item, i){ setTimeout(function(){ makeItem(item); }, 820 + i * 160); });
+      }
+      if (s.score) setTimeout(function(){ animScore(s.score); }, 650);
+      if (s.final) {
+        nextBtn.textContent = 'Restart ↺';
+        nextBtn.classList.add('restart');
+        if (notif) setTimeout(function(){ notif.style.opacity = '1'; notif.style.pointerEvents = ''; }, 1200);
+      }
+      updateDots();
+    };
+
+    /* Spacebar advances demo when no input is focused */
+    document.addEventListener('keydown', function(e) {
+      if (e.code !== 'Space') return;
+      var tag = document.activeElement ? document.activeElement.tagName : '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+      e.preventDefault();
+      window.demoAdvance();
+    });
+
+    init();
+  })();
 </script>
 
 <!-- Floating Clara button — mobile sticky -->
