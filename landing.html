@@ -968,13 +968,14 @@
     }
   }
 
-  // FLOATING CLARA — show on all devices after scrolling past hero
+  // FLOATING CLARA — show after user scrolls past hero section
   (function() {
     var floatingBtn = document.getElementById('clara-floating-btn');
     var hero = document.querySelector('.hero');
     if (!floatingBtn || !hero) return;
     function checkScroll() {
-      floatingBtn.classList.toggle('visible', hero.getBoundingClientRect().bottom < -40);
+      var heroBottom = hero.getBoundingClientRect().bottom;
+      floatingBtn.classList.toggle('visible', heroBottom < window.innerHeight * 0.5);
     }
     window.addEventListener('scroll', checkScroll, { passive: true });
     checkScroll();
