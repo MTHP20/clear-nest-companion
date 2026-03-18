@@ -231,6 +231,40 @@
   .persona-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
   [data-theme="dark"] .persona-name { color: var(--text); }
   .persona-desc { font-size: 14px; color: var(--text-soft); line-height: 1.6; }
+
+  /* WHO TAB SWITCHER */
+  .who-outer { max-width: 1200px; margin: 0 auto; }
+  .who-tab-header { margin-bottom: 40px; }
+  .who-tab-bar { display: inline-flex; background: rgba(61,31,138,0.06); border-radius: 100px; padding: 4px; gap: 2px; margin-top: 16px; }
+  [data-theme="dark"] .who-tab-bar { background: rgba(155,123,200,0.10); }
+  .wtab { background: none; border: none; border-radius: 100px; padding: 9px 22px; font-size: 14px; font-weight: 500; color: var(--text-mid); cursor: pointer; transition: background 0.2s, color 0.2s; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .wtab:hover { color: var(--navy); }
+  [data-theme="dark"] .wtab:hover { color: var(--text); }
+  .wtab.wtab-active { background: var(--white); color: var(--navy); box-shadow: 0 1px 8px rgba(61,31,138,0.10); }
+  [data-theme="dark"] .wtab.wtab-active { background: rgba(155,123,200,0.18); color: var(--text); }
+  .who-panel { display: none; }
+  .who-panel.wpactive { display: block; animation: fadeIn 0.3s ease; }
+  /* Institutional panels */
+  .who-inst { display: grid; grid-template-columns: 1fr 320px; gap: 72px; align-items: start; }
+  .inst-left { display: flex; flex-direction: column; }
+  .inst-left .section-headline { margin-bottom: 16px; }
+  .inst-left .section-sub { margin-bottom: 32px; }
+  .inst-points { display: flex; flex-direction: column; gap: 24px; margin-bottom: 36px; }
+  .inst-point { display: flex; gap: 16px; align-items: flex-start; }
+  .inst-point-icon { width: 40px; height: 40px; background: rgba(155,123,200,0.10); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .inst-point-title { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+  [data-theme="dark"] .inst-point-title { color: var(--text); }
+  .inst-point-desc { font-size: 14px; color: var(--text-soft); line-height: 1.6; }
+  .inst-cta-btn { display: inline-flex; align-items: center; background: var(--navy); color: var(--white); padding: 13px 26px; border-radius: 100px; font-size: 15px; font-weight: 500; text-decoration: none; transition: opacity 0.2s, transform 0.2s; align-self: flex-start; }
+  .inst-cta-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .inst-right { display: flex; flex-direction: column; gap: 14px; }
+  .inst-card { background: var(--white); border-radius: 16px; padding: 22px; box-shadow: 0 2px 16px rgba(61,31,138,0.06); border-top: 3px solid #9B7BC8; }
+  [data-theme="dark"] .inst-card { background: #1A1612; }
+  .inst-card-icon { font-size: 20px; margin-bottom: 8px; }
+  .inst-card-stat { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1; margin-bottom: 6px; }
+  [data-theme="dark"] .inst-card-stat { color: var(--text); }
+  .inst-card-label { font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+
   .quote-section { background: var(--navy); padding: 100px 48px; text-align: center; }
   .quote-inner { max-width: 760px; margin: 0 auto; }
   .quote-mark { font-family: 'Playfair Display', serif; font-size: 80px; line-height: 0.5; color: var(--amber-light); margin-bottom: 32px; display: block; opacity: 0.6; }
@@ -447,6 +481,10 @@
     .timeline-track { left: 25px; }
     section { padding: 64px 24px; }
     .who-inner { grid-template-columns: 1fr; gap: 40px; }
+    .who-tab-bar { flex-wrap: wrap; border-radius: 16px; }
+    .who-inst { grid-template-columns: 1fr; gap: 36px; }
+    .inst-right { flex-direction: row; flex-wrap: wrap; }
+    .inst-card { flex: 1 1 160px; }
     .covers { padding: 60px 20px; }
     .covers-grid { grid-template-columns: 1fr; }
     .ccard.open { grid-column: span 1; }
@@ -746,17 +784,135 @@
   </div>
 </section>
 
-<section>
-  <div class="who-inner">
-    <div class="animate-in">
+<section id="who">
+  <div class="who-outer">
+
+    <!-- Tab strip -->
+    <div class="who-tab-header animate-in">
       <div class="section-label">Who it's for</div>
-      <h2 class="section-headline">Designed for two people who love each other.</h2>
-      <p class="section-sub">The conversation is impossible between them. Clara makes it possible for both of them.</p>
+      <div class="who-tab-bar" role="tablist">
+        <button class="wtab wtab-active" role="tab" data-panel="families">Families</button>
+        <button class="wtab" role="tab" data-panel="care">Care homes</button>
+        <button class="wtab" role="tab" data-panel="advisers">Financial advisers</button>
+      </div>
     </div>
-    <div class="who-persona animate-in">
-      <div class="persona-card"><div class="persona-icon blue">👴</div><div><div class="persona-name">The elderly parent</div><div class="persona-desc">Gets a warm, patient voice call from Clara. No apps, no screens, no complexity. Just a gentle conversation at their own pace — and the comfort of knowing their family will be prepared.</div></div></div>
-      <div class="persona-card"><div class="persona-icon amber">👨‍💼</div><div><div class="persona-name">The adult child</div><div class="persona-desc">Gets an organised dashboard, a Family Report they can take to a solicitor, and clear next steps — without having to have the conversation that neither of them can start.</div></div></div>
+
+    <!-- Panel: Families -->
+    <div class="who-panel wpactive" id="wpanel-families" role="tabpanel">
+      <div class="who-inner">
+        <div>
+          <h2 class="section-headline">Designed for two people who love each other.</h2>
+          <p class="section-sub">The conversation is impossible between them. Clara makes it possible for both of them.</p>
+        </div>
+        <div class="who-persona">
+          <div class="persona-card"><div class="persona-icon blue">👴</div><div><div class="persona-name">The elderly parent</div><div class="persona-desc">Gets a warm, patient voice call from Clara. No apps, no screens, no complexity. Just a gentle conversation at their own pace — and the comfort of knowing their family will be prepared.</div></div></div>
+          <div class="persona-card"><div class="persona-icon amber">👨‍💼</div><div><div class="persona-name">The adult child</div><div class="persona-desc">Gets an organised dashboard, a Family Report they can take to a solicitor, and clear next steps — without having to have the conversation that neither of them can start.</div></div></div>
+        </div>
+      </div>
     </div>
+
+    <!-- Panel: Care homes -->
+    <div class="who-panel" id="wpanel-care" role="tabpanel">
+      <div class="who-inst">
+        <div class="inst-left">
+          <h2 class="section-headline">Ready families.<br>Smoother admissions.</h2>
+          <p class="section-sub">Before a resident arrives, Clara calls the family. By the time they walk in, you have the legal, financial, and care-preference picture already captured and structured.</p>
+          <div class="inst-points">
+            <div class="inst-point">
+              <div class="inst-point-icon">🗂️</div>
+              <div>
+                <div class="inst-point-title">Onboarding in hours, not weeks</div>
+                <div class="inst-point-desc">Legal documents, financial authority, and care wishes captured before day one — no chasing families for paperwork mid-admission.</div>
+              </div>
+            </div>
+            <div class="inst-point">
+              <div class="inst-point-icon">⚖️</div>
+              <div>
+                <div class="inst-point-title">LPA gaps flagged before they become your problem</div>
+                <div class="inst-point-desc">Clara surfaces missing or unregistered Lasting Powers of Attorney before admission — so your team is never stuck waiting for legal authority.</div>
+              </div>
+            </div>
+            <div class="inst-point">
+              <div class="inst-point-icon">📋</div>
+              <div>
+                <div class="inst-point-title">Structured report for your care team</div>
+                <div class="inst-point-desc">A clean Family Report with every financial and legal detail your care coordinators need — formatted to share, not to decipher.</div>
+              </div>
+            </div>
+          </div>
+          <a href="#waitlist" class="inst-cta-btn">Enquire about care home partnerships →</a>
+        </div>
+        <div class="inst-right">
+          <div class="inst-card">
+            <div class="inst-card-icon">⏱️</div>
+            <div class="inst-card-stat">3–5×</div>
+            <div class="inst-card-label">faster admission onboarding when families arrive pre-briefed with a completed report</div>
+          </div>
+          <div class="inst-card">
+            <div class="inst-card-icon">⚠️</div>
+            <div class="inst-card-stat">1 in 3</div>
+            <div class="inst-card-label">new admissions have an LPA gap that creates a legal bottleneck for your staff</div>
+          </div>
+          <div class="inst-card">
+            <div class="inst-card-icon">🤝</div>
+            <div class="inst-card-stat">Zero</div>
+            <div class="inst-card-label">new software required — Clara works alongside your existing admissions workflow</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Financial advisers -->
+    <div class="who-panel" id="wpanel-advisers" role="tabpanel">
+      <div class="who-inst">
+        <div class="inst-left">
+          <h2 class="section-headline">Walk in knowing<br>everything.</h2>
+          <p class="section-sub">Before you meet a client's ageing parent, Clara has mapped their will, pension pots, bank accounts, insurance, and LPA status. You bill for advice — not the first hour of discovery.</p>
+          <div class="inst-points">
+            <div class="inst-point">
+              <div class="inst-point-icon">💰</div>
+              <div>
+                <div class="inst-point-title">Surface hidden assets before the appointment</div>
+                <div class="inst-point-desc">£31B sits in lost and unclaimed pension pots across the UK. Clara asks about them — so you already know what's there before you walk in the door.</div>
+              </div>
+            </div>
+            <div class="inst-point">
+              <div class="inst-point-icon">📄</div>
+              <div>
+                <div class="inst-point-title">A structured pre-brief, the night before</div>
+                <div class="inst-point-desc">A financial snapshot covering every account, policy, and legal document — reviewed in ten minutes so you spend the meeting on strategy, not fact-finding.</div>
+              </div>
+            </div>
+            <div class="inst-point">
+              <div class="inst-point-icon">🔓</div>
+              <div>
+                <div class="inst-point-title">Gaps become your next engagement</div>
+                <div class="inst-point-desc">Missing LPA, orphaned pension, no will — every gap Clara surfaces is an estate-planning conversation you're now positioned to lead.</div>
+              </div>
+            </div>
+          </div>
+          <a href="#waitlist" class="inst-cta-btn">Enquire about adviser partnerships →</a>
+        </div>
+        <div class="inst-right">
+          <div class="inst-card">
+            <div class="inst-card-icon">💷</div>
+            <div class="inst-card-stat">£31B</div>
+            <div class="inst-card-label">in lost pension pots across the UK — many belong to your existing clients' parents</div>
+          </div>
+          <div class="inst-card">
+            <div class="inst-card-icon">⏱️</div>
+            <div class="inst-card-stat">~60 min</div>
+            <div class="inst-card-label">of discovery time reclaimed per client meeting — bill for advice, not admin</div>
+          </div>
+          <div class="inst-card">
+            <div class="inst-card-icon">📈</div>
+            <div class="inst-card-stat">3+</div>
+            <div class="inst-card-label">new product conversations opened per client family by gaps Clara identifies</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -1564,6 +1720,19 @@
   document.getElementById('exit-popup').addEventListener('click', (e) => {
     if (e.target.id === 'exit-popup') closeExitPopup();
   });
+
+  /* ── WHO TAB SWITCHER ── */
+  (function(){
+    document.querySelectorAll('.wtab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var panel = tab.dataset.panel;
+        document.querySelectorAll('.wtab').forEach(function(t) { t.classList.remove('wtab-active'); });
+        document.querySelectorAll('.who-panel').forEach(function(p) { p.classList.remove('wpactive'); });
+        tab.classList.add('wtab-active');
+        document.getElementById('wpanel-' + panel).classList.add('wpactive');
+      });
+    });
+  })();
 
   /* ── HERO CARD DEMO ── */
   (function(){
