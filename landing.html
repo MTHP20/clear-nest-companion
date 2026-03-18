@@ -166,6 +166,7 @@
   .stat-number { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700; color: var(--white); line-height: 1; margin-bottom: 8px; }
   .stat-number span { color: var(--amber-light); }
   .stat-desc { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.5; font-weight: 300; }
+  .stat-inline { color: var(--amber-light); font-weight: 600; }
 
   /* NHS CALLOUT */
   .nhs-callout { border-left: 4px solid #E53935; border-radius: 0 12px 12px 0; background: linear-gradient(135deg, rgba(229,57,53,0.04), rgba(244,162,97,0.04)); border-top: 1px solid rgba(229,57,53,0.12); border-right: 1px solid rgba(229,57,53,0.12); border-bottom: 1px solid rgba(229,57,53,0.12); padding: 28px 36px; margin: 0 48px 0; display: flex; align-items: flex-start; gap: 20px; }
@@ -604,10 +605,10 @@
 </section>
 
 <div class="stats-strip">
-  <div class="stat-item"><div class="stat-number">1<span>M+</span></div><div class="stat-desc">People living with dementia in the UK right now</div></div>
-  <div class="stat-item"><div class="stat-number">£<span>31B</span></div><div class="stat-desc">In lost and unclaimed pension pots across the UK</div></div>
-  <div class="stat-item"><div class="stat-number">55<span>K</span></div><div class="stat-desc">LPA applications rejected in 2025 alone — a 199% rise</div></div>
-  <div class="stat-item"><div class="stat-number">£<span>20K</span></div><div class="stat-desc">Minimum Court of Protection cost when no LPA exists</div></div>
+  <div class="stat-item"><div class="stat-number" data-count="1" data-prefix="" data-suffix="M+">1<span>M+</span></div><div class="stat-desc">People living with dementia in the UK right now</div></div>
+  <div class="stat-item"><div class="stat-number" data-count="31" data-prefix="£" data-suffix="B">£<span>31B</span></div><div class="stat-desc">In lost and unclaimed pension pots across the UK</div></div>
+  <div class="stat-item"><div class="stat-number" data-count="55" data-prefix="" data-suffix="K">55<span>K</span></div><div class="stat-desc">LPA applications rejected in 2025 alone — a <span class="stat-inline" data-count="199" data-suffix="%">199%</span> rise</div></div>
+  <div class="stat-item"><div class="stat-number" data-count="20" data-prefix="£" data-suffix="K">£<span>20K</span></div><div class="stat-desc">Minimum Court of Protection cost when no LPA exists</div></div>
 </div>
 
 <div class="supported-by-strip">
@@ -974,6 +975,40 @@
     }
     window.addEventListener('scroll', checkScroll, { passive: true });
     checkScroll();
+  })();
+
+  // STAT COUNTUP — triggers once on scroll into view
+  (function() {
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    function runCount(el, duration) {
+      var target = parseInt(el.dataset.count, 10);
+      var prefix = el.dataset.prefix || '';
+      var suffix = el.dataset.suffix || '';
+      var isInline = el.classList.contains('stat-inline');
+      var start = performance.now();
+      function step(now) {
+        var progress = Math.min((now - start) / duration, 1);
+        var val = Math.round(easeOutCubic(progress) * target);
+        if (isInline) {
+          el.textContent = val + suffix;
+        } else {
+          el.innerHTML = prefix + val + '<span>' + suffix + '</span>';
+        }
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    var strip = document.querySelector('.stats-strip');
+    if (!strip) return;
+    var fired = false;
+    var observer = new IntersectionObserver(function(entries) {
+      if (fired || !entries[0].isIntersecting) return;
+      fired = true;
+      strip.querySelectorAll('[data-count]').forEach(function(el, i) {
+        setTimeout(function() { runCount(el, 1600); }, i * 150);
+      });
+    }, { threshold: 0.35 });
+    observer.observe(strip);
   })();
 
   // Share the same audio instance between both buttons so they stay in sync
