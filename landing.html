@@ -539,24 +539,35 @@
     </div>
 
     <script>
-    var cnhState = 0;
     function cnHeroCycle() {
-      cnhState = (cnhState + 1) % 3;
+      var audio = document.getElementById('clara-demo');
       var lbl = document.getElementById('cnh-label');
       var bars = document.getElementById('cnh-bars');
       var l1 = document.getElementById('cnh-l1');
-      if (cnhState === 0) {
+      if (!audio) return;
+      function setSpeaking() {
+        lbl.textContent = 'Clara · Speaking';
+        bars.classList.add('active');
+        l1.style.animationDuration = '4s';
+      }
+      function setReady() {
         lbl.textContent = 'Clara · Ready';
         bars.classList.remove('active');
         l1.style.animationDuration = '12s';
-      } else if (cnhState === 1) {
-        lbl.textContent = 'Clara · Listening...';
-        bars.classList.add('active');
-        l1.style.animationDuration = '3.5s';
+      }
+      if (audio.paused) {
+        audio.currentTime = 0;
+        audio.play().then(function() {
+          setSpeaking();
+          audio.onended = setReady;
+        }).catch(function() {
+          lbl.textContent = 'Clara · Coming soon';
+          setTimeout(setReady, 2000);
+        });
       } else {
-        lbl.textContent = 'Clara · Speaking';
-        bars.classList.remove('active');
-        l1.style.animationDuration = '5s';
+        audio.pause();
+        audio.currentTime = 0;
+        setReady();
       }
     }
     </script>
