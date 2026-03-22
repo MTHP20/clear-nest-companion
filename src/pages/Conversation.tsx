@@ -65,6 +65,7 @@ const Conversation = () => {
     capturedItems,
     parentName,
     childName,
+    familyId,
     lastClaraMessage,
     lastUserMessage,
     setLastClaraMessage,
@@ -316,6 +317,7 @@ const Conversation = () => {
           context,
           elderly_name: parentName,
           trusted_contact_name: childName,
+          family_id: familyId,
         },
       });
     } catch (err) {
@@ -327,7 +329,7 @@ const Conversation = () => {
       console.error('❌', msg);
       setErrorMessage("Clara couldn't connect. Please try again.");
     }
-  }, [agentId, status, buildContextSummary, parentName, childName]);
+  }, [agentId, status, buildContextSummary, parentName, childName, familyId]);
 
   const endSession = useCallback(async () => {
     setIsHolding(false);

@@ -29,3 +29,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Supabase CLI generated files
+supabase/.temp/

@@ -52,6 +52,7 @@ export interface ReadinessSnapshot {
 interface SessionContextType {
   parentName: string;
   childName: string;
+  familyId: string;
   capturedItems: CapturedItem[];
   actionItems: ActionItem[];
   sessions: SessionEntry[];
@@ -153,21 +154,23 @@ function saveLS(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota exceeded */ }
 }
 
-function loadProfileNames(): { parentName: string; childName: string } {
+function loadProfileNames(): { parentName: string; childName: string; familyId: string } {
   try {
     const raw = localStorage.getItem('cn-user-profile');
-    if (!raw) return { parentName: 'You', childName: 'Family' };
-    const p = JSON.parse(raw) as { elderlyName?: string; trustedContactName?: string };
+    if (!raw) return { parentName: 'You', childName: 'Family', familyId: 'unknown' };
+    const p = JSON.parse(raw) as { elderlyName?: string; trustedContactName?: string; sessionToken?: string };
     return {
       parentName: p.elderlyName?.trim() || 'You',
       childName: p.trustedContactName?.trim() || 'Family',
+      familyId: p.sessionToken || 'unknown',
     };
-  } catch { return { parentName: 'You', childName: 'Family' }; }
+  } catch { return { parentName: 'You', childName: 'Family', familyId: 'unknown' }; }
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [parentName] = useState(() => loadProfileNames().parentName);
   const [childName] = useState(() => loadProfileNames().childName);
+  const [familyId] = useState(() => loadProfileNames().familyId);
 
   // ── Persisted state — survives page refresh via localStorage ──────────────
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>(() =>
@@ -562,6 +565,7 @@ ${transcriptText.slice(0, 4000)}`,
       value={{
         parentName,
         childName,
+        familyId,
         capturedItems,
         actionItems,
         sessions,
