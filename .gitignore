@@ -32,3 +32,4 @@ dist-ssr
 
 # Supabase CLI generated files
 supabase/.temp/
+.env

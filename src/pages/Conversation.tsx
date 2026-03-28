@@ -313,6 +313,7 @@ const Conversation = () => {
     try {
       await convMethodsRef.current!.start({
         agentId,
+        connectionType: 'websocket',
         dynamicVariables: {
           context,
           elderly_name: parentName,

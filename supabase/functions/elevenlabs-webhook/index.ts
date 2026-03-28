@@ -6,8 +6,8 @@
  *   1. Verify webhook signature (HMAC-SHA256)
  *   2. Fetch full transcript from ElevenLabs API
  *   3. Encrypt transcript (AES-256-GCM) and write to `sessions`
- *   4. Extract structured profile data via Claude API
- *   5. Upsert extracted data into `profiles`
+ *   4. Extract structured profile data via Claude API (tool_use — strict schema)
+ *   5. Merge extracted data into existing `profiles` row (never overwrites previous data)
  *
  * Required Supabase secrets (set via `supabase secrets set`):
  *   ELEVENLABS_API_KEY       — ElevenLabs API key
@@ -29,7 +29,6 @@ interface ElevenLabsWebhookPayload {
     conversation_id: string;
     agent_id: string;
     status: string;
-    /** Optional — set this in ElevenLabs conversation metadata to link a family */
     metadata?: {
       family_id?: string;
       [key: string]: unknown;
@@ -53,10 +52,21 @@ interface ElevenLabsConversationDetail {
   };
 }
 
+/** Canonical extracted profile — used as both the Claude tool input schema and DB shape. */
 interface ClaudeExtractedProfile {
   bank_accounts: Array<{
     bank_name: string;
     account_type: string;
+    notes: string;
+  }>;
+  financial_accounts: Array<{
+    type: string;
+    provider: string;
+    notes: string;
+  }>;
+  property_details: Array<{
+    description: string;
+    ownership_type: string;
     notes: string;
   }>;
   pension_status: string | null;
@@ -71,6 +81,18 @@ interface ClaudeExtractedProfile {
   topics_covered: string[];
 }
 
+/** Existing profiles row shape (partial — only the fields we need to merge). */
+interface ExistingProfile {
+  bank_accounts: ClaudeExtractedProfile["bank_accounts"];
+  financial_accounts: ClaudeExtractedProfile["financial_accounts"];
+  property_details: ClaudeExtractedProfile["property_details"];
+  pension_status: string | null;
+  lpa_confirmed: boolean;
+  will_location: string | null;
+  key_contacts: ClaudeExtractedProfile["key_contacts"];
+  care_wishes: string | null;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Verify the ElevenLabs webhook signature (HMAC-SHA256). */
@@ -81,7 +103,6 @@ async function verifyWebhookSignature(
 ): Promise<boolean> {
   if (!signatureHeader) return false;
 
-  // Header format: "t=<timestamp>,v1=<hex_signature>"
   const parts = Object.fromEntries(
     signatureHeader.split(",").map((p) => p.split("=")),
   );
@@ -89,7 +110,6 @@ async function verifyWebhookSignature(
   const receivedSig = parts["v1"];
   if (!timestamp || !receivedSig) return false;
 
-  // Reject messages older than 5 minutes
   const age = Date.now() / 1000 - Number(timestamp);
   if (age > 300) return false;
 
@@ -108,7 +128,6 @@ async function verifyWebhookSignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  // Constant-time comparison
   if (expectedSig.length !== receivedSig.length) return false;
   let mismatch = 0;
   for (let i = 0; i < expectedSig.length; i++) {
@@ -118,10 +137,7 @@ async function verifyWebhookSignature(
 }
 
 /** Encrypt plaintext using AES-256-GCM. Returns base64(iv + ciphertext). */
-async function encryptTranscript(
-  plaintext: string,
-  hexKey: string,
-): Promise<string> {
+async function encryptTranscript(plaintext: string, hexKey: string): Promise<string> {
   const keyBytes = new Uint8Array(
     hexKey.match(/.{2}/g)!.map((b) => parseInt(b, 16)),
   );
@@ -133,19 +149,13 @@ async function encryptTranscript(
     ["encrypt"],
   );
 
-  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
+  const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(plaintext);
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    cryptoKey,
-    encoded,
-  );
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, encoded);
 
-  // Prepend IV to ciphertext so decryption has everything it needs
   const combined = new Uint8Array(iv.length + ciphertext.byteLength);
   combined.set(iv, 0);
   combined.set(new Uint8Array(ciphertext), iv.length);
-
   return btoa(String.fromCharCode(...combined));
 }
 
@@ -165,36 +175,32 @@ async function fetchElevenLabsConversation(
   return resp.json() as Promise<ElevenLabsConversationDetail>;
 }
 
-/** Build a plain-text representation of the transcript for Claude. */
 function buildTranscriptText(turns: ElevenLabsTranscriptTurn[]): string {
   return turns
     .map((t) => `${t.role === "user" ? "Margaret" : "Clara"}: ${t.message}`)
     .join("\n");
 }
 
-/** Call the Claude API to extract structured profile data from the transcript. */
+/**
+ * Call the Claude API using tool_use to extract structured profile data.
+ * tool_choice: { type: "tool" } forces Claude to always call the tool,
+ * guaranteeing a schema-valid JSON response — no markdown fences, no deviation.
+ */
 async function extractProfileWithClaude(
   transcriptText: string,
   apiKey: string,
 ): Promise<ClaudeExtractedProfile> {
-  const systemPrompt = `You are an assistant helping a family organise critical financial and legal information following a dementia diagnosis. You will be given a transcript of a conversation between an elderly person and Clara (an AI assistant). Extract structured information carefully and conservatively — only include information that was clearly stated. Do not infer or guess.
-
-Respond with a JSON object matching this exact schema:
-{
-  "bank_accounts": [{ "bank_name": string, "account_type": string, "notes": string }],
-  "pension_status": string | null,
-  "lpa_confirmed": boolean,
-  "will_location": string | null,
-  "key_contacts": [{ "name": string, "role": string, "phone": string | undefined }],
-  "care_wishes": string | null,
-  "topics_covered": string[]
-}
-
-Rules:
-- "lpa_confirmed" is true only if the person clearly stated they have a signed LPA in place.
-- "topics_covered" should be a list of short topic labels (e.g. ["bank_accounts", "pension", "lpa"]).
-- If a field is not mentioned, use null or an empty array.
-- Never fabricate information.`;
+  const empty: ClaudeExtractedProfile = {
+    bank_accounts: [],
+    financial_accounts: [],
+    property_details: [],
+    pension_status: null,
+    lpa_confirmed: false,
+    will_location: null,
+    key_contacts: [],
+    care_wishes: null,
+    topics_covered: [],
+  };
 
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -205,12 +211,122 @@ Rules:
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system: systemPrompt,
+      max_tokens: 1500,
+      system:
+        "You are extracting structured information from a care-planning conversation between an elderly person and Clara (an AI assistant). Extract only what was clearly stated — never infer or fabricate. Omit fields that were not mentioned.",
+      tools: [
+        {
+          name: "store_extracted_profile",
+          description:
+            "Store all structured information extracted from the care-planning conversation transcript.",
+          input_schema: {
+            type: "object",
+            properties: {
+              bank_accounts: {
+                type: "array",
+                description: "Bank accounts explicitly mentioned.",
+                items: {
+                  type: "object",
+                  properties: {
+                    bank_name: { type: "string" },
+                    account_type: {
+                      type: "string",
+                      description: "e.g. current, savings, ISA",
+                    },
+                    notes: { type: "string" },
+                  },
+                  required: ["bank_name", "account_type", "notes"],
+                },
+              },
+              financial_accounts: {
+                type: "array",
+                description: "Pensions, ISAs, investments, savings accounts (non-bank).",
+                items: {
+                  type: "object",
+                  properties: {
+                    type: {
+                      type: "string",
+                      description: "e.g. pension, ISA, investment, annuity",
+                    },
+                    provider: { type: "string" },
+                    notes: { type: "string" },
+                  },
+                  required: ["type", "provider", "notes"],
+                },
+              },
+              property_details: {
+                type: "array",
+                description: "Property ownership details explicitly mentioned.",
+                items: {
+                  type: "object",
+                  properties: {
+                    description: {
+                      type: "string",
+                      description: "e.g. 3-bed house in Manchester",
+                    },
+                    ownership_type: {
+                      type: "string",
+                      description: "e.g. owned outright, mortgaged, rented, leasehold",
+                    },
+                    notes: { type: "string" },
+                  },
+                  required: ["description", "ownership_type", "notes"],
+                },
+              },
+              pension_status: {
+                type: ["string", "null"],
+                description: "Summary of pension arrangements, or null if not discussed.",
+              },
+              lpa_confirmed: {
+                type: "boolean",
+                description:
+                  "True ONLY if the person clearly stated they have a signed Lasting Power of Attorney in place.",
+              },
+              will_location: {
+                type: ["string", "null"],
+                description: "Where the will is stored, or null if not mentioned.",
+              },
+              key_contacts: {
+                type: "array",
+                description: "Named contacts such as GP, solicitor, accountant, financial adviser.",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    role: { type: "string", description: "e.g. GP, solicitor, accountant" },
+                    phone: { type: "string" },
+                  },
+                  required: ["name", "role"],
+                },
+              },
+              care_wishes: {
+                type: ["string", "null"],
+                description:
+                  "Care preferences and end-of-life wishes explicitly stated, or null.",
+              },
+              topics_covered: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "Short topic labels for what was discussed, e.g. [\"bank_accounts\", \"pension\", \"lpa\"].",
+              },
+            },
+            required: [
+              "bank_accounts",
+              "financial_accounts",
+              "property_details",
+              "lpa_confirmed",
+              "key_contacts",
+              "topics_covered",
+            ],
+          },
+        },
+      ],
+      tool_choice: { type: "tool", name: "store_extracted_profile" },
       messages: [
         {
           role: "user",
-          content: `Here is the conversation transcript:\n\n${transcriptText}\n\nExtract the structured profile data as JSON.`,
+          content: `Extract structured profile data from this care-planning conversation:\n\n${transcriptText}`,
         },
       ],
     }),
@@ -222,26 +338,33 @@ Rules:
   }
 
   const result = await resp.json();
-  const rawText: string = result.content?.[0]?.text ?? "{}";
+  const toolUse = (result.content ?? []).find(
+    (b: { type: string }) => b.type === "tool_use",
+  ) as { input?: ClaudeExtractedProfile } | undefined;
 
-  // Strip markdown code fences if Claude wrapped the JSON
-  const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) ?? [null, rawText];
-  const jsonText = (jsonMatch[1] ?? rawText).trim();
-
-  try {
-    return JSON.parse(jsonText) as ClaudeExtractedProfile;
-  } catch {
-    console.error("Failed to parse Claude response as JSON:", jsonText);
-    return {
-      bank_accounts: [],
-      pension_status: null,
-      lpa_confirmed: false,
-      will_location: null,
-      key_contacts: [],
-      care_wishes: null,
-      topics_covered: [],
-    };
+  if (!toolUse?.input) {
+    console.error("Claude did not return a tool_use block:", JSON.stringify(result));
+    return empty;
   }
+
+  return { ...empty, ...toolUse.input };
+}
+
+/**
+ * Merge two JSONB arrays, deduplicating by JSON string equality.
+ * Existing items come first; new items are appended if not already present.
+ */
+function mergeArrays<T>(existing: T[], incoming: T[]): T[] {
+  const seen = new Set<string>(existing.map((x) => JSON.stringify(x)));
+  const result = [...existing];
+  for (const item of incoming) {
+    const key = JSON.stringify(item);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(item);
+    }
+  }
+  return result;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -251,7 +374,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  // ── Read secrets ────────────────────────────────────────────────────────────
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
   const ELEVENLABS_WEBHOOK_SECRET = Deno.env.get("ELEVENLABS_WEBHOOK_SECRET");
   const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -271,21 +393,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response("Internal Server Error", { status: 500 });
   }
 
-  // ── Read & verify body ──────────────────────────────────────────────────────
   const rawBody = await req.text();
-
   const signatureHeader = req.headers.get("ElevenLabs-Signature");
-  const valid = await verifyWebhookSignature(
-    rawBody,
-    signatureHeader,
-    ELEVENLABS_WEBHOOK_SECRET,
-  );
+  const valid = await verifyWebhookSignature(rawBody, signatureHeader, ELEVENLABS_WEBHOOK_SECRET);
   if (!valid) {
     console.warn("Webhook signature verification failed");
     return new Response("Unauthorized", { status: 401 });
   }
 
-  // ── Parse payload ───────────────────────────────────────────────────────────
   let payload: ElevenLabsWebhookPayload;
   try {
     payload = JSON.parse(rawBody);
@@ -293,23 +408,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response("Bad Request: invalid JSON", { status: 400 });
   }
 
-  // Only process conversation-ended events
   if (payload.type !== "conversation.ended") {
     return new Response("OK", { status: 200 });
   }
 
   const { conversation_id, metadata } = payload.data;
   const family_id = metadata?.family_id ?? "unknown";
-
   console.log(`Processing conversation ${conversation_id} for family ${family_id}`);
 
-  // ── Fetch transcript from ElevenLabs ────────────────────────────────────────
+  // ── Fetch transcript ────────────────────────────────────────────────────────
   let conversation: ElevenLabsConversationDetail;
   try {
-    conversation = await fetchElevenLabsConversation(
-      conversation_id,
-      ELEVENLABS_API_KEY,
-    );
+    conversation = await fetchElevenLabsConversation(conversation_id, ELEVENLABS_API_KEY);
   } catch (err) {
     console.error("Failed to fetch ElevenLabs conversation:", err);
     return new Response("Internal Server Error", { status: 500 });
@@ -321,24 +431,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // ── Encrypt transcript ──────────────────────────────────────────────────────
   let encryptedTranscript: string;
   try {
-    encryptedTranscript = await encryptTranscript(
-      transcriptText,
-      TRANSCRIPT_ENCRYPTION_KEY,
-    );
+    encryptedTranscript = await encryptTranscript(transcriptText, TRANSCRIPT_ENCRYPTION_KEY);
   } catch (err) {
     console.error("Encryption failed:", err);
     return new Response("Internal Server Error", { status: 500 });
   }
 
-  // ── Extract profile data via Claude ─────────────────────────────────────────
+  // ── Extract profile via Claude (strict tool_use) ────────────────────────────
   let extracted: ClaudeExtractedProfile;
   try {
     extracted = await extractProfileWithClaude(transcriptText, ANTHROPIC_API_KEY);
   } catch (err) {
     console.error("Claude extraction failed:", err);
-    // Non-fatal — we still write the session, just with empty topics
     extracted = {
       bank_accounts: [],
+      financial_accounts: [],
+      property_details: [],
       pension_status: null,
       lpa_confirmed: false,
       will_location: null,
@@ -348,10 +456,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     };
   }
 
-  // ── Write to Supabase ───────────────────────────────────────────────────────
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Insert session row
+  // ── Insert session row ──────────────────────────────────────────────────────
   const { error: sessionError } = await supabase.from("sessions").insert({
     conversation_id,
     family_id,
@@ -361,7 +468,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   });
 
   if (sessionError) {
-    // Duplicate conversation_id — safe to ignore (idempotent webhook delivery)
     if (sessionError.code === "23505") {
       console.log(`Conversation ${conversation_id} already stored — skipping`);
       return new Response("OK", { status: 200 });
@@ -370,34 +476,45 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response("Internal Server Error", { status: 500 });
   }
 
-  // Upsert profile row (merge new data into existing profile)
-  const { error: profileError } = await supabase.from("profiles").upsert(
-    {
-      family_id,
-      bank_accounts: extracted.bank_accounts,
-      pension_status: extracted.pension_status,
-      lpa_confirmed: extracted.lpa_confirmed,
-      will_location: extracted.will_location,
-      key_contacts: extracted.key_contacts,
-      care_wishes: extracted.care_wishes,
-      last_updated: new Date().toISOString(),
-    },
-    {
-      onConflict: "family_id",
-      // Only overwrite non-null fields so earlier data isn't lost
-      ignoreDuplicates: false,
-    },
-  );
+  // ── Merge profile data (never overwrite existing non-empty fields) ──────────
+  // Read the existing profile row first so we can merge arrays instead of replacing them.
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select(
+      "bank_accounts, financial_accounts, property_details, pension_status, lpa_confirmed, will_location, key_contacts, care_wishes",
+    )
+    .eq("family_id", family_id)
+    .maybeSingle();
+
+  const prev = (existing ?? {}) as Partial<ExistingProfile>;
+
+  const merged = {
+    family_id,
+    // Arrays: append new unique items to what was already known
+    bank_accounts: mergeArrays(prev.bank_accounts ?? [], extracted.bank_accounts),
+    financial_accounts: mergeArrays(prev.financial_accounts ?? [], extracted.financial_accounts),
+    property_details: mergeArrays(prev.property_details ?? [], extracted.property_details),
+    key_contacts: mergeArrays(prev.key_contacts ?? [], extracted.key_contacts),
+    // Scalar: keep existing value if new extraction is empty/null
+    pension_status: extracted.pension_status ?? prev.pension_status ?? null,
+    lpa_confirmed: extracted.lpa_confirmed || prev.lpa_confirmed || false,
+    will_location: extracted.will_location ?? prev.will_location ?? null,
+    care_wishes: extracted.care_wishes ?? prev.care_wishes ?? null,
+    last_updated: new Date().toISOString(),
+  };
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert(merged, { onConflict: "family_id" });
 
   if (profileError) {
     console.error("Failed to upsert profile:", profileError);
-    // Session was already written — log the error but return 200 so ElevenLabs
-    // doesn't retry (the session is safe, the profile can be backfilled)
+    // Session was already written — return 200 so ElevenLabs doesn't retry
     return new Response("OK", { status: 200 });
   }
 
   console.log(
-    `Stored session ${conversation_id} and updated profile for family ${family_id}`,
+    `Stored session ${conversation_id} and merged profile for family ${family_id}`,
   );
   return new Response("OK", { status: 200 });
 });
