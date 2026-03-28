@@ -50,6 +50,26 @@ const COVERAGE_AREAS = [
   { category: 'care_wishes',        label: 'Care Wishes' },
 ] as const;
 
+// ─── Topic selection ─────────────────────────────────────────────────────────
+type TopicOption = 'all' | 'bank_accounts' | 'financial_accounts' | 'documents' | 'property' | 'care_wishes' | 'key_contacts' | 'chat';
+
+const TOPIC_CARDS: Array<{
+  id: TopicOption;
+  label: string;
+  icon: string;
+  description: string;
+  category?: string; // links to COVERAGE_AREAS category for completion check
+}> = [
+  { id: 'all',                label: 'All topics',         icon: '📋', description: 'Cover everything step by step' },
+  { id: 'bank_accounts',      label: 'Bank accounts',      icon: '🏦', description: 'Banks, cards, savings', category: 'bank_accounts' },
+  { id: 'financial_accounts', label: 'Financial',          icon: '📈', description: 'Pensions, ISAs, investments', category: 'financial_accounts' },
+  { id: 'documents',          label: 'Will & documents',   icon: '📄', description: 'Will, LPA, insurance', category: 'documents' },
+  { id: 'property',           label: 'Property',           icon: '🏠', description: 'Home, deeds, mortgage', category: 'property' },
+  { id: 'care_wishes',        label: 'Care wishes',        icon: '❤️', description: 'Care & end-of-life preferences', category: 'care_wishes' },
+  { id: 'key_contacts',       label: 'Key contacts',       icon: '👥', description: 'GP, solicitor, accountant', category: 'key_contacts' },
+  { id: 'chat',               label: 'Just a chat',        icon: '☕', description: 'No agenda — friendly catch-up' },
+];
+
 // ─── Brand colours ────────────────────────────────────────────────────────────
 const BRAND = {
   red:       '#E53935',
@@ -85,6 +105,7 @@ const Conversation = () => {
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
   // ── Session state ─────────────────────────────────────────────────────────
+  const [selectedTopic, setSelectedTopic]       = useState<TopicOption | null>(null);
   const [isHolding, setIsHolding]               = useState(false);
   const [isMicMuted, setIsMicMuted]             = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
@@ -268,48 +289,67 @@ const Conversation = () => {
   const { displayed: typedMessage, isTyping } = useTypewriter(lastClaraMessage, isAgentSpeaking, 30);
 
   // ── Build context summary for Clara from captured items ──────────────────
-  const buildContextSummary = useCallback((): string => {
-    if (capturedItems.length === 0) {
-      return `This is the first session with ${parentName}. No information has been captured yet. Cover all areas: bank accounts, pensions, property, will/documents, key contacts, care wishes.`;
-    }
-
+  const buildContextSummary = useCallback((topic: TopicOption): string => {
     const CATEGORY_LABELS: Record<string, string> = {
-      bank_accounts: 'Bank accounts',
+      bank_accounts:      'Bank accounts',
       financial_accounts: 'Pensions & investments',
-      property: 'Property',
-      documents: 'Documents & will',
-      key_contacts: 'Key contacts',
-      care_wishes: 'Care wishes',
-      general: 'General notes',
+      property:           'Property',
+      documents:          'Documents & will',
+      key_contacts:       'Key contacts',
+      care_wishes:        'Care wishes',
+      general:            'General notes',
     };
 
     const ALL_CATS = ['bank_accounts', 'financial_accounts', 'property', 'documents', 'key_contacts', 'care_wishes'];
     const coveredCats = new Set(capturedItems.map(i => i.category));
-    const notCovered = ALL_CATS.filter(c => !coveredCats.has(c));
 
-    const linesByCat: Record<string, string[]> = {};
-    for (const item of capturedItems.slice(0, 30)) { // cap to avoid huge prompts
-      if (!linesByCat[item.category]) linesByCat[item.category] = [];
-      if (linesByCat[item.category].length < 3) {
-        linesByCat[item.category].push(item.content.trim());
+    // Build base context from previous sessions (capped to avoid huge prompts)
+    let baseContext = '';
+    if (capturedItems.length > 0) {
+      const linesByCat: Record<string, string[]> = {};
+      for (const item of capturedItems.slice(0, 30)) {
+        if (!linesByCat[item.category]) linesByCat[item.category] = [];
+        if (linesByCat[item.category].length < 3) {
+          linesByCat[item.category].push(item.content.trim());
+        }
       }
+      const knownLines = Object.entries(linesByCat)
+        .map(([cat, lines]) => `- [${CATEGORY_LABELS[cat] ?? cat}]: ${lines.join('; ')}`)
+        .join('\n');
+      baseContext = `From previous sessions with ${parentName} (reviewed by ${childName}):\n${knownLines}\n\n`;
     }
 
-    const knownLines = Object.entries(linesByCat)
-      .map(([cat, lines]) => `- [${CATEGORY_LABELS[cat] ?? cat}]: ${lines.join('; ')}`)
-      .join('\n');
+    // Topic-specific focus injection
+    if (topic === 'chat') {
+      return `${baseContext}⚠️ SESSION MODE OVERRIDE — FRIENDLY CHAT ONLY: This is NOT an information-gathering session. Do NOT ask about finances, property, documents, or any coverage areas. Have a warm, friendly conversation — ask about ${parentName}'s day, how they're feeling, what they've been enjoying or remembering lately. Be fully present and caring. Only call capture_note if ${parentName} volunteers genuinely important practical information completely unprompted. Do NOT follow the "COVER THESE AREAS" instruction this session.`;
+    }
 
-    const uncoveredStr = notCovered.length > 0
-      ? `Topics NOT yet covered: ${notCovered.map(c => CATEGORY_LABELS[c]).join(', ')}.`
-      : 'All main topics have been covered.';
+    if (topic === 'all') {
+      const notCovered = ALL_CATS.filter(c => !coveredCats.has(c));
+      const uncoveredStr = notCovered.length > 0
+        ? `Topics NOT yet covered: ${notCovered.map(c => CATEGORY_LABELS[c]).join(', ')}.`
+        : `All main topics have been covered — do a gentle check to confirm nothing has changed.`;
+      return `${baseContext}${uncoveredStr}\nFocus this session on what's missing. Acknowledge what ${parentName} has already shared — do not ask again.`;
+    }
 
-    return `From previous sessions with ${parentName} (reviewed by ${childName}):\n${knownLines}\n\n${uncoveredStr}\nFocus this session on what's missing. Acknowledge what ${parentName} has already shared — do not ask again.`;
+    // Single-topic deep dive
+    const TOPIC_DEEP: Record<string, string> = {
+      bank_accounts:      `bank accounts (which banks ${parentName} uses, account types, where bank cards and statements are kept)`,
+      financial_accounts: `financial accounts (pensions — who with, ISAs, investments, savings accounts, premium bonds)`,
+      documents:          `documents (does a will exist and where is it kept; is a Lasting Power of Attorney set up and who is named; insurance policies)`,
+      property:           `property (does ${parentName} own or rent their home, the address, where the deeds are kept, whether there is a mortgage)`,
+      care_wishes:        `care wishes (where ${parentName} would prefer to be cared for if needed, end-of-life preferences, funeral wishes)`,
+      key_contacts:       `key contacts (named GP, solicitor, accountant, financial adviser — names and any contact details known)`,
+    };
+    const topicFocus = TOPIC_DEEP[topic] ?? topic;
+    return `${baseContext}⚠️ TOPIC FOCUS OVERRIDE: For this session, talk ONLY about ${topicFocus}. Do NOT ask about any other areas today. Explore this topic in depth with thoughtful follow-up questions. Once you have gathered thorough information, end the session warmly. Ignore the ordered list in your instructions — this single topic is all that matters today.`;
   }, [capturedItems, parentName, childName]);
 
   const startSession = useCallback(async () => {
     if (status !== 'disconnected') return;
     setErrorMessage(null);
-    const context = buildContextSummary();
+    const topic = selectedTopic ?? 'all';
+    const context = buildContextSummary(topic);
     try {
       await convMethodsRef.current!.start({
         agentId,
@@ -445,6 +485,40 @@ const Conversation = () => {
   return (
     <div style={styles.page}>
 
+      {/* ── Topic selection modal — shown before any session starts ── */}
+      {selectedTopic === null && (
+        <div style={styles.topicOverlay} role="dialog" aria-modal="true" aria-labelledby="topic-modal-title">
+          <div style={styles.topicCard}>
+            <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
+            <h2 id="topic-modal-title" style={styles.topicTitle}>What would you like to talk about?</h2>
+            <p style={styles.topicSubtitle}>Choose a topic and Clara will focus the conversation on it.</p>
+            <div style={styles.topicGrid}>
+              {TOPIC_CARDS.map((t) => {
+                const isDone = t.category !== undefined && coveredCategories.has(t.category);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => !isDone && setSelectedTopic(t.id)}
+                    disabled={isDone}
+                    aria-disabled={isDone}
+                    style={{
+                      ...styles.topicBtn,
+                      ...(isDone ? styles.topicBtnDone : {}),
+                      ...(t.id === 'all' ? styles.topicBtnAll : {}),
+                      ...(t.id === 'chat' ? styles.topicBtnChat : {}),
+                    }}
+                  >
+                    <span style={styles.topicIcon}>{isDone ? '✓' : t.icon}</span>
+                    <span style={styles.topicLabel}>{t.label}</span>
+                    <span style={styles.topicDesc}>{isDone ? 'Already covered' : t.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Minimal header — logo as trust mark only ── */}
       <header style={styles.header}>
         <ClearNestLogo variant="small" />
@@ -480,13 +554,16 @@ const Conversation = () => {
           </div>
         )}
 
-        {showGreeting && (
+        {showGreeting && selectedTopic !== null && (
           <div style={styles.greetingCard}>
             <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
             <h1 style={styles.greetingTitle}>Hello. I'm Clara.</h1>
             <p style={styles.greetingBody}>
-              I'm here for a gentle chat to help your family get organised.
-              There are no wrong answers — we go at your pace.
+              {selectedTopic === 'chat'
+                ? "I'm here for a friendly chat — no agenda, just a good conversation."
+                : selectedTopic === 'all'
+                ? "I'm here for a gentle chat to help your family get organised. There are no wrong answers — we go at your pace."
+                : `I'm here to talk about ${TOPIC_CARDS.find(t => t.id === selectedTopic)?.label.toLowerCase() ?? 'this topic'} today.`}
             </p>
           </div>
         )}
@@ -1013,6 +1090,102 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     lineHeight: 1.4,
     fontWeight: 600,
+  },
+
+  // ── Topic selection modal ────────────────────────────────────────────────────
+  topicOverlay: {
+    position: 'fixed' as const,
+    inset: 0,
+    zIndex: 50,
+    background: 'rgba(26,26,46,0.55)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '16px',
+    overflowY: 'auto' as const,
+  },
+  topicCard: {
+    background: '#FDFAF5',
+    borderRadius: 24,
+    padding: '32px 28px 28px',
+    maxWidth: 480,
+    width: '100%',
+    boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
+    textAlign: 'center' as const,
+    animation: 'fadeUp 0.35s ease',
+  },
+  topicTitle: {
+    fontFamily: PLAYFAIR,
+    fontSize: 22,
+    fontWeight: 700,
+    color: '#1A1A2E',
+    margin: '0 0 6px',
+  },
+  topicSubtitle: {
+    fontFamily: DM_SANS,
+    fontSize: 15,
+    color: '#6B7280',
+    margin: '0 0 24px',
+    lineHeight: 1.5,
+  },
+  topicGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 10,
+    textAlign: 'left' as const,
+  },
+  topicBtn: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start',
+    gap: 2,
+    background: '#ffffff',
+    border: '1.5px solid #E5E7EB',
+    borderRadius: 14,
+    padding: '14px 14px 12px',
+    cursor: 'pointer',
+    transition: 'border-color 0.18s, box-shadow 0.18s, background 0.18s',
+    textAlign: 'left' as const,
+  },
+  topicBtnDone: {
+    background: '#F3F4F6',
+    border: '1.5px solid #D1D5DB',
+    opacity: 0.6,
+    cursor: 'not-allowed' as const,
+  },
+  topicBtnAll: {
+    gridColumn: 'span 2',
+    background: '#EBF2FA',
+    border: '1.5px solid #5B8DB8',
+    flexDirection: 'row' as const,
+    alignItems: 'center',
+    gap: 12,
+  },
+  topicBtnChat: {
+    gridColumn: 'span 2',
+    background: '#FFF8F0',
+    border: '1.5px solid #F4A261',
+  },
+  topicIcon: {
+    fontSize: 22,
+    lineHeight: 1,
+    marginBottom: 4,
+  },
+  topicLabel: {
+    fontFamily: DM_SANS,
+    fontSize: 15,
+    fontWeight: 700,
+    color: '#1A1A2E',
+    display: 'block',
+    lineHeight: 1.2,
+  },
+  topicDesc: {
+    fontFamily: DM_SANS,
+    fontSize: 12,
+    color: '#6B7280',
+    display: 'block',
+    lineHeight: 1.3,
   },
 };
 
