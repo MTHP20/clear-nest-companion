@@ -523,6 +523,10 @@ const Landing = () => {
         </p>
         <p className="text-xs text-muted-foreground">
           © 2026 Pannonl Ltd ·{' '}
+          <a href="/admin" className="underline underline-offset-2 hover:opacity-80">
+            Admin
+          </a>
+          {' '}·{' '}
           <a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
             Privacy Policy
           </a>

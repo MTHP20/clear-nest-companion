@@ -158,6 +158,9 @@ const Dashboard = () => {
               : 'No sessions yet'}
           </p>
           <p className="mt-1">Data stored on your device only</p>
+          <p className="mt-2 text-sm">
+            <a href="/admin" className="underline underline-offset-2 hover:opacity-80">Admin</a>
+          </p>
         </div>
       </aside>
 

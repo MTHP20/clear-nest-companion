@@ -4,446 +4,788 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blog — ClearNest</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cpath d='M13 53 Q18 44 36 43 Q54 44 59 53' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5' stroke-linecap='round'/%3E%3Cellipse cx='36' cy='54' rx='23' ry='6' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5'/%3E%3Cpath d='M17 52 Q24 48 32 47' fill='none' stroke='%23B8946A' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M55 52 Q48 48 40 47' fill='none' stroke='%23B8946A' stroke-width='1' stroke-linecap='round'/%3E%3Cellipse cx='36' cy='36' rx='11' ry='9' fill='%239B7BC8'/%3E%3Ccircle cx='36' cy='24' r='8' fill='%239B7BC8'/%3E%3Cellipse cx='36.5' cy='38' rx='6.5' ry='5' fill='%23C4A8E8'/%3E%3Cpath d='M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z' fill='%237B58A8' opacity='0.7'/%3E%3Ccircle cx='39' cy='22' r='2' fill='%232A1248'/%3E%3Ccircle cx='39.6' cy='21.4' r='0.7' fill='white'/%3E%3Cpath d='M43 23.5 L48 22.5 L43 26 Z' fill='%23F4A261'/%3E%3Cpath d='M25 38 Q19 42 16 48 Q21 43 27 41Z' fill='%237B58A8' opacity='0.6'/%3E%3Cpath d='M30 47 L27 52 M30 47 L30 53 M30 47 L33 52' stroke='%23C4A878' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M42 47 L39 52 M42 47 L42 53 M42 47 L45 52' stroke='%23C4A878' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cpath d='M13 53 Q18 44 36 43 Q54 44 59 53' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5' stroke-linecap='round'/%3E%3Cellipse cx='36' cy='54' rx='23' ry='6' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5'/%3E%3Cellipse cx='36' cy='36' rx='11' ry='9' fill='%239B7BC8'/%3E%3Ccircle cx='36' cy='24' r='8' fill='%239B7BC8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --cream: #FDFAF5; --cream-dark: #F5F0E8; --navy: #3D1F8A; --navy-light: #6B3FA0;
-    --blue: #9B7BC8; --blue-mid: #7B5BAA; --amber: #E8935A; --amber-light: #F4A261;
-    --text: #1A1A2E; --text-mid: #3D3D52; --text-soft: #6B7280; --white: #FFFFFF;
-    --border: rgba(61,31,138,0.1);
-  }
-  [data-theme="dark"] {
-    --cream: #0E0C0A; --cream-dark: #1A1612; --text: #F5F0E8; --text-mid: #C4BDB4;
-    --text-soft: #8A8178; --border: #2E2820; --white: #1A1612;
-    --navy: #4A2570; --navy-light: #7B4DB8; --blue-mid: #9B7BC8; --blue: #9B7BC8;
-    --amber-light: #F4A261; --amber: #E8935A;
-  }
-  html { scroll-behavior: smooth; }
-  body { background: var(--cream); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 17px; line-height: 1.65; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #F5F0EA;
+  color: #1A1A2E;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
 
-  /* NAV */
-  nav { position: fixed; top: 32px; left: 50%; transform: translateX(-50%); width: calc(100% - 2rem); max-width: 900px; z-index: 50; padding: 12px 12px 12px 24px; display: flex; align-items: center; justify-content: space-between; background: rgba(61,31,138,0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(61,31,138,0.12); border-radius: 30px; box-shadow: 0 4px 24px rgba(61,31,138,0.08); transition: background 0.35s ease, box-shadow 0.35s ease; }
-  [data-theme="dark"] nav { background: rgba(14,12,10,0.85); border-color: rgba(255,255,255,0.08); }
-  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .nav-logo-text { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
-  [data-theme="dark"] .nav-logo-text { color: var(--text); }
-  .nav-right { display: flex; align-items: center; gap: 8px; }
-  .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
-  .nav-links a { text-decoration: none; color: var(--text-mid); font-size: 14px; font-weight: 400; transition: color 0.2s; }
-  .nav-links a:hover { color: var(--navy); }
-  .nav-links a.nav-active { color: #9B7BC8; font-weight: 600; }
-  .nav-cta { background: var(--navy); color: #fff !important; padding: 10px 22px; border-radius: 100px; font-weight: 500 !important; font-size: 14px !important; transition: background 0.2s !important; }
-  .nav-cta:hover { background: var(--navy-light) !important; }
-  .theme-toggle { background: rgba(61,31,138,0.06); border: 1px solid rgba(61,31,138,0.12); border-radius: 100px; padding: 7px 14px; cursor: pointer; font-size: 13px; color: var(--text-mid); display: flex; align-items: center; gap: 6px; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
-  .theme-toggle:hover { border-color: var(--blue); color: var(--navy); }
-  [data-theme="dark"] .theme-toggle { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: var(--text-mid); }
-  .nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; flex-direction: column; gap: 5px; }
-  .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--navy); border-radius: 2px; }
-  [data-theme="dark"] .nav-hamburger span { background: var(--text); }
-  .nav-mobile { display: none; position: fixed; top: 80px; left: 50%; transform: translateX(-50%); width: calc(100% - 48px); max-width: 860px; background: var(--cream); border: 1px solid rgba(61,31,138,0.1); border-radius: 20px; padding: 16px 24px; z-index: 99; box-shadow: 0 8px 24px rgba(61,31,138,0.08); }
-  [data-theme="dark"] .nav-mobile { background: var(--cream); }
-  .nav-mobile.open { display: block; }
-  .nav-mobile ul { list-style: none; display: flex; flex-direction: column; }
-  .nav-mobile a { display: flex; align-items: center; padding: 16px 12px; text-decoration: none; color: var(--text-mid); font-size: 17px; font-weight: 500; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; transition: color 0.2s, border-left-color 0.2s, padding-left 0.2s; min-height: 44px; }
-  .nav-mobile a:hover { color: var(--navy); border-left-color: var(--blue); padding-left: 18px; }
-  .nav-mobile li:last-child a { color: var(--blue); font-weight: 600; border-left-color: var(--blue); }
+/* ── Admin bar ── */
+#admin-bar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #1A1A2E;
+  color: #fff;
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+#admin-bar.visible { display: flex; }
+.admin-bar-left { display: flex; align-items: center; gap: 8px; }
+.admin-pulse { width: 8px; height: 8px; border-radius: 50%; background: #4ADE80; animation: pulse 2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+.admin-bar-email { opacity: 0.6; font-size: 12px; }
+.admin-bar-right { display: flex; align-items: center; gap: 10px; }
+.btn-new-post {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.15);
+  border: none; color: #fff; font-size: 12px; font-weight: 600;
+  padding: 5px 14px; border-radius: 999px; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-new-post:hover { background: rgba(255,255,255,0.25); }
+.btn-signout {
+  background: none; border: none; color: rgba(255,255,255,0.7);
+  font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+  transition: opacity 0.15s;
+}
+.btn-signout:hover { opacity: 0.8; }
 
-  /* HERO */
-  .blog-hero { background: #F5F0E8; padding: 80px 48px 48px; }
-  [data-theme="dark"] .blog-hero { background: var(--cream-dark); }
-  .blog-hero-inner { max-width: 1200px; margin: 0 auto; }
-  .blog-badge { display: inline-flex; align-items: center; background: #EDE0FF; color: #3D1F8A; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 999px; margin-bottom: 20px; }
-  .blog-hero h1 { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 600; color: #3D1F8A; line-height: 1.15; margin-bottom: 16px; }
-  [data-theme="dark"] .blog-hero h1 { color: var(--text); }
-  .blog-hero-sub { color: #6B7280; font-size: 18px; line-height: 1.6; max-width: 560px; }
+/* ── Nav ── */
+nav {
+  background: #F5F0EA;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1A1A2E;
+  text-decoration: none;
+}
+.nav-links {
+  display: flex; align-items: center; gap: 28px;
+  list-style: none; font-size: 14px; font-weight: 500; color: #3D3D3D;
+}
+.nav-links a { text-decoration: none; color: inherit; transition: opacity 0.15s; }
+.nav-links a:hover { opacity: 0.7; }
+.nav-links .active { color: #6C5CE7; font-weight: 600; }
+.nav-cta {
+  background: #3D3D3D;
+  color: #fff !important;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 14px;
+  transition: opacity 0.15s;
+}
+.nav-cta:hover { opacity: 0.85; }
 
-  /* SEARCH */
-  .search-wrap { margin-top: 32px; position: relative; display: inline-flex; align-items: center; }
-  .search-icon { position: absolute; left: 16px; color: #9B7BC8; pointer-events: none; }
-  .search-input { width: 340px; padding: 12px 20px 12px 44px; font-size: 15px; font-family: 'DM Sans', sans-serif; border: 1px solid #D4B8FF; border-radius: 999px; background: white; color: var(--text); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-  .search-input:focus { border-color: #9B7BC8; box-shadow: 0 0 0 3px rgba(155,123,200,0.12); }
-  [data-theme="dark"] .search-input { background: var(--white); color: var(--text); border-color: #6B3FA0; }
+/* ── Hero ── */
+.hero {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px 36px;
+}
+.hero-tag {
+  display: inline-block;
+  background: #EDE8F5;
+  color: #6C5CE7;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 700;
+  color: #1A1A2E;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+.hero-sub {
+  color: #5A5A6E;
+  font-size: 15px;
+  max-width: 500px;
+  margin-bottom: 28px;
+}
 
-  /* FILTERS */
-  .filter-row { margin-top: 20px; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .filter-row::-webkit-scrollbar { display: none; }
-  .filter-btn { flex-shrink: 0; background: white; border: 1px solid #D4B8FF; color: #3D1F8A; border-radius: 999px; padding: 8px 18px; font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-  .filter-btn:hover { border-color: #9B7BC8; }
-  .filter-btn.active { background: #9B7BC8; color: white; border-color: #9B7BC8; font-weight: 500; }
-  [data-theme="dark"] .filter-btn { background: var(--white); border-color: #6B3FA0; color: var(--text); }
-  [data-theme="dark"] .filter-btn.active { background: #9B7BC8; color: white; border-color: #9B7BC8; }
+/* ── Search ── */
+.search-wrap {
+  position: relative;
+  max-width: 420px;
+  margin-bottom: 24px;
+}
+.search-wrap svg {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+#search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 14px;
+  color: #1A1A2E;
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  transition: box-shadow 0.15s;
+}
+#search-input:focus { box-shadow: 0 0 0 2px #A78BFA55; }
+#search-input::placeholder { color: #9CA3AF; }
 
-  /* MAIN CONTENT */
-  .blog-main { max-width: 1200px; margin: 0 auto; padding: 48px 48px 80px; }
+/* ── Filter pills ── */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #C4BFBA;
+  background: transparent;
+  color: #3D3D3D;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.pill.active { background: #3D3D3D; color: #fff; border-color: #3D3D3D; }
+.pill:hover:not(.active) { background: rgba(0,0,0,0.05); }
 
-  /* NO RESULTS */
-  .no-results { display: none; color: var(--text-soft); font-size: 15px; margin-top: 24px; }
+/* ── Grid ── */
+.grid-section { background: #fff; padding: 40px 0 60px; }
+.grid-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+@media (max-width: 1024px) { .posts-grid { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 720px)  { .posts-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 480px)  { .posts-grid { grid-template-columns: 1fr; } }
 
-  /* GRID */
-  .blog-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+/* ── Card ── */
+.card {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: transform 0.18s, box-shadow 0.18s;
+  position: relative;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+.card-img {
+  width: 100%; height: 160px;
+  position: relative;
+  display: flex; align-items: flex-start;
+  padding: 12px;
+  overflow: hidden;
+}
+.card-img img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.card-badge {
+  position: relative; z-index: 1;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 11px; border-radius: 999px;
+  background: #fff;
+  white-space: nowrap;
+}
+.card-body { padding: 16px 14px 14px; }
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px; font-weight: 700;
+  color: #1A1A2E; line-height: 1.35;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-desc {
+  font-size: 13px; color: #6B7280; line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 12px;
+}
+.card-footer { display: flex; align-items: center; justify-content: space-between; }
+.card-read-more { font-size: 13px; font-weight: 500; color: #6C5CE7; }
+.card-date { font-size: 11px; color: #9CA3AF; }
 
-  /* CARD */
-  .blog-card { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #EDE0FF; cursor: pointer; transition: border-color 0.2s; display: flex; flex-direction: column; }
-  .blog-card:hover { border-color: #9B7BC8; }
-  [data-theme="dark"] .blog-card { background: var(--white); border-color: var(--border); }
-  [data-theme="dark"] .blog-card:hover { border-color: #9B7BC8; }
-  .card-image { height: 180px; width: 100%; position: relative; flex-shrink: 0; }
-  .card-cat-tag { position: absolute; top: 12px; left: 12px; background: white; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 500; color: #3D1F8A; }
-  .card-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-  .card-title { color: #3D1F8A; font-size: 17px; font-weight: 600; line-height: 1.35; margin-bottom: 8px; }
-  [data-theme="dark"] .card-title { color: var(--text); }
-  .card-excerpt { color: #6B7280; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; flex: 1; }
-  .card-read-more { color: #9B7BC8; font-size: 13px; font-weight: 500; margin-top: 12px; display: block; text-decoration: none; }
-  .card-read-more:hover { text-decoration: underline; }
+/* ── Admin card overlays ── */
+.card-admin-btns {
+  display: none;
+  position: absolute; top: 8px; right: 8px;
+  gap: 6px; z-index: 10;
+}
+.is-admin .card:hover .card-admin-btns { display: flex; }
+.card-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  color: #3D3D3D; font-size: 13px;
+}
+.card-btn:hover { background: #6C5CE7; color: #fff; }
+.card-btn.del:hover { background: #EF4444; color: #fff; }
+.is-admin .card:hover .card-img::after {
+  content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.08);
+}
 
-  /* BOTTOM CTA */
-  .blog-cta { background: #EDE0FF; padding: 64px 48px; text-align: center; }
-  [data-theme="dark"] .blog-cta { background: #1A1230; }
-  .blog-cta h2 { font-family: 'Playfair Display', serif; color: #3D1F8A; font-size: 28px; font-weight: 600; margin-bottom: 8px; }
-  [data-theme="dark"] .blog-cta h2 { color: var(--text); }
-  .blog-cta p { color: #6B7280; font-size: 16px; margin-bottom: 24px; }
-  .cta-form { display: inline-flex; gap: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(61,31,138,0.10); }
-  .cta-input { padding: 14px 20px; font-size: 15px; font-family: 'DM Sans', sans-serif; border: 1px solid #D4B8FF; border-right: none; border-radius: 8px 0 0 8px; background: white; color: var(--text); outline: none; width: 260px; }
-  .cta-input:focus { border-color: #9B7BC8; }
-  .cta-btn { background: #9B7BC8; color: white; border: none; padding: 14px 24px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; border-radius: 0 8px 8px 0; transition: background 0.2s; }
-  .cta-btn:hover { background: #7B5BAA; }
+/* ── Skeleton ── */
+.skeleton { animation: shimmer 1.4s infinite; }
+@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.skel-img { background: #E5E7EB; width: 100%; height: 160px; }
+.skel-body { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.skel-line { background: #E5E7EB; border-radius: 4px; height: 12px; }
 
-  /* FOOTER */
-  footer { background: #1A1A2E; padding: 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
-  .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .footer-logo-text { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: rgba(255,255,255,0.85); }
-  .footer-center { text-align: center; }
-  .footer-copy { font-size: 13px; color: rgba(255,255,255,0.4); }
-  .footer-privacy-badge { font-size: 12px; color: rgba(255,255,255,0.28); margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-  .footer-links { display: flex; gap: 24px; list-style: none; }
-  .footer-links a { text-decoration: none; font-size: 13px; color: rgba(255,255,255,0.4); transition: color 0.2s; }
-  .footer-links a:hover { color: rgba(255,255,255,0.8); }
+/* ── Empty ── */
+.empty-state { text-align: center; padding: 80px 24px; color: #6B7280; font-size: 16px; grid-column: 1/-1; }
 
-  /* RESPONSIVE */
-  @media (max-width: 1199px) {
-    .blog-grid { grid-template-columns: repeat(3, 1fr); }
-  }
-  @media (max-width: 767px) {
-    .blog-hero { padding: 100px 24px 40px; }
-    .blog-hero h1 { font-size: 34px; }
-    .blog-main { padding: 32px 24px 60px; }
-    .blog-grid { grid-template-columns: 1fr; }
-    .search-input { width: 100%; }
-    .search-wrap { width: 100%; }
-    .blog-cta { padding: 48px 24px; }
-    .cta-form { flex-direction: column; border-radius: 8px; overflow: visible; }
-    .cta-input { width: 100%; border-right: 1px solid #D4B8FF; border-radius: 8px; margin-bottom: 8px; }
-    .cta-btn { border-radius: 8px; }
-    footer { flex-direction: column; gap: 20px; padding: 40px 24px; text-align: center; }
-    .footer-links { justify-content: center; flex-wrap: wrap; }
-    .nav-links { display: none; }
-    .nav-hamburger { display: flex; }
-    .theme-toggle .theme-label { display: none; }
-  }
-  @media (min-width: 768px) {
-    .nav-hamburger { display: none; }
-  }
+/* ── Footer ── */
+footer {
+  background: #fff; border-top: 1px solid #E5E7EB;
+  padding: 20px 24px; text-align: center;
+  font-size: 12px; color: #9CA3AF;
+}
+footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+footer a:hover { opacity: 0.7; }
+
+/* ── Modal backdrop ── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 24px; overflow-y: auto;
+}
+.modal-backdrop.open { display: flex; }
+
+/* ── Modal box ── */
+.modal {
+  background: #fff; border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  width: 100%; max-width: 520px;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 24px 16px; border-bottom: 1px solid #F3F4F6;
+}
+.modal-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 600; color: #1A1A2E;
+}
+.btn-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: transparent;
+  cursor: pointer; font-size: 16px; color: #6B7280;
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.btn-close:hover { background: #F3F4F6; }
+.modal form { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 13px; font-weight: 500; color: #1A1A2E; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid #E5E7EB; border-radius: 8px;
+  font-size: 13px; color: #1A1A2E;
+  font-family: 'DM Sans', sans-serif; background: #fff;
+  outline: none; transition: box-shadow 0.15s;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  box-shadow: 0 0 0 2px #A78BFA55; border-color: #A78BFA;
+}
+.form-group textarea { resize: vertical; min-height: 100px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#img-preview {
+  display: none; width: 100%; height: 90px; object-fit: cover;
+  border-radius: 8px; border: 1px solid #E5E7EB; margin-top: 6px;
+}
+.form-error {
+  display: none; background: #FEF2F2; border: 1px solid #FECACA;
+  color: #DC2626; font-size: 13px; padding: 8px 12px; border-radius: 8px;
+}
+.modal-actions { display: flex; gap: 10px; padding-top: 4px; }
+.btn-cancel {
+  flex: 1; padding: 10px; border-radius: 8px;
+  border: 1px solid #E5E7EB; background: transparent;
+  font-size: 14px; font-weight: 500; color: #1A1A2E;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+}
+.btn-cancel:hover { background: #F9FAFB; }
+.btn-save {
+  flex: 1; padding: 10px; border-radius: 8px;
+  border: none; background: #6C5CE7;
+  font-size: 14px; font-weight: 600; color: #fff;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-save:hover { background: #5A4BD4; }
+.btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Delete modal ── */
+.del-modal { max-width: 380px; text-align: center; padding: 32px 28px; }
+.del-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #FEF2F2; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px; font-size: 20px;
+}
+.del-modal h2 { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: #1A1A2E; margin-bottom: 8px; }
+.del-modal p { font-size: 13px; color: #6B7280; margin-bottom: 24px; line-height: 1.5; }
+.del-actions { display: flex; gap: 10px; }
+.btn-del-confirm {
+  flex: 1; padding: 10px; border-radius: 8px;
+  border: none; background: #EF4444;
+  font-size: 14px; font-weight: 600; color: #fff;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-del-confirm:hover { background: #DC2626; }
+.btn-del-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+.spinner {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin 0.7s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
+<!-- Admin bar (shown when logged in) -->
+<div id="admin-bar">
+  <div class="admin-bar-left">
+    <div class="admin-pulse"></div>
+    <span>Dev Mode</span>
+    <span style="opacity:0.4">·</span>
+    <span class="admin-bar-email" id="admin-email"></span>
+  </div>
+  <div class="admin-bar-right">
+    <button class="btn-new-post" onclick="openCreate()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New post
+    </button>
+    <button class="btn-signout" onclick="doSignOut()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Sign out
+    </button>
+  </div>
+</div>
+
+<!-- Nav -->
 <nav>
-  <a href="landing.html" class="nav-logo">
-    <svg width="36" height="36" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-      <!-- Nest -->
-      <path d="M13 53 Q18 44 36 43 Q54 44 59 53" fill="#D4B896" stroke="#C4A878" stroke-width="1.5" stroke-linecap="round"/>
-      <ellipse cx="36" cy="54" rx="23" ry="6" fill="#D4B896" stroke="#C4A878" stroke-width="1.5"/>
-      <!-- Nest weave lines -->
-      <path d="M17 52 Q24 48 32 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
-      <path d="M55 52 Q48 48 40 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
-      <path d="M22 54 Q28 50 36 49" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
-      <path d="M50 54 Q44 50 36 49" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
-      <!-- Body -->
-      <ellipse cx="36" cy="36" rx="11" ry="9" fill="#9B7BC8"/>
-      <!-- Head -->
-      <circle cx="36" cy="24" r="8" fill="#9B7BC8"/>
-      <!-- Belly highlight -->
-      <ellipse cx="36.5" cy="38" rx="6.5" ry="5" fill="#C4A8E8"/>
-      <!-- Wing -->
-      <path d="M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z" fill="#7B58A8" opacity="0.7"/>
-      <!-- Eye -->
-      <circle cx="39" cy="22" r="2" fill="#2A1248"/>
-      <circle cx="39.6" cy="21.4" r="0.7" fill="#fff"/>
-      <!-- Beak -->
-      <path d="M43 23.5 L48 22.5 L43 26 Z" fill="#F4A261"/>
-      <!-- Tail feathers -->
-      <path d="M25 38 Q19 42 16 48 Q21 43 27 41Z" fill="#7B58A8" opacity="0.6"/>
-      <path d="M25 40 Q17 46 15 52 Q20 46 26 43Z" fill="#9B7BC8" opacity="0.4"/>
-      <!-- Feet -->
-      <path d="M30 47 L27 52 M30 47 L30 53 M30 47 L33 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
-      <path d="M42 47 L39 52 M42 47 L42 53 M42 47 L45 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
-    </svg>
-    <span class="nav-logo-text">ClearNest</span>
-  </a>
-  <div class="nav-right">
+  <div class="nav-inner">
+    <a class="nav-logo" href="landing.html">
+      <svg width="28" height="28" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 53 Q18 44 36 43 Q54 44 59 53" fill="#D4B896" stroke="#C4A878" stroke-width="1.5" stroke-linecap="round"/>
+        <ellipse cx="36" cy="54" rx="23" ry="6" fill="#D4B896" stroke="#C4A878" stroke-width="1.5"/>
+        <path d="M17 52 Q24 48 32 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+        <path d="M55 52 Q48 48 40 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+        <ellipse cx="36" cy="36" rx="11" ry="9" fill="#9B7BC8"/>
+        <circle cx="36" cy="24" r="8" fill="#9B7BC8"/>
+        <ellipse cx="36.5" cy="38" rx="6.5" ry="5" fill="#C4A8E8"/>
+        <path d="M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z" fill="#7B58A8" opacity="0.7"/>
+        <circle cx="39" cy="22" r="2" fill="#2A1248"/>
+        <circle cx="39.6" cy="21.4" r="0.7" fill="#fff"/>
+        <path d="M43 23.5 L48 22.5 L43 26 Z" fill="#F4A261"/>
+        <path d="M25 38 Q19 42 16 48 Q21 43 27 41Z" fill="#7B58A8" opacity="0.6"/>
+        <path d="M30 47 L27 52 M30 47 L30 53 M30 47 L33 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M42 47 L39 52 M42 47 L42 53 M42 47 L45 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      ClearNest
+    </a>
     <ul class="nav-links">
       <li><a href="landing.html#how">How it works</a></li>
       <li><a href="landing.html#covers">What Clara covers</a></li>
-      <li><a href="blog.html" class="nav-active">Blog</a></li>
+      <li><span class="active">Blog</span></li>
       <li><a href="landing.html#waitlist" class="nav-cta">Priority access</a></li>
     </ul>
-    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
-      <span id="theme-icon">🌙</span><span class="theme-label" id="theme-label">Dark</span>
-    </button>
-    <button class="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
   </div>
 </nav>
 
-<div class="nav-mobile" id="nav-mobile">
-  <ul>
-    <li><a href="landing.html#how" onclick="closeMobileNav()">How it works</a></li>
-    <li><a href="landing.html#covers" onclick="closeMobileNav()">What Clara covers</a></li>
-    <li><a href="blog.html" onclick="closeMobileNav()">Blog</a></li>
-    <li><a href="landing.html#waitlist" onclick="closeMobileNav()">Get early access →</a></li>
-  </ul>
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-tag">From the ClearNest team</div>
+  <h1>Guides for families</h1>
+  <p class="hero-sub">Practical advice on getting your family's affairs in order — before it becomes urgent.</p>
+  <div class="search-wrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" placeholder="Search articles..." oninput="applyFilters()">
+  </div>
+  <div class="filters" id="filters">
+    <button class="pill active" data-filter="All" onclick="setFilter(this)">All</button>
+    <button class="pill" data-filter="Guides" onclick="setFilter(this)">Guides</button>
+    <button class="pill" data-filter="Real Stories" onclick="setFilter(this)">Real stories</button>
+    <button class="pill" data-filter="ClearNest News" onclick="setFilter(this)">ClearNest news</button>
+    <button class="pill" data-filter="Research" onclick="setFilter(this)">Research</button>
+    <button class="pill" data-filter="Interviews" onclick="setFilter(this)">Interviews</button>
+    <button class="pill" data-filter="Opinion" onclick="setFilter(this)">Opinion</button>
+  </div>
 </div>
 
-<!-- HERO -->
-<div class="blog-hero">
-  <div class="blog-hero-inner">
-    <div class="blog-badge">From the ClearNest team</div>
-    <h1>Guides for families</h1>
-    <p class="blog-hero-sub">Practical advice on getting your family's affairs in order — before it becomes urgent.</p>
-
-    <!-- SEARCH -->
-    <div class="search-wrap">
-      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input class="search-input" id="search-input" type="text" placeholder="Search articles..." oninput="filterCards()" />
-    </div>
-
-    <!-- CATEGORY TABS -->
-    <div class="filter-row" id="filter-row">
-      <button class="filter-btn active" data-filter="All" onclick="setFilter(this)">All</button>
-      <button class="filter-btn" data-filter="Guides" onclick="setFilter(this)">Guides</button>
-      <button class="filter-btn" data-filter="Real stories" onclick="setFilter(this)">Real stories</button>
-      <button class="filter-btn" data-filter="ClearNest news" onclick="setFilter(this)">ClearNest news</button>
-      <button class="filter-btn" data-filter="Research" onclick="setFilter(this)">Research</button>
-      <button class="filter-btn" data-filter="Interviews" onclick="setFilter(this)">Interviews</button>
-      <button class="filter-btn" data-filter="Opinion" onclick="setFilter(this)">Opinion</button>
+<!-- Posts grid -->
+<div class="grid-section">
+  <div class="grid-inner">
+    <div class="posts-grid" id="posts-grid">
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
+      <div class="card skeleton"><div class="skel-img"></div><div class="skel-body"><div class="skel-line" style="width:40%"></div><div class="skel-line"></div><div class="skel-line" style="width:75%"></div></div></div>
     </div>
   </div>
 </div>
 
-<!-- BLOG GRID -->
-<div class="blog-main">
-  <div class="no-results" id="no-results">No articles found — try a different search.</div>
-  <div class="blog-grid" id="blog-grid">
-
-    <!-- Card 1 -->
-    <div class="blog-card" data-category="Guides">
-      <div class="card-image" style="background:#EDE0FF;">
-        <span class="card-cat-tag">Guides</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">What happens if your parent loses capacity without an LPA in place</div>
-        <div class="card-excerpt">55,000 LPA applications were rejected in the UK last year. Here is what that means for your family and what you can do before it becomes urgent.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 2 -->
-    <div class="blog-card" data-category="Real stories">
-      <div class="card-image" style="background:#E0F0FF;">
-        <span class="card-cat-tag">Real stories</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">How one family finally got everything in order — after years of avoiding it</div>
-        <div class="card-excerpt">David had been meaning to have the conversation with his father for three years. Here is what finally changed — and what he wishes he had done sooner.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 3 -->
-    <div class="blog-card" data-category="Research">
-      <div class="card-image" style="background:#FFF0E0;">
-        <span class="card-cat-tag">Research</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">The hidden cost of not knowing where your parents' pension is</div>
-        <div class="card-excerpt">Billions in pension assets go untraced every year in the UK. Not because the money disappeared — because nobody in the family knew where to look.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 4 -->
-    <div class="blog-card" data-category="Opinion">
-      <div class="card-image" style="background:#E0FFE8;">
-        <span class="card-cat-tag">Opinion</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">Why voice is the only interface that works for this generation</div>
-        <div class="card-excerpt">Every competitor in this space has built a portal. A form. A checklist. We think they are all solving the wrong problem. Here is why we built Clara as a phone call.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 5 -->
-    <div class="blog-card" data-category="ClearNest news">
-      <div class="card-image" style="background:#FFF0E0;">
-        <span class="card-cat-tag">ClearNest news</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">Why we built ClearNest in 5 hours at a UCL hackathon</div>
-        <div class="card-excerpt">In February 2026 we had 5 hours and one idea. Here is the honest story of what we built, why it won ElevenLabs Best Project, and where it is going next.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 6 -->
-    <div class="blog-card" data-category="Guides">
-      <div class="card-image" style="background:#EDE0FF;">
-        <span class="card-cat-tag">Guides</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">How to start the financial conversation with an elderly parent without it becoming difficult</div>
-        <div class="card-excerpt">Most families know they should have this conversation. Very few know how to start it. Here is a gentle approach that actually works.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 7 -->
-    <div class="blog-card" data-category="Interviews">
-      <div class="card-image" style="background:#E0F0FF;">
-        <span class="card-cat-tag">Interviews</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">"I had no idea where anything was" — a financial adviser on what families get wrong</div>
-        <div class="card-excerpt">We spoke to a later life financial adviser about the most common mistakes families make and what she wishes more people understood before a crisis hits.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-    <!-- Card 8 -->
-    <div class="blog-card" data-category="Research">
-      <div class="card-image" style="background:#E0FFE8;">
-        <span class="card-cat-tag">Research</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">199% rise in LPA rejections since 2021 — what the data tells us</div>
-        <div class="card-excerpt">A Freedom of Information request revealed a near 200% rise in rejected LPA applications in three years. We broke down the numbers to understand why.</div>
-        <a href="#" class="card-read-more">Read more →</a>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- BOTTOM CTA -->
-<div class="blog-cta">
-  <h2>More guides coming soon</h2>
-  <p>Get notified when we publish something new.</p>
-  <div class="cta-form">
-    <input class="cta-input" type="email" placeholder="your@email.com" />
-    <button class="cta-btn">Notify me</button>
-  </div>
-</div>
-
-<!-- FOOTER -->
+<!-- Footer -->
 <footer>
-  <a href="landing.html" class="footer-logo">
-    <svg width="32" height="32" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-      <path d="M13 53 Q18 44 36 43 Q54 44 59 53" fill="#D4B896" stroke="#C4A878" stroke-width="1.5" stroke-linecap="round"/>
-      <ellipse cx="36" cy="54" rx="23" ry="6" fill="#D4B896" stroke="#C4A878" stroke-width="1.5"/>
-      <path d="M17 52 Q24 48 32 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
-      <path d="M55 52 Q48 48 40 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
-      <ellipse cx="36" cy="36" rx="11" ry="9" fill="#9B7BC8"/>
-      <circle cx="36" cy="24" r="8" fill="#9B7BC8"/>
-      <ellipse cx="36.5" cy="38" rx="6.5" ry="5" fill="#C4A8E8"/>
-      <path d="M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z" fill="#7B58A8" opacity="0.7"/>
-      <circle cx="39" cy="22" r="2" fill="#2A1248"/>
-      <circle cx="39.6" cy="21.4" r="0.7" fill="#fff"/>
-      <path d="M43 23.5 L48 22.5 L43 26 Z" fill="#F4A261"/>
-      <path d="M25 38 Q19 42 16 48 Q21 43 27 41Z" fill="#7B58A8" opacity="0.6"/>
-      <path d="M25 40 Q17 46 15 52 Q20 46 26 43Z" fill="#9B7BC8" opacity="0.4"/>
-      <path d="M30 47 L27 52 M30 47 L30 53 M30 47 L33 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
-      <path d="M42 47 L39 52 M42 47 L42 53 M42 47 L45 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
-    </svg>
-    <span class="footer-logo-text">ClearNest</span>
-  </a>
-  <div class="footer-center">
-    <div class="footer-copy">© 2026 ClearNest · Pannonl Ltd. A gentle way to get organised.</div>
-    <div class="footer-privacy-badge">🔒 No cookies. No tracking. Built on privacy.</div>
-    <div class="footer-privacy-badge" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.22);">Not legal or financial advice. ClearNest is an organisational tool only.</div>
-  </div>
-  <ul class="footer-links">
-    <li><a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer">Privacy</a></li>
-    <li><a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer">Terms</a></li>
-    <li><a href="/safeguarding-policy.md" target="_blank" rel="noopener noreferrer">Safeguarding</a></li>
-    <li><a href="mailto:hello@clearnest.co.uk">Contact</a></li>
-  </ul>
+  © 2026 Pannonl Ltd ·
+  <a href="/admin">Admin</a> ·
+  <a href="/privacy-policy.md" target="_blank" rel="noopener">Privacy Policy</a> ·
+  <a href="/terms-of-service.md" target="_blank" rel="noopener">Terms of Service</a>
 </footer>
 
+<!-- Create / Edit modal -->
+<div class="modal-backdrop" id="post-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">New post</h2>
+      <button class="btn-close" onclick="closePostModal()" aria-label="Close">✕</button>
+    </div>
+    <form id="post-form" onsubmit="savePost(event)">
+      <div class="form-group">
+        <label for="f-title">Title <span style="color:#EF4444">*</span></label>
+        <input id="f-title" type="text" required placeholder="e.g. How to set up a Lasting Power of Attorney">
+      </div>
+      <div class="form-group">
+        <label for="f-desc">Description <span style="color:#EF4444">*</span></label>
+        <textarea id="f-desc" required placeholder="A summary of what this post covers…"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="f-cat">Category</label>
+          <select id="f-cat">
+            <option>Guides</option>
+            <option>Real Stories</option>
+            <option>ClearNest News</option>
+            <option>Research</option>
+            <option>Interviews</option>
+            <option>Opinion</option>
+            <option>Care Planning</option>
+            <option>Legal &amp; Financial</option>
+            <option>Family</option>
+            <option>News &amp; Updates</option>
+            <option>General</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-date">Date posted</label>
+          <input id="f-date" type="date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="f-pic">Picture URL <span style="color:#9CA3AF;font-weight:400">(optional)</span></label>
+        <input id="f-pic" type="url" placeholder="https://…" oninput="previewImg(this.value)">
+        <img id="img-preview" alt="Preview" onerror="this.style.display='none'">
+      </div>
+      <p class="form-error" id="form-error"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closePostModal()">Cancel</button>
+        <button type="submit" class="btn-save" id="btn-save">Create post</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-backdrop" id="del-modal" role="dialog" aria-modal="true">
+  <div class="modal del-modal">
+    <div class="del-icon">🗑️</div>
+    <h2>Delete this post?</h2>
+    <p>This cannot be undone. The post will be permanently removed.</p>
+    <div class="del-actions">
+      <button class="btn-cancel" onclick="closeDelModal()">Cancel</button>
+      <button class="btn-del-confirm" id="btn-del-confirm" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-  // Theme
-  function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
-    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
-    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+const SUPA_URL = 'https://btgjwnqvyqjtsqaolsdt.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0Z2p3bnF2eXFqdHNxYW9sc2R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTY3NjgsImV4cCI6MjA4ODczMjc2OH0.0mQ9oGlCmFn8zdoxTwYqt16jrGm2ZYsWCkpoEE2sliQ';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ─── State ────────────────────────────────────────────────────────────────────
+var allPosts     = [];
+var isAdmin      = false;
+var editingId    = null;
+var pendingDeleteId = null;
+var activeFilter = 'All';
+
+// ─── Category colours ─────────────────────────────────────────────────────────
+var CAT_COLOUR = {
+  'Care Planning':    '#7C65A9',
+  'Legal & Financial':'#5B8DB8',
+  'Family':           '#E8896A',
+  'News & Updates':   '#4CAF82',
+  'ClearNest News':   '#E8896A',
+  'Guides':           '#7C65A9',
+  'General':          '#9CA3AF',
+  'Real Stories':     '#5B8DB8',
+  'Research':         '#F4A261',
+  'Opinion':          '#4CAF82',
+  'Interviews':       '#5B8DB8',
+};
+var CAT_BG = {
+  'Care Planning':    '#EDE8F5',
+  'Legal & Financial':'#E0EBF5',
+  'Family':           '#FAE8E0',
+  'News & Updates':   '#E0F2EC',
+  'ClearNest News':   '#FDE8DC',
+  'Guides':           '#EDE8F5',
+  'General':          '#F3F4F6',
+  'Real Stories':     '#DDEAF5',
+  'Research':         '#FEF0E3',
+  'Opinion':          '#E0F5EC',
+  'Interviews':       '#E0EBF5',
+};
+function catColour(c) { return CAT_COLOUR[c] || '#9CA3AF'; }
+function catBg(c)     { return CAT_BG[c]     || '#F3F4F6'; }
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function initAuth() {
+  var res = await sb.auth.getSession();
+  setAdminMode(res.data.session);
+  sb.auth.onAuthStateChange(function(_e, session) { setAdminMode(session); });
+}
+
+function setAdminMode(session) {
+  isAdmin = !!session;
+  var bar = document.getElementById('admin-bar');
+  if (isAdmin) {
+    bar.classList.add('visible');
+    document.getElementById('admin-email').textContent = session.user.email;
+    document.body.classList.add('is-admin');
+  } else {
+    bar.classList.remove('visible');
+    document.body.classList.remove('is-admin');
   }
-  (function() {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      document.getElementById('theme-icon').textContent = '☀️';
-      document.getElementById('theme-label').textContent = 'Light';
+  renderPosts();
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+}
+
+// ─── Fetch ────────────────────────────────────────────────────────────────────
+async function fetchPosts() {
+  var res = await sb.from('blog_posts').select('*').order('date_posted', { ascending: false });
+  allPosts = res.data || [];
+  renderPosts();
+}
+
+// ─── Filter + render ──────────────────────────────────────────────────────────
+function setFilter(btn) {
+  document.querySelectorAll('.pill').forEach(function(p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  activeFilter = btn.dataset.filter;
+  renderPosts();
+}
+
+function applyFilters() { renderPosts(); }
+
+function renderPosts() {
+  var query = (document.getElementById('search-input').value || '').toLowerCase();
+  var grid  = document.getElementById('posts-grid');
+  if (!grid) return;
+
+  var filtered = allPosts.filter(function(p) {
+    var matchFilter = activeFilter === 'All' || p.category === activeFilter;
+    var matchSearch = !query || p.title.toLowerCase().indexOf(query) !== -1 || p.description.toLowerCase().indexOf(query) !== -1;
+    return matchFilter && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="empty-state">' + (query || activeFilter !== 'All' ? 'No posts match your search.' : 'No posts yet.') + '</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(cardHTML).join('');
+}
+
+function cardHTML(p) {
+  var colour  = catColour(p.category);
+  var bg      = catBg(p.category);
+  var dateStr = new Date(p.date_posted).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  var imgHTML = p.picture_url ? '<img src="' + esc(p.picture_url) + '" alt="' + esc(p.title) + '" onerror="this.style.display=\'none\'">' : '';
+  var adminBtns = isAdmin
+    ? '<div class="card-admin-btns">'
+      + '<button class="card-btn" onclick="openEdit(\'' + p.id + '\')" title="Edit">✏️</button>'
+      + '<button class="card-btn del" onclick="openDelete(\'' + p.id + '\')" title="Delete">🗑️</button>'
+      + '</div>'
+    : '';
+  return '<div class="card">'
+    + adminBtns
+    + '<div class="card-img" style="background:' + bg + '">'
+    + imgHTML
+    + '<span class="card-badge" style="color:' + colour + '">' + esc(p.category) + '</span>'
+    + '</div>'
+    + '<div class="card-body">'
+    + '<div class="card-title">' + esc(p.title) + '</div>'
+    + '<div class="card-desc">' + esc(p.description) + '</div>'
+    + '<div class="card-footer"><span class="card-read-more">Read more →</span><span class="card-date">' + dateStr + '</span></div>'
+    + '</div></div>';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Create / Edit modal ──────────────────────────────────────────────────────
+function openCreate() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'New post';
+  document.getElementById('btn-save').textContent    = 'Create post';
+  document.getElementById('f-title').value  = '';
+  document.getElementById('f-desc').value   = '';
+  document.getElementById('f-cat').value    = 'Guides';
+  document.getElementById('f-date').value   = new Date().toISOString().slice(0,10);
+  document.getElementById('f-pic').value    = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('form-error').style.display  = 'none';
+  document.getElementById('post-modal').classList.add('open');
+}
+
+function openEdit(id) {
+  var p = allPosts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit post';
+  document.getElementById('btn-save').textContent    = 'Save changes';
+  document.getElementById('f-title').value  = p.title;
+  document.getElementById('f-desc').value   = p.description;
+  document.getElementById('f-cat').value    = p.category;
+  document.getElementById('f-date').value   = p.date_posted;
+  document.getElementById('f-pic').value    = p.picture_url || '';
+  previewImg(p.picture_url || '');
+  document.getElementById('form-error').style.display = 'none';
+  document.getElementById('post-modal').classList.add('open');
+}
+
+function closePostModal() {
+  document.getElementById('post-modal').classList.remove('open');
+}
+
+function previewImg(url) {
+  var img = document.getElementById('img-preview');
+  if (url) { img.src = url; img.style.display = 'block'; }
+  else { img.style.display = 'none'; }
+}
+
+async function savePost(e) {
+  e.preventDefault();
+  var errEl = document.getElementById('form-error');
+  errEl.style.display = 'none';
+
+  var title = document.getElementById('f-title').value.trim();
+  var desc  = document.getElementById('f-desc').value.trim();
+  if (!title || !desc) {
+    errEl.textContent = 'Title and description are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+  var payload = {
+    title: title,
+    description: desc,
+    category:    document.getElementById('f-cat').value,
+    date_posted: document.getElementById('f-date').value,
+    picture_url: document.getElementById('f-pic').value.trim() || null,
+  };
+
+  try {
+    var result;
+    if (editingId) {
+      result = await sb.from('blog_posts').update(payload).eq('id', editingId);
+    } else {
+      result = await sb.from('blog_posts').insert(payload);
     }
-  })();
-
-  // Mobile nav
-  function toggleMobileNav() {
-    document.getElementById('nav-mobile').classList.toggle('open');
+    if (result.error) throw result.error;
+    closePostModal();
+    await fetchPosts();
+  } catch(err) {
+    errEl.textContent = err.message || 'Failed to save post.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingId ? 'Save changes' : 'Create post';
   }
-  function closeMobileNav() {
-    document.getElementById('nav-mobile').classList.remove('open');
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────────
+function openDelete(id) {
+  pendingDeleteId = id;
+  document.getElementById('del-modal').classList.add('open');
+}
+
+function closeDelModal() {
+  pendingDeleteId = null;
+  document.getElementById('del-modal').classList.remove('open');
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  var btn = document.getElementById('btn-del-confirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Deleting…';
+  var result = await sb.from('blog_posts').delete().eq('id', pendingDeleteId);
+  if (!result.error) {
+    allPosts = allPosts.filter(function(p) { return p.id !== pendingDeleteId; });
+    renderPosts();
   }
+  closeDelModal();
+  btn.disabled = false;
+  btn.textContent = 'Delete';
+}
 
-  // Filtering state
-  let activeFilter = 'All';
+// Close modals on backdrop click
+document.getElementById('post-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePostModal();
+});
+document.getElementById('del-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDelModal();
+});
 
-  function setFilter(btn) {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFilter = btn.dataset.filter;
-    filterCards();
-  }
-
-  function filterCards() {
-    const query = document.getElementById('search-input').value.toLowerCase().trim();
-    const cards = document.querySelectorAll('.blog-card');
-    let visible = 0;
-
-    cards.forEach(card => {
-      const cat = card.dataset.category;
-      const title = card.querySelector('.card-title').textContent.toLowerCase();
-      const matchesFilter = activeFilter === 'All' || cat === activeFilter;
-      const matchesSearch = query === '' || title.includes(query);
-
-      if (matchesFilter && matchesSearch) {
-        card.style.display = 'flex';
-        visible++;
-      } else {
-        card.style.display = 'none';
-      }
-    });
-
-    document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
-  }
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+initAuth();
+fetchPosts();
 </script>
 </body>
 </html>
