@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What happens if your parent loses capacity without an LPA in place — ClearNest</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cpath d='M13 53 Q18 44 36 43 Q54 44 59 53' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5' stroke-linecap='round'/%3E%3Cellipse cx='36' cy='54' rx='23' ry='6' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5'/%3E%3Cpath d='M17 52 Q24 48 32 47' fill='none' stroke='%23B8946A' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M55 52 Q48 48 40 47' fill='none' stroke='%23B8946A' stroke-width='1' stroke-linecap='round'/%3E%3Cellipse cx='36' cy='36' rx='11' ry='9' fill='%239B7BC8'/%3E%3Ccircle cx='36' cy='24' r='8' fill='%239B7BC8'/%3E%3Cellipse cx='36.5' cy='38' rx='6.5' ry='5' fill='%23C4A8E8'/%3E%3Cpath d='M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z' fill='%237B58A8' opacity='0.7'/%3E%3Ccircle cx='39' cy='22' r='2' fill='%232A1248'/%3E%3Ccircle cx='39.6' cy='21.4' r='0.7' fill='white'/%3E%3Cpath d='M43 23.5 L48 22.5 L43 26 Z' fill='%23F4A261'/%3E%3Cpath d='M25 38 Q19 42 16 48 Q21 43 27 41Z' fill='%237B58A8' opacity='0.6'/%3E%3Cpath d='M30 47 L27 52 M30 47 L30 53 M30 47 L33 52' stroke='%23C4A878' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M42 47 L39 52 M42 47 L42 53 M42 47 L45 52' stroke='%23C4A878' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream: #FDFAF5; --cream-dark: #F5F0E8; --navy: #3D1F8A; --navy-light: #6B3FA0;
+    --blue: #9B7BC8; --blue-mid: #7B5BAA; --amber: #E8935A; --amber-light: #F4A261;
+    --text: #1A1A2E; --text-mid: #3D3D52; --text-soft: #6B7280; --white: #FFFFFF;
+    --border: rgba(61,31,138,0.1);
+  }
+  [data-theme="dark"] {
+    --cream: #0E0C0A; --cream-dark: #1A1612; --text: #F5F0E8; --text-mid: #C4BDB4;
+    --text-soft: #8A8178; --border: #2E2820; --white: #1A1612;
+    --navy: #4A2570; --navy-light: #7B4DB8; --blue-mid: #9B7BC8; --blue: #9B7BC8;
+    --amber-light: #F4A261; --amber: #E8935A;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--cream); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 17px; line-height: 1.65; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+
+  /* NAV */
+  nav { position: fixed; top: 32px; left: 50%; transform: translateX(-50%); width: calc(100% - 2rem); max-width: 900px; z-index: 50; padding: 12px 12px 12px 24px; display: flex; align-items: center; justify-content: space-between; background: rgba(61,31,138,0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(61,31,138,0.12); border-radius: 30px; box-shadow: 0 4px 24px rgba(61,31,138,0.08); transition: background 0.35s ease, box-shadow 0.35s ease; }
+  [data-theme="dark"] nav { background: rgba(14,12,10,0.85); border-color: rgba(255,255,255,0.08); }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav-logo-text { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
+  [data-theme="dark"] .nav-logo-text { color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 8px; }
+  .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+  .nav-links a { text-decoration: none; color: var(--text-mid); font-size: 14px; font-weight: 400; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--navy); }
+  .nav-links a.nav-active { color: #9B7BC8; font-weight: 600; }
+  .nav-cta { background: var(--navy); color: #fff !important; padding: 10px 22px; border-radius: 100px; font-weight: 500 !important; font-size: 14px !important; transition: background 0.2s !important; }
+  .nav-cta:hover { background: var(--navy-light) !important; }
+  .theme-toggle { background: rgba(61,31,138,0.06); border: 1px solid rgba(61,31,138,0.12); border-radius: 100px; padding: 7px 14px; cursor: pointer; font-size: 13px; color: var(--text-mid); display: flex; align-items: center; gap: 6px; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+  .theme-toggle:hover { border-color: var(--blue); color: var(--navy); }
+  [data-theme="dark"] .theme-toggle { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: var(--text-mid); }
+  .nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; flex-direction: column; gap: 5px; }
+  .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--navy); border-radius: 2px; }
+  [data-theme="dark"] .nav-hamburger span { background: var(--text); }
+  .nav-mobile { display: none; position: fixed; top: 80px; left: 50%; transform: translateX(-50%); width: calc(100% - 48px); max-width: 860px; background: var(--cream); border: 1px solid rgba(61,31,138,0.1); border-radius: 20px; padding: 16px 24px; z-index: 99; box-shadow: 0 8px 24px rgba(61,31,138,0.08); }
+  [data-theme="dark"] .nav-mobile { background: var(--cream); }
+  .nav-mobile.open { display: block; }
+  .nav-mobile ul { list-style: none; display: flex; flex-direction: column; }
+  .nav-mobile a { display: flex; align-items: center; padding: 16px 12px; text-decoration: none; color: var(--text-mid); font-size: 17px; font-weight: 500; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; transition: color 0.2s, border-left-color 0.2s, padding-left 0.2s; min-height: 44px; }
+  .nav-mobile a:hover { color: var(--navy); border-left-color: var(--blue); padding-left: 18px; }
+  .nav-mobile li:last-child a { color: var(--blue); font-weight: 600; border-left-color: var(--blue); }
+
+  /* ARTICLE HEADER */
+  .article-header { background: #F5F0E8; padding: 80px 24px 48px; text-align: center; }
+  [data-theme="dark"] .article-header { background: var(--cream-dark); }
+  .article-header-inner { max-width: 720px; margin: 0 auto; }
+  .article-pill { display: inline-block; background: #EDE0FF; color: #3D1F8A; font-size: 12px; font-weight: 500; border-radius: 999px; padding: 4px 14px; }
+  .article-header h1 { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700; line-height: 1.2; color: #3D1F8A; margin-top: 16px; }
+  [data-theme="dark"] .article-header h1 { color: var(--text); }
+  .article-byline { color: #6B7280; font-size: 14px; margin-top: 12px; }
+
+  /* ARTICLE BODY */
+  .article-body { max-width: 720px; margin: 0 auto; padding: 64px 24px; background: white; }
+  [data-theme="dark"] .article-body { background: var(--white); }
+  .article-body p { font-size: 17px; line-height: 1.8; color: #2C2C2C; margin-bottom: 24px; }
+  [data-theme="dark"] .article-body p { color: var(--text-mid); }
+
+  /* FOOTER CTA */
+  .article-cta-wrap { max-width: 720px; margin: 0 auto; padding: 0 24px 80px; background: white; }
+  [data-theme="dark"] .article-cta-wrap { background: var(--white); }
+  .article-cta { background: #EDE0FF; border-radius: 16px; padding: 48px; text-align: center; margin-top: 64px; }
+  [data-theme="dark"] .article-cta { background: #1A1230; }
+  .article-cta h2 { font-family: 'Playfair Display', serif; color: #3D1F8A; font-size: 24px; font-weight: 600; }
+  [data-theme="dark"] .article-cta h2 { color: var(--text); }
+  .article-cta p { color: #6B7280; font-size: 16px; margin-top: 8px; }
+  .article-cta-btn { display: inline-block; background: #9B7BC8; color: white; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 500; text-decoration: none; margin-top: 20px; transition: background 0.2s; }
+  .article-cta-btn:hover { background: #7B5BAA; }
+  .article-back { display: block; color: #9B7BC8; font-size: 14px; margin-top: 16px; text-decoration: none; }
+  .article-back:hover { text-decoration: underline; }
+
+  /* FOOTER */
+  footer { background: #1A1A2E; padding: 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+  .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .footer-logo-text { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: rgba(255,255,255,0.85); }
+  .footer-center { text-align: center; }
+  .footer-copy { font-size: 13px; color: rgba(255,255,255,0.4); }
+  .footer-privacy-badge { font-size: 12px; color: rgba(255,255,255,0.28); margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .footer-links { display: flex; gap: 24px; list-style: none; }
+  .footer-links a { text-decoration: none; font-size: 13px; color: rgba(255,255,255,0.4); transition: color 0.2s; }
+  .footer-links a:hover { color: rgba(255,255,255,0.8); }
+
+  /* RESPONSIVE */
+  @media (max-width: 767px) {
+    .article-header { padding: 100px 20px 40px; }
+    .article-header h1 { font-size: 28px; }
+    .article-body { padding: 40px 20px; }
+    .article-cta-wrap { padding: 0 20px 60px; }
+    .article-cta { padding: 36px 20px; }
+    footer { flex-direction: column; gap: 20px; padding: 40px 24px; text-align: center; }
+    .footer-links { justify-content: center; flex-wrap: wrap; }
+    .nav-links { display: none; }
+    .nav-hamburger { display: flex; }
+    .theme-toggle .theme-label { display: none; }
+  }
+  @media (min-width: 768px) {
+    .nav-hamburger { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="landing.html" class="nav-logo">
+    <svg width="36" height="36" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+      <!-- Nest -->
+      <path d="M13 53 Q18 44 36 43 Q54 44 59 53" fill="#D4B896" stroke="#C4A878" stroke-width="1.5" stroke-linecap="round"/>
+      <ellipse cx="36" cy="54" rx="23" ry="6" fill="#D4B896" stroke="#C4A878" stroke-width="1.5"/>
+      <!-- Nest weave lines -->
+      <path d="M17 52 Q24 48 32 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M55 52 Q48 48 40 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M22 54 Q28 50 36 49" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M50 54 Q44 50 36 49" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <!-- Body -->
+      <ellipse cx="36" cy="36" rx="11" ry="9" fill="#9B7BC8"/>
+      <!-- Head -->
+      <circle cx="36" cy="24" r="8" fill="#9B7BC8"/>
+      <!-- Belly highlight -->
+      <ellipse cx="36.5" cy="38" rx="6.5" ry="5" fill="#C4A8E8"/>
+      <!-- Wing -->
+      <path d="M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z" fill="#7B58A8" opacity="0.7"/>
+      <!-- Eye -->
+      <circle cx="39" cy="22" r="2" fill="#2A1248"/>
+      <circle cx="39.6" cy="21.4" r="0.7" fill="#fff"/>
+      <!-- Beak -->
+      <path d="M43 23.5 L48 22.5 L43 26 Z" fill="#F4A261"/>
+      <!-- Tail feathers -->
+      <path d="M25 38 Q19 42 16 48 Q21 43 27 41Z" fill="#7B58A8" opacity="0.6"/>
+      <path d="M25 40 Q17 46 15 52 Q20 46 26 43Z" fill="#9B7BC8" opacity="0.4"/>
+      <!-- Feet -->
+      <path d="M30 47 L27 52 M30 47 L30 53 M30 47 L33 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M42 47 L39 52 M42 47 L42 53 M42 47 L45 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <span class="nav-logo-text">ClearNest</span>
+  </a>
+  <div class="nav-right">
+    <ul class="nav-links">
+      <li><a href="landing.html#how">How it works</a></li>
+      <li><a href="landing.html#covers">What Clara covers</a></li>
+      <li><a href="blog.html" class="nav-active">Blog</a></li>
+      <li><a href="landing.html#waitlist" class="nav-cta">Priority access</a></li>
+    </ul>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+      <span id="theme-icon">🌙</span><span class="theme-label" id="theme-label">Dark</span>
+    </button>
+    <button class="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="nav-mobile" id="nav-mobile">
+  <ul>
+    <li><a href="landing.html#how" onclick="closeMobileNav()">How it works</a></li>
+    <li><a href="landing.html#covers" onclick="closeMobileNav()">What Clara covers</a></li>
+    <li><a href="blog.html" onclick="closeMobileNav()">Blog</a></li>
+    <li><a href="landing.html#waitlist" onclick="closeMobileNav()">Get early access →</a></li>
+  </ul>
+</div>
+
+<!-- ARTICLE HEADER -->
+<div class="article-header">
+  <div class="article-header-inner">
+    <span class="article-pill">Guides</span>
+    <h1>What happens if your parent loses capacity without an LPA in place</h1>
+    <p class="article-byline">By the ClearNest team · April 2026</p>
+  </div>
+</div>
+
+<!-- ARTICLE BODY -->
+<div class="article-body">
+  <p>Every year, families across the UK face the same painful discovery. A parent has a stroke, a fall, or a sudden diagnosis — and nobody has legal authority to access their accounts, manage their property, or make decisions on their behalf.</p>
+
+  <p>A Lasting Power of Attorney is a legal document that allows a trusted person to step in and manage someone's finances and welfare if they lose the mental capacity to do so themselves. Without one, families have no automatic right to act — regardless of how close the relationship is.</p>
+
+  <p>According to a Freedom of Information request submitted to the Ministry of Justice and published by Which?, more than 50,000 LPA applications were rejected by the Office of the Public Guardian in the 2023 to 2024 financial year. The most common reasons were not complicated. Missing signatures or dates. The incorrect signing order — the donor must sign first, then the certificate provider, then the attorneys. Incorrect witnesses. Contradictory instructions. Small errors with significant consequences.</p>
+
+  <p>The rejection rate has been rising sharply. Figures obtained by MoneyWeek via a Freedom of Information request to the Office of the Public Guardian show a 199% rise in LPA rejections in England and Wales between 2021 and 2024.</p>
+
+  <p>Families without an LPA in place when something goes wrong must apply to the Court of Protection instead. The application fee alone is £408. A professional deputy's fixed costs for the first year of management are £2,116 plus VAT, according to Practice Direction 19B published by the Judiciary of England and Wales in April 2024. The process can also take months — time during which families may have no legal access to a parent's accounts at all.</p>
+
+  <p>The most important detail is one most families only discover too late. An LPA can only be registered while the person still has mental capacity. Once capacity is lost, the window closes permanently.</p>
+
+  <p>What you can do right now is straightforward. Find out whether your parent has an LPA in place. If they do, confirm where it is registered and who the named attorneys are. If they do not, the right time to start is before there is any urgency — because urgency is exactly when it becomes impossible.</p>
+
+  <p>ClearNest was built for this. Clara calls your parent and captures whether an LPA is in place, flagging it on your family dashboard. No forms. No difficult kitchen table conversation. Just clarity, before a crisis demands it.</p>
+</div>
+
+<!-- FOOTER CTA -->
+<div class="article-cta-wrap">
+  <div class="article-cta">
+    <h2>Get your family organised before it becomes urgent.</h2>
+    <p>Join our closed beta. First month completely free.</p>
+    <a href="landing.html#waitlist" class="article-cta-btn">Join the beta</a>
+    <a href="blog.html" class="article-back">← Back to all guides</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a href="landing.html" class="footer-logo">
+    <svg width="28" height="28" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+      <!-- Nest -->
+      <path d="M13 53 Q18 44 36 43 Q54 44 59 53" fill="#D4B896" stroke="#C4A878" stroke-width="1.5" stroke-linecap="round"/>
+      <ellipse cx="36" cy="54" rx="23" ry="6" fill="#D4B896" stroke="#C4A878" stroke-width="1.5"/>
+      <!-- Nest weave lines -->
+      <path d="M17 52 Q24 48 32 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M55 52 Q48 48 40 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M22 54 Q28 50 36 49" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M50 54 Q44 50 36 49" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round"/>
+      <!-- Body -->
+      <ellipse cx="36" cy="36" rx="11" ry="9" fill="#9B7BC8"/>
+      <!-- Head -->
+      <circle cx="36" cy="24" r="8" fill="#9B7BC8"/>
+      <!-- Belly highlight -->
+      <ellipse cx="36.5" cy="38" rx="6.5" ry="5" fill="#C4A8E8"/>
+      <!-- Wing -->
+      <path d="M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z" fill="#7B58A8" opacity="0.7"/>
+      <!-- Eye -->
+      <circle cx="39" cy="22" r="2" fill="#2A1248"/>
+      <circle cx="39.6" cy="21.4" r="0.7" fill="#fff"/>
+      <!-- Beak -->
+      <path d="M43 23.5 L48 22.5 L43 26 Z" fill="#F4A261"/>
+      <!-- Tail feathers -->
+      <path d="M25 38 Q19 42 16 48 Q21 43 27 41Z" fill="#7B58A8" opacity="0.6"/>
+      <path d="M25 40 Q17 46 15 52 Q20 46 26 43Z" fill="#9B7BC8" opacity="0.4"/>
+      <!-- Feet -->
+      <path d="M30 47 L27 52 M30 47 L30 53 M30 47 L33 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M42 47 L39 52 M42 47 L42 53 M42 47 L45 52" stroke="#C4A878" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <span class="footer-logo-text">ClearNest</span>
+  </a>
+  <div class="footer-center">
+    <div class="footer-copy">© 2026 ClearNest · Pannonl Ltd. A gentle way to get organised.</div>
+    <div class="footer-privacy-badge">🔒 No cookies. No tracking. Built on privacy.</div>
+    <div class="footer-privacy-badge" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.22);">Not legal or financial advice. ClearNest is an organisational tool only.</div>
+  </div>
+  <ul class="footer-links">
+    <li><a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer">Privacy</a></li>
+    <li><a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer">Terms</a></li>
+    <li><a href="/safeguarding-policy.md" target="_blank" rel="noopener noreferrer">Safeguarding</a></li>
+    <li><a href="mailto:hello@clearnest.co.uk">Contact</a></li>
+  </ul>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  }
+  (function() {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('theme-icon').textContent = '☀️';
+      document.getElementById('theme-label').textContent = 'Light';
+    }
+  })();
+
+  function toggleMobileNav() {
+    document.getElementById('nav-mobile').classList.toggle('open');
+  }
+  function closeMobileNav() {
+    document.getElementById('nav-mobile').classList.remove('open');
+  }
+</script>
+</body>
+</html>

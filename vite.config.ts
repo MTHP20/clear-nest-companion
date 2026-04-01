@@ -23,6 +23,7 @@ export default defineConfig(() => ({
         main: path.resolve(__dirname, "index.html"),
         landing: path.resolve(__dirname, "landing.html"),
         blog: path.resolve(__dirname, "blog.html"),
+        blogLpa: path.resolve(__dirname, "blog-lpa-no-power-of-attorney.html"),
       },
     },
   },
