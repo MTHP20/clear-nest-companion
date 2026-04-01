@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 export interface CapturedItem {
   id: string;
@@ -81,8 +82,6 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | null>(null);
 
 // ─── Category normaliser ──────────────────────────────────────────────────────
-// Maps various Claude / ElevenLabs category names → the exact strings the
-// dashboard components filter on.
 const VALID_CATEGORIES = new Set([
   'documents',
   'bank_accounts',
@@ -96,7 +95,6 @@ const VALID_CATEGORIES = new Set([
 function normaliseCategory(raw: string): string {
   const lower = (raw ?? '').toLowerCase().replace(/[\s-]/g, '_');
   if (VALID_CATEGORIES.has(lower)) return lower;
-  // fuzzy aliases
   if (lower.includes('document') || lower.includes('will') || lower.includes('legal')) return 'documents';
   if (lower.includes('bank')) return 'bank_accounts';
   if (lower.includes('financ') || lower.includes('pension') || lower.includes('invest')) return 'financial_accounts';
@@ -106,7 +104,7 @@ function normaliseCategory(raw: string): string {
   return 'general';
 }
 
-// ─── Shared keyword patterns — used by both liveExtract and syncFromConversation
+// ─── Shared keyword patterns ──────────────────────────────────────────────────
 type PatternEntry = { re: RegExp; category: string; confidence: 'clear' | 'needs-follow-up' };
 const KEYWORD_PATTERNS: PatternEntry[] = [
   {
@@ -167,12 +165,18 @@ function loadProfileNames(): { parentName: string; childName: string; familyId: 
   } catch { return { parentName: 'You', childName: 'Family', familyId: 'unknown' }; }
 }
 
+// ─── Supabase client (anon key — read-only profile hydration) ─────────────────
+const supabaseUrl = import.meta.env.VITE_SUPA_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPA_KEY as string | undefined;
+const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [parentName] = useState(() => loadProfileNames().parentName);
   const [childName] = useState(() => loadProfileNames().childName);
   const [familyId] = useState(() => loadProfileNames().familyId);
 
-  // ── Persisted state — survives page refresh via localStorage ──────────────
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>(() =>
     loadLS<CapturedItem[]>('cn-captured-items', [])
   );
@@ -184,7 +188,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [claraResponses] = useState<ClaraResponse[]>([]);
   const [lastClaraMessage, setLastClaraMessage] = useState('');
   const [lastUserMessage, setLastUserMessage] = useState('');
-  // Ref so handleAgentToolCall always reads the latest user message
   const lastUserMessageRef = useRef('');
   const [isListening, setListening] = useState(false);
   const [isThinking, setThinking] = useState(false);
@@ -193,12 +196,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     loadLS<ReadinessSnapshot[]>('cn-readiness-history', [])
   );
 
-  // ── Persist to localStorage whenever items change ─────────────────────────
   useEffect(() => { saveLS('cn-captured-items', capturedItems); }, [capturedItems]);
   useEffect(() => { saveLS('cn-action-items', actionItems); }, [actionItems]);
   useEffect(() => { saveLS('cn-readiness-history', readinessHistory); }, [readinessHistory]);
 
-  // ── Snapshot readiness score daily whenever capturedItems changes ─────────
   useEffect(() => {
     if (capturedItems.length === 0) return;
     const ALL_CATS = ['bank_accounts', 'financial_accounts', 'property', 'documents', 'key_contacts', 'care_wishes'];
@@ -206,13 +207,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const score = Math.round((ALL_CATS.filter(c => coveredCats.has(c)).length / ALL_CATS.length) * 100);
     const today = new Date().toISOString().slice(0, 10);
     setReadinessHistory(prev => {
-      // Replace today's entry if it exists, otherwise append
       const without = prev.filter(s => s.date !== today);
-      return [...without, { date: today, score }].slice(-30); // keep last 30 days
+      return [...without, { date: today, score }].slice(-30);
     });
   }, [capturedItems]);
 
-  // Track which conversation IDs have been synced — versioned key resets on pattern updates
   const syncedIds = useRef<Set<string>>(
     new Set(loadLS<string[]>('cn-synced-ids-v2', []))
   );
@@ -221,7 +220,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUserNotes(prev => ({ ...prev, [itemId]: note }));
   }, []);
 
-  // Wrap setter so the ref stays in sync for use inside handleAgentToolCall
   const wrappedSetLastUserMessage = useCallback((msg: string) => {
     lastUserMessageRef.current = msg;
     setLastUserMessage(msg);
@@ -229,7 +227,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const addCapturedItem = useCallback((item: CapturedItem) => {
     setCapturedItems(prev => {
-      // Deduplicate: skip if same content + category already exists
       if (prev.some(e => e.category === item.category && e.content.trim() === item.content.trim())) return prev;
       return [item, ...prev];
     });
@@ -265,7 +262,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const content = (parameters.content as string) ?? '';
         let category = normaliseCategory((parameters.category as string) ?? 'general');
 
-        // If still general, scan the content with keyword patterns to find a better category
         if (category === 'general' && content) {
           for (const { re, category: patternCategory } of KEYWORD_PATTERNS) {
             if (re.test(content)) {
@@ -336,8 +332,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [addCapturedItem, parentName]);
 
   // ─── Sync a past ElevenLabs conversation into the dashboard ──────────────
-  // Fetches the transcript, extracts Clara's stored tool_calls AND runs
-  // Claude AI over the full transcript text for richer extraction.
   const syncFromConversation = useCallback(async (conversationId: string): Promise<SyncResult> => {
     if (syncedIds.current.has(conversationId)) {
       return { items: 0, actions: 0, alreadySynced: true };
@@ -355,53 +349,66 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let actions = 0;
     const ts = Date.now();
 
-    // ── Step 1: extract tool_calls stored by ElevenLabs in the transcript ──
+    // ── Step 1: extract tool_calls from the ElevenLabs transcript ──────────
+    // ElevenLabs may store tool calls inside individual transcript turns OR
+    // as a top-level array — check both locations.
     type RawTurn = { role: string; message?: string; tool_calls?: unknown[] };
+    type RawToolCall = {
+      tool_name?: string; name?: string;
+      params_as_json?: string; parameters?: Record<string, unknown>;
+    };
+
+    const allToolCalls: RawToolCall[] = [];
+
+    // Per-turn tool_calls (standard location)
     for (const turn of (data.transcript ?? []) as RawTurn[]) {
       for (const tc of (turn.tool_calls ?? [])) {
-        try {
-          const toolCall = tc as {
-            tool_name?: string;
-            name?: string;
-            params_as_json?: string;
-            parameters?: Record<string, unknown>;
-          };
-          const toolName = toolCall.tool_name ?? toolCall.name ?? '';
-          let params: Record<string, unknown> = {};
-          if (typeof toolCall.params_as_json === 'string') {
-            params = JSON.parse(toolCall.params_as_json);
-          } else if (toolCall.parameters) {
-            params = toolCall.parameters;
-          }
-
-          if (toolName === 'capture_note') {
-            addCapturedItem({
-              id: `sync-${conversationId}-${ts}-${items}`,
-              category: normaliseCategory((params.category as string) ?? 'general'),
-              content: (params.content as string) ?? '',
-              confidence: (params.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
-              flag: (params.flag as boolean) ?? false,
-              timestamp: new Date(),
-            });
-            items++;
-          } else if (toolName === 'flag_action') {
-            addActionItem({
-              id: `sync-action-${conversationId}-${ts}-${actions}`,
-              title: (params.title as string) ?? 'Action required',
-              description: (params.description as string) ?? '',
-              severity: (params.severity as 'red' | 'amber') ?? 'amber',
-              status: 'todo',
-              learnMoreUrl: (params.learnMoreUrl as string) ?? undefined,
-            });
-            actions++;
-          }
-        } catch {
-          // skip malformed tool call
-        }
+        allToolCalls.push(tc as RawToolCall);
       }
     }
 
-    // ── Step 2: Claude AI extraction from full transcript text ──────────────
+    // Top-level tool_results (alternative ElevenLabs API shape)
+    for (const tc of (data.tool_results ?? data.analysis?.tool_results ?? [])) {
+      allToolCalls.push(tc as RawToolCall);
+    }
+
+    for (const toolCall of allToolCalls) {
+      try {
+        const toolName = toolCall.tool_name ?? toolCall.name ?? '';
+        let params: Record<string, unknown> = {};
+        if (typeof toolCall.params_as_json === 'string') {
+          params = JSON.parse(toolCall.params_as_json);
+        } else if (toolCall.parameters) {
+          params = toolCall.parameters;
+        }
+
+        if (toolName === 'capture_note') {
+          addCapturedItem({
+            id: `sync-${conversationId}-${ts}-${items}`,
+            category: normaliseCategory((params.category as string) ?? 'general'),
+            content: (params.content as string) ?? '',
+            confidence: (params.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
+            flag: (params.flag as boolean) ?? false,
+            timestamp: new Date(),
+          });
+          items++;
+        } else if (toolName === 'flag_action') {
+          addActionItem({
+            id: `sync-action-${conversationId}-${ts}-${actions}`,
+            title: (params.title as string) ?? 'Action required',
+            description: (params.description as string) ?? '',
+            severity: (params.severity as 'red' | 'amber') ?? 'amber',
+            status: 'todo',
+            learnMoreUrl: (params.learnMoreUrl as string) ?? undefined,
+          });
+          actions++;
+        }
+      } catch {
+        // skip malformed tool call
+      }
+    }
+
+    // ── Step 2: Claude AI extraction (strict tool_use) ──────────────────────
     const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
     const transcriptText = ((data.transcript ?? []) as RawTurn[])
       .filter(t => t.message && t.message.trim())
@@ -419,20 +426,54 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             'anthropic-dangerous-direct-browser-access': 'true',
           },
           body: JSON.stringify({
-            // haiku is the cheapest Claude model — ~$0.001 per full conversation sync
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 900,
+            max_tokens: 1200,
+            system: 'Extract factual information from a care-planning conversation. Only include what was clearly stated.',
+            tools: [
+              {
+                name: 'store_notes',
+                description: 'Store all extracted notes and flagged actions from the conversation.',
+                input_schema: {
+                  type: 'object',
+                  properties: {
+                    notes: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          category: {
+                            type: 'string',
+                            enum: ['documents', 'bank_accounts', 'financial_accounts', 'property', 'care_wishes', 'key_contacts', 'general'],
+                          },
+                          content: { type: 'string', description: '1-sentence factual statement' },
+                          confidence: { type: 'string', enum: ['clear', 'needs-follow-up'] },
+                        },
+                        required: ['category', 'content', 'confidence'],
+                      },
+                    },
+                    actions: {
+                      type: 'array',
+                      description: 'Urgent gaps only — e.g. no will, no LPA set up.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          title: { type: 'string' },
+                          description: { type: 'string' },
+                          severity: { type: 'string', enum: ['red', 'amber'] },
+                        },
+                        required: ['title', 'description', 'severity'],
+                      },
+                    },
+                  },
+                  required: ['notes', 'actions'],
+                },
+              },
+            ],
+            tool_choice: { type: 'tool', name: 'store_notes' },
             messages: [
               {
                 role: 'user',
-                content: `Extract all factual information from this care-planning conversation. Return ONLY JSON (no markdown):
-{"notes":[{"category":"...","content":"1-sentence fact","confidence":"clear|needs-follow-up"}],"actions":[{"title":"...","description":"...","severity":"red|amber"}]}
-
-Categories: documents (will/LPA/insurance/solicitor), bank_accounts, financial_accounts (pension/ISA/investments), property (house/deeds/mortgage), care_wishes (care home/medical wishes), key_contacts (named GP/solicitor/accountant), general
-Actions only for urgent gaps (no will, no LPA set up, etc).
-
-Conversation:
-${transcriptText.slice(0, 4000)}`,
+                content: `Extract all factual information from this care-planning conversation:\n\n${transcriptText.slice(0, 4000)}`,
               },
             ],
           }),
@@ -440,14 +481,14 @@ ${transcriptText.slice(0, 4000)}`,
 
         if (claudeResp.ok) {
           const claudeData = await claudeResp.json();
-          const text: string = claudeData.content?.[0]?.text ?? '';
-          const jsonMatch = text.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const extracted = JSON.parse(jsonMatch[0]) as {
-              notes?: Array<{ category: string; content: string; confidence: string }>;
-              actions?: Array<{ title: string; description: string; severity: string }>;
-            };
-            for (const note of extracted.notes ?? []) {
+          const toolUse = (claudeData.content ?? []).find(
+            (b: { type: string }) => b.type === 'tool_use'
+          ) as { input?: { notes?: unknown[]; actions?: unknown[] } } | undefined;
+
+          if (toolUse?.input) {
+            const { notes = [], actions = [] } = toolUse.input;
+
+            for (const note of notes as Array<{ category: string; content: string; confidence: string }>) {
               if (note.content?.trim()) {
                 addCapturedItem({
                   id: `ai-${conversationId}-${ts}-${items}`,
@@ -460,7 +501,7 @@ ${transcriptText.slice(0, 4000)}`,
                 items++;
               }
             }
-            for (const action of extracted.actions ?? []) {
+            for (const action of actions as Array<{ title: string; description: string; severity: string }>) {
               if (action.title?.trim()) {
                 addActionItem({
                   id: `ai-action-${conversationId}-${ts}-${actions}`,
@@ -479,8 +520,7 @@ ${transcriptText.slice(0, 4000)}`,
         console.warn('Claude AI extraction failed, using tool_calls only:', err);
       }
     } else if (transcriptText.length > 50 && items === 0) {
-      // No tool_calls and no Anthropic key (or key failed) — use shared KEYWORD_PATTERNS
-      // to extract factual statements from the elderly person's side of the conversation.
+      // Last resort: keyword matching on the elderly person's lines
       const narayanLines = transcriptText
         .split('\n')
         .filter(l => l.startsWith(`${parentName}:`))
@@ -499,14 +539,12 @@ ${transcriptText.slice(0, 4000)}`,
               timestamp: new Date(),
             });
             items++;
-            break; // one category per utterance
+            break;
           }
         }
       }
     }
 
-    // Only mark as synced if we actually extracted something — conversations with
-    // 0 items will be retried on the next boot sync with potentially improved patterns.
     if (items > 0 || actions > 0) {
       syncedIds.current.add(conversationId);
       saveLS('cn-synced-ids-v2', [...syncedIds.current]);
@@ -516,7 +554,6 @@ ${transcriptText.slice(0, 4000)}`,
   }, [addCapturedItem, addActionItem, parentName]);
 
   // ─── Auto-sync all unsynced ElevenLabs conversations ────────────────────
-  // Fetches the last 20 conversations and syncs any that haven't been seen yet.
   const autoSyncLatest = useCallback(async (): Promise<SyncResult | null> => {
     const EL_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
     const AGENT_ID = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
@@ -550,15 +587,140 @@ ${transcriptText.slice(0, 4000)}`,
     }
   }, [syncFromConversation]);
 
-  // ─── Auto-sync all conversations on mount ────────────────────────────────
-  // Runs once when the app first loads — picks up all ElevenLabs conversations
-  // that haven't been synced yet and populates the dashboard immediately.
+  // ─── Supabase profile hydration ──────────────────────────────────────────
+  // After ElevenLabs sync, pull the structured profiles row from Supabase and
+  // merge any server-extracted data that isn't already in localStorage.
+  const hydrateFromSupabase = useCallback(async () => {
+    if (!supabase || !familyId || familyId === 'unknown') return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('bank_accounts, financial_accounts, property_details, pension_status, will_location, key_contacts, care_wishes, lpa_confirmed')
+        .eq('family_id', familyId)
+        .maybeSingle();
+
+      if (error || !data) return;
+
+      const now = new Date();
+
+      // Convert each structured field into CapturedItems and merge
+      type BankRow = { bank_name: string; account_type: string; notes: string };
+      for (const row of (data.bank_accounts ?? []) as BankRow[]) {
+        if (row.bank_name) {
+          addCapturedItem({
+            id: `sb-bank-${row.bank_name.toLowerCase().replace(/\s+/g, '-')}`,
+            category: 'bank_accounts',
+            content: `${row.bank_name} — ${row.account_type}${row.notes ? `. ${row.notes}` : ''}`,
+            confidence: 'clear',
+            flag: false,
+            timestamp: now,
+          });
+        }
+      }
+
+      type FinRow = { type: string; provider: string; notes: string };
+      for (const row of (data.financial_accounts ?? []) as FinRow[]) {
+        if (row.type || row.provider) {
+          addCapturedItem({
+            id: `sb-fin-${(row.provider || row.type).toLowerCase().replace(/\s+/g, '-')}`,
+            category: 'financial_accounts',
+            content: `${row.type}${row.provider ? ` with ${row.provider}` : ''}${row.notes ? `. ${row.notes}` : ''}`,
+            confidence: 'clear',
+            flag: false,
+            timestamp: now,
+          });
+        }
+      }
+
+      type PropRow = { description: string; ownership_type: string; notes: string };
+      for (const row of (data.property_details ?? []) as PropRow[]) {
+        if (row.description) {
+          addCapturedItem({
+            id: `sb-prop-${row.description.slice(0, 20).toLowerCase().replace(/\s+/g, '-')}`,
+            category: 'property',
+            content: `${row.description} (${row.ownership_type})${row.notes ? `. ${row.notes}` : ''}`,
+            confidence: 'clear',
+            flag: false,
+            timestamp: now,
+          });
+        }
+      }
+
+      type ContactRow = { name: string; role: string; phone?: string };
+      for (const row of (data.key_contacts ?? []) as ContactRow[]) {
+        if (row.name) {
+          addCapturedItem({
+            id: `sb-contact-${row.name.toLowerCase().replace(/\s+/g, '-')}`,
+            category: 'key_contacts',
+            content: `${row.name} (${row.role})${row.phone ? ` — ${row.phone}` : ''}`,
+            confidence: 'clear',
+            flag: false,
+            timestamp: now,
+          });
+        }
+      }
+
+      if (data.pension_status) {
+        addCapturedItem({
+          id: 'sb-pension',
+          category: 'financial_accounts',
+          content: data.pension_status,
+          confidence: 'clear',
+          flag: false,
+          timestamp: now,
+        });
+      }
+
+      if (data.will_location) {
+        addCapturedItem({
+          id: 'sb-will',
+          category: 'documents',
+          content: `Will stored at: ${data.will_location}`,
+          confidence: 'clear',
+          flag: false,
+          timestamp: now,
+        });
+      }
+
+      if (data.lpa_confirmed) {
+        addCapturedItem({
+          id: 'sb-lpa',
+          category: 'documents',
+          content: 'Lasting Power of Attorney is confirmed and signed.',
+          confidence: 'clear',
+          flag: false,
+          timestamp: now,
+        });
+      }
+
+      if (data.care_wishes) {
+        addCapturedItem({
+          id: 'sb-care',
+          category: 'care_wishes',
+          content: data.care_wishes,
+          confidence: 'clear',
+          flag: false,
+          timestamp: now,
+        });
+      }
+
+      console.log('☁️ Supabase profile hydrated into dashboard');
+    } catch (err) {
+      console.warn('Supabase hydration failed (non-fatal):', err);
+    }
+  }, [familyId, addCapturedItem]);
+
+  // ─── On mount: ElevenLabs sync, then Supabase hydration ─────────────────
   useEffect(() => {
     autoSyncLatest()
-      .then(r => { if (r && !r.alreadySynced) console.log(`🔄 Boot sync: ${r.items} notes, ${r.actions} actions`); })
+      .then(r => {
+        if (r && !r.alreadySynced) console.log(`🔄 Boot sync: ${r.items} notes, ${r.actions} actions`);
+        return hydrateFromSupabase();
+      })
       .catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
+  }, []);
 
   return (
     <SessionContext.Provider
