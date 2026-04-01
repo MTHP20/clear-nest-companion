@@ -533,11 +533,11 @@ footer a:hover { opacity: 0.7; }
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script>
-const SUPA_URL = 'https://btgjwnqvyqjtsqaolsdt.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0Z2p3bnF2eXFqdHNxYW9sc2R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTY3NjgsImV4cCI6MjA4ODczMjc2OH0.0mQ9oGlCmFn8zdoxTwYqt16jrGm2ZYsWCkpoEE2sliQ';
-const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+<script type="module">
+import { createClient } from '@supabase/supabase-js';
+const SUPA_URL = import.meta.env.VITE_SUPA_URL;
+const SUPA_KEY = import.meta.env.VITE_SUPA_KEY;
+const sb = createClient(SUPA_URL, SUPA_KEY);
 
 // ─── State ────────────────────────────────────────────────────────────────────
 var allPosts     = [];
@@ -782,6 +782,19 @@ document.getElementById('post-modal').addEventListener('click', function(e) {
 document.getElementById('del-modal').addEventListener('click', function(e) {
   if (e.target === this) closeDelModal();
 });
+
+// ─── Expose to window for inline onclick handlers ────────────────────────────
+window.setFilter      = setFilter;
+window.applyFilters   = applyFilters;
+window.doSignOut      = doSignOut;
+window.openCreate     = openCreate;
+window.openEdit       = openEdit;
+window.openDelete     = openDelete;
+window.closePostModal = closePostModal;
+window.closeDelModal  = closeDelModal;
+window.confirmDelete  = confirmDelete;
+window.previewImg     = previewImg;
+window.savePost       = savePost;
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 initAuth();
