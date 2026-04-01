@@ -20,7 +20,7 @@
 
   <body>
     <script>
-      if ('%VITE_SET_WAITLIST%' === 'true') {
+      if ('%VITE_SET_WAITLIST%' === 'true' && window.location.pathname !== '/admin') {
         window.location.replace('/landing.html');
       }
     </script>
