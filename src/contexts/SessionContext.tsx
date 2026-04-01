@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase as sharedSupabase } from '@/lib/supabase';
 
 export interface CapturedItem {
   id: string;
@@ -165,12 +165,8 @@ function loadProfileNames(): { parentName: string; childName: string; familyId: 
   } catch { return { parentName: 'You', childName: 'Family', familyId: 'unknown' }; }
 }
 
-// ─── Supabase client (anon key — read-only profile hydration) ─────────────────
-const supabaseUrl = import.meta.env.VITE_SUPA_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPA_KEY as string | undefined;
-const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+// ─── Supabase client (shared instance) ───────────────────────────────────────
+const supabase = sharedSupabase;
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [parentName] = useState(() => loadProfileNames().parentName);
@@ -591,7 +587,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // After ElevenLabs sync, pull the structured profiles row from Supabase and
   // merge any server-extracted data that isn't already in localStorage.
   const hydrateFromSupabase = useCallback(async () => {
-    if (!supabase || !familyId || familyId === 'unknown') return;
+    if (!familyId || familyId === 'unknown') return;
 
     try {
       const { data, error } = await supabase

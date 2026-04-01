@@ -725,6 +725,9 @@ const Conversation = () => {
           <button onClick={handleEndChat} style={styles.backBtn} aria-label="Go back">
             Go back
           </button>
+          <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF' }}>
+            <a href="/admin" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Admin</a>
+          </div>
         </div>
       )}
 
