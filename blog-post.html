@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog — ClearNest</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cpath d='M13 53 Q18 44 36 43 Q54 44 59 53' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5' stroke-linecap='round'/%3E%3Cellipse cx='36' cy='54' rx='23' ry='6' fill='%23D4B896' stroke='%23C4A878' stroke-width='1.5'/%3E%3Cellipse cx='36' cy='36' rx='11' ry='9' fill='%239B7BC8'/%3E%3Ccircle cx='36' cy='24' r='8' fill='%239B7BC8'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #F7F3EE;
+      color: #1A1A2E;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: #F5F0EA;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1A1A2E;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: #3D3D3D;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: inherit;
+      transition: opacity 0.15s;
+    }
+
+    .nav-links a:hover {
+      opacity: 0.7;
+    }
+
+    .nav-cta {
+      background: #3D3D3D;
+      color: #fff !important;
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 14px;
+      transition: opacity 0.15s;
+    }
+
+    .nav-cta:hover {
+      opacity: 0.85;
+    }
+
+    /* ── Loading / Error ── */
+    .state-wrap {
+      max-width: 720px;
+      margin: 80px auto;
+      padding: 0 24px;
+      text-align: center;
+      color: #6B7280;
+    }
+
+    .state-wrap h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      color: #1A1A2E;
+      margin-bottom: 8px;
+    }
+
+    /* ── Article header ── */
+    .article-header {
+      background: #F5F0E8;
+      padding: 56px 24px 48px;
+    }
+
+    .article-header-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .article-pill {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: #EDE8F5;
+      color: #6C5CE7;
+      margin-bottom: 16px;
+    }
+
+    .article-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 700;
+      line-height: 1.2;
+      color: #1A1A2E;
+      margin-bottom: 12px;
+    }
+
+    .article-desc {
+      font-size: 17px;
+      color: #5A5A6E;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .article-byline {
+      font-size: 13px;
+      color: #9CA3AF;
+    }
+
+    .article-cover {
+      width: 100%;
+      max-height: 420px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-top: 28px;
+      display: block;
+    }
+
+    /* ── Article body ── */
+    .article-body-wrap {
+      background: #fff;
+    }
+
+    .article-body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 52px 24px 64px;
+    }
+
+    .article-body h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1A1A2E;
+      margin: 32px 0 12px;
+      line-height: 1.3;
+    }
+
+    .article-body h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: #1A1A2E;
+      margin: 24px 0 8px;
+    }
+
+    .article-body p {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #2C2C2C;
+      margin-bottom: 20px;
+    }
+
+    .article-body ul,
+    .article-body ol {
+      padding-left: 22px;
+      margin-bottom: 20px;
+    }
+
+    .article-body li {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #2C2C2C;
+      margin-bottom: 6px;
+    }
+
+    .article-body b,
+    .article-body strong {
+      font-weight: 600;
+      color: #1A1A2E;
+    }
+
+    .article-body em,
+    .article-body i {
+      font-style: italic;
+    }
+
+    /* ── CTA block ── */
+    .article-cta-wrap {
+      background: #fff;
+      padding-bottom: 64px;
+    }
+
+    .article-cta-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .article-cta {
+      background: #EDE8F5;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .article-cta h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #1A1A2E;
+      margin-bottom: 8px;
+    }
+
+    .article-cta p {
+      color: #6B7280;
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+
+    .article-cta-btn {
+      display: inline-block;
+      background: #6C5CE7;
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .article-cta-btn:hover {
+      background: #5A4BD4;
+    }
+
+    .article-back {
+      display: block;
+      color: #6C5CE7;
+      font-size: 13px;
+      margin-top: 14px;
+      text-decoration: none;
+    }
+
+    .article-back:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: #fff;
+      border-top: 1px solid #E5E7EB;
+      padding: 20px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #9CA3AF;
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    footer a:hover {
+      opacity: 0.7;
+    }
+
+    /* ── Skeleton ── */
+    .skel {
+      animation: shimmer 1.4s infinite;
+      background: #E5E7EB;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.45
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-logo" href="landing.html">
+        <svg width="28" height="28" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13 53 Q18 44 36 43 Q54 44 59 53" fill="#D4B896" stroke="#C4A878" stroke-width="1.5"
+            stroke-linecap="round" />
+          <ellipse cx="36" cy="54" rx="23" ry="6" fill="#D4B896" stroke="#C4A878" stroke-width="1.5" />
+          <path d="M17 52 Q24 48 32 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round" />
+          <path d="M55 52 Q48 48 40 47" fill="none" stroke="#B8946A" stroke-width="1" stroke-linecap="round" />
+          <ellipse cx="36" cy="36" rx="11" ry="9" fill="#9B7BC8" />
+          <circle cx="36" cy="24" r="8" fill="#9B7BC8" />
+          <ellipse cx="36.5" cy="38" rx="6.5" ry="5" fill="#C4A8E8" />
+          <path d="M25 34 Q21 28 25 22 Q31 19 36 26 Q30 28 28 34Z" fill="#7B58A8" opacity="0.7" />
+          <circle cx="39" cy="22" r="2" fill="#2A1248" />
+          <circle cx="39.6" cy="21.4" r="0.7" fill="#fff" />
+          <path d="M43 23.5 L48 22.5 L43 26 Z" fill="#F4A261" />
+          <path d="M25 38 Q19 42 16 48 Q21 43 27 41Z" fill="#7B58A8" opacity="0.6" />
+          <path d="M30 47 L27 52 M30 47 L30 53 M30 47 L33 52" stroke="#C4A878" stroke-width="1.3"
+            stroke-linecap="round" />
+          <path d="M42 47 L39 52 M42 47 L42 53 M42 47 L45 52" stroke="#C4A878" stroke-width="1.3"
+            stroke-linecap="round" />
+        </svg>
+        ClearNest
+      </a>
+      <ul class="nav-links">
+        <li><a href="landing.html#how">How it works</a></li>
+        <li><a href="landing.html#covers">What Clara covers</a></li>
+        <li><a href="blog.html">Blog</a></li>
+        <li><a href="landing.html#waitlist" class="nav-cta">Priority access</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Content injected by JS -->
+  <div id="page-content">
+    <!-- Loading skeleton -->
+    <div class="article-header" id="skel-header">
+      <div class="article-header-inner">
+        <div class="skel" style="width:80px;height:22px;margin-bottom:18px"></div>
+        <div class="skel" style="width:100%;height:36px;margin-bottom:10px"></div>
+        <div class="skel" style="width:75%;height:36px;margin-bottom:18px"></div>
+        <div class="skel" style="width:140px;height:16px"></div>
+      </div>
+    </div>
+    <div class="article-body-wrap">
+      <div class="article-body">
+        <div class="skel" style="width:100%;height:16px;margin-bottom:12px"></div>
+        <div class="skel" style="width:92%;height:16px;margin-bottom:12px"></div>
+        <div class="skel" style="width:85%;height:16px;margin-bottom:28px"></div>
+        <div class="skel" style="width:50%;height:22px;margin-bottom:14px"></div>
+        <div class="skel" style="width:100%;height:16px;margin-bottom:12px"></div>
+        <div class="skel" style="width:88%;height:16px;margin-bottom:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    © 2026 Pannonl Ltd ·
+    <a href="blog.html">← Back to blog</a> ·
+    <a href="/privacy-policy.md" target="_blank" rel="noopener">Privacy Policy</a>
+  </footer>
+
+  <script type="module">
+    import { createClient } from '@supabase/supabase-js';
+    const SUPA_URL = import.meta.env.VITE_SUPA_URL;
+    const SUPA_KEY = import.meta.env.VITE_SUPA_KEY;
+    const sb = createClient(SUPA_URL, SUPA_KEY);
+
+    const CATEGORY_COLOURS = {
+      'Care Planning': '#7C65A9',
+      'Legal & Financial': '#5B8DB8',
+      'Family': '#E8896A',
+      'News & Updates': '#4CAF82',
+      'ClearNest News': '#E8896A',
+      'Guides': '#7C65A9',
+      'General': '#9CA3AF',
+      'Real Stories': '#5B8DB8',
+      'Research': '#F4A261',
+      'Opinion': '#4CAF82',
+      'Interviews': '#5B8DB8',
+    };
+
+    function catColour(c) { return CATEGORY_COLOURS[c] || '#9CA3AF'; }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function loadPost() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+
+      if (!id) {
+        renderError('No post ID specified.', 'Head back to the blog to find an article.');
+        return;
+      }
+
+      const { data: post, error } = await sb
+        .from('blog_posts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !post) {
+        renderError('Post not found.', "We couldn't find this article. It may have been removed.");
+        return;
+      }
+
+      renderPost(post);
+    }
+
+    function renderPost(post) {
+      document.title = post.title + ' — ClearNest';
+
+      const dateStr = new Date(post.date_posted).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+
+      const colour = catColour(post.category);
+
+      const coverImg = post.picture_url
+        ? '<img class="article-cover" src="' + esc(post.picture_url) + '" alt="' + esc(post.title) + '" onerror="this.style.display=\'none\'">'
+        : '';
+
+      const bodyContent = post.content
+        ? post.content
+        : '<p style="color:#9CA3AF;font-style:italic">This post has no additional content yet.</p>';
+
+      document.getElementById('page-content').innerHTML =
+        '<div class="article-header">'
+        + '<div class="article-header-inner">'
+        + '<span class="article-pill" style="color:' + colour + ';background:' + colour + '22">' + esc(post.category) + '</span>'
+        + '<h1>' + esc(post.title) + '</h1>'
+        + '<p class="article-desc">' + esc(post.description) + '</p>'
+        + '<span class="article-byline">ClearNest team · ' + dateStr + '</span>'
+        + coverImg
+        + '</div>'
+        + '</div>'
+        + '<div class="article-body-wrap">'
+        + '<div class="article-body">'
+        + bodyContent
+        + '</div>'
+        + '</div>'
+        + '<div class="article-cta-wrap">'
+        + '<div class="article-cta-inner">'
+        + '<div class="article-cta">'
+        + '<h2>Get your family\'s affairs in order</h2>'
+        + '<p>Clara helps families document what matters before it becomes urgent.</p>'
+        + '<a href="landing.html#waitlist" class="article-cta-btn">Get priority access</a>'
+        + '<a href="blog.html" class="article-back">← Back to all articles</a>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    }
+
+    function renderError(title, message) {
+      document.getElementById('page-content').innerHTML =
+        '<div class="state-wrap">'
+        + '<h2>' + esc(title) + '</h2>'
+        + '<p>' + esc(message) + '</p>'
+        + '<a href="blog.html" style="display:inline-block;margin-top:20px;color:#6C5CE7;font-size:14px;text-decoration:none">← Back to blog</a>'
+        + '</div>';
+    }
+
+    loadPost();
+  </script>
+</body>
+
+</html>

@@ -415,6 +415,11 @@
       font-size: 13px;
       font-weight: 500;
       color: #6C5CE7;
+      text-decoration: none;
+    }
+
+    .card-read-more:hover {
+      text-decoration: underline;
     }
 
     .card-date {
@@ -559,7 +564,7 @@
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
       width: 100%;
-      max-width: 520px;
+      max-width: 680px;
     }
 
     .modal-header {
@@ -800,6 +805,89 @@
         transform: rotate(360deg);
       }
     }
+
+    /* ── Rich text editor ── */
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 8px;
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      flex-wrap: wrap;
+    }
+
+    .editor-btn {
+      padding: 4px 9px;
+      border: none;
+      background: transparent;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      color: #3D3D3D;
+      cursor: pointer;
+      line-height: 1.4;
+      transition: background 0.12s;
+    }
+
+    .editor-btn:hover {
+      background: #E5E7EB;
+    }
+
+    .editor-sep {
+      width: 1px;
+      height: 16px;
+      background: #D1D5DB;
+      margin: 0 4px;
+      flex-shrink: 0;
+    }
+
+    .editor-area {
+      min-height: 180px;
+      max-height: 340px;
+      overflow-y: auto;
+      border: 1px solid #E5E7EB;
+      border-radius: 0 0 8px 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      color: #1A1A2E;
+      line-height: 1.7;
+      outline: none;
+      background: #fff;
+    }
+
+    .editor-area:focus {
+      box-shadow: 0 0 0 2px #A78BFA55;
+      border-color: #A78BFA;
+    }
+
+    .editor-area h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 12px 0 6px;
+      color: #1A1A2E;
+    }
+
+    .editor-area h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 600;
+      margin: 10px 0 4px;
+      color: #1A1A2E;
+    }
+
+    .editor-area ul {
+      padding-left: 20px;
+      margin-bottom: 8px;
+    }
+
+    .editor-area p {
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 
@@ -983,6 +1071,19 @@
           <label for="f-desc">Description <span style="color:#EF4444">*</span></label>
           <textarea id="f-desc" required placeholder="A summary of what this post covers…"></textarea>
         </div>
+        <div class="form-group">
+          <label>Blog Content <span style="color:#9CA3AF;font-weight:400">(optional)</span></label>
+          <div class="editor-toolbar">
+            <button type="button" class="editor-btn" onclick="fmt('bold')" title="Bold"><b>B</b></button>
+            <button type="button" class="editor-btn" onclick="fmt('italic')" title="Italic"><i>I</i></button>
+            <span class="editor-sep"></span>
+            <button type="button" class="editor-btn" onclick="fmtHeading('h2')" title="Heading">H2</button>
+            <button type="button" class="editor-btn" onclick="fmtHeading('h3')" title="Subheading">H3</button>
+            <span class="editor-sep"></span>
+            <button type="button" class="editor-btn" onclick="fmt('insertUnorderedList')" title="Bullet list">• List</button>
+          </div>
+          <div id="f-content" class="editor-area" contenteditable="true" aria-label="Blog content"></div>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="f-cat">Category</label>
@@ -1155,12 +1256,23 @@
         + '<div class="card-body">'
         + '<div class="card-title">' + esc(p.title) + '</div>'
         + '<div class="card-desc">' + esc(p.description) + '</div>'
-        + '<div class="card-footer"><span class="card-read-more">Read more →</span><span class="card-date">' + dateStr + '</span></div>'
+        + '<div class="card-footer"><a class="card-read-more" href="blog-post.html?id=' + p.id + '">Read more →</a><span class="card-date">' + dateStr + '</span></div>'
         + '</div></div>';
     }
 
     function esc(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ─── Rich text editor helpers ─────────────────────────────────────────────────
+    function fmt(cmd) {
+      document.execCommand(cmd, false, null);
+      document.getElementById('f-content').focus();
+    }
+
+    function fmtHeading(tag) {
+      document.execCommand('formatBlock', false, tag);
+      document.getElementById('f-content').focus();
     }
 
     // ─── Create / Edit modal ──────────────────────────────────────────────────────
@@ -1173,6 +1285,7 @@
       document.getElementById('f-cat').value = 'Guides';
       document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
       document.getElementById('f-pic').value = '';
+      document.getElementById('f-content').innerHTML = '';
       document.getElementById('img-preview').style.display = 'none';
       document.getElementById('form-error').style.display = 'none';
       document.getElementById('post-modal').classList.add('open');
@@ -1189,6 +1302,7 @@
       document.getElementById('f-cat').value = p.category;
       document.getElementById('f-date').value = p.date_posted;
       document.getElementById('f-pic').value = p.picture_url || '';
+      document.getElementById('f-content').innerHTML = p.content || '';
       previewImg(p.picture_url || '');
       document.getElementById('form-error').style.display = 'none';
       document.getElementById('post-modal').classList.add('open');
@@ -1227,6 +1341,7 @@
         category: document.getElementById('f-cat').value,
         date_posted: document.getElementById('f-date').value,
         picture_url: document.getElementById('f-pic').value.trim() || null,
+        content: document.getElementById('f-content').innerHTML.trim() || null,
       };
 
       try {
@@ -1294,6 +1409,8 @@
     window.confirmDelete = confirmDelete;
     window.previewImg = previewImg;
     window.savePost = savePost;
+    window.fmt = fmt;
+    window.fmtHeading = fmtHeading;
 
     // ─── Boot ─────────────────────────────────────────────────────────────────────
     initAuth();
