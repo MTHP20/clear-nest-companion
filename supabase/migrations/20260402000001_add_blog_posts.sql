@@ -22,16 +22,22 @@ alter table public.blog_posts add column if not exists content text;
 alter table public.blog_posts enable row level security;
 
 -- Anyone (including anonymous visitors) can read published posts
-create policy "blog_posts: public read"
-  on public.blog_posts
-  for select
-  to anon, authenticated
-  using (true);
+do $$ begin
+  create policy "blog_posts: public read"
+    on public.blog_posts
+    for select
+    to anon, authenticated
+    using (true);
+exception when duplicate_object then null;
+end $$;
 
 -- Only authenticated users (admins) may insert/update/delete
-create policy "blog_posts: authenticated write"
-  on public.blog_posts
-  for all
-  to authenticated
-  using (true)
-  with check (true);
+do $$ begin
+  create policy "blog_posts: authenticated write"
+    on public.blog_posts
+    for all
+    to authenticated
+    using (true)
+    with check (true);
+exception when duplicate_object then null;
+end $$;
