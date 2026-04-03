@@ -369,7 +369,7 @@ const Blog = () => {
                   )}
                   {/* Card image area */}
                   <div
-                    className={`relative z-[2] w-full h-44 overflow-hidden flex items-end p-3 ${!isAdmin ? 'pointer-events-none' : ''}`}
+                    className={`relative z-[2] w-full h-44 overflow-hidden flex items-end p-3 ${!isAdmin ? 'pointer-events-none [&_*]:pointer-events-none' : ''}`}
                     style={{ background: catBg(post.category) }}
                   >
                     {post.picture_url ? (
@@ -394,7 +394,7 @@ const Blog = () => {
                   </div>
 
                   {/* Card body */}
-                  <div className={`p-4 relative z-[2] ${!isAdmin ? 'pointer-events-none' : ''}`}>
+                  <div className={`p-4 relative z-[2] ${!isAdmin ? 'pointer-events-none [&_*]:pointer-events-none' : ''}`}>
                     <h2
                       className="font-display font-semibold text-sm leading-snug line-clamp-3 mb-2"
                       style={{ color: '#1A1A2E' }}
