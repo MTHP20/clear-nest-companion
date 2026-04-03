@@ -116,21 +116,21 @@ function ReadinessTrend({
             {/* Area fill */}
             <polygon
               points={`${PAD},${H - PAD} ${polyline} ${points[points.length - 1].x.toFixed(1)},${H - PAD}`}
-              fill="#4A7FA5"
+              fill="#9B7BC8"
               opacity="0.10"
             />
             {/* Trend line */}
             <polyline
               points={polyline!}
               fill="none"
-              stroke="#4A7FA5"
+              stroke="#9B7BC8"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             {/* Data points */}
             {points.map((p, i) => (
-              <circle key={i} cx={p.x} cy={p.y} r="3" fill="#4A7FA5" stroke="#fff" strokeWidth="1.5">
+              <circle key={i} cx={p.x} cy={p.y} r="3" fill="#9B7BC8" stroke="#fff" strokeWidth="1.5">
                 <title>{p.date}: {p.score}%</title>
               </circle>
             ))}
@@ -175,7 +175,7 @@ function ProgressRing({ score }: { score: number }) {
             cy="60"
             r={radius}
             fill="none"
-            stroke="#4A7FA5"
+            stroke="#9B7BC8"
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -291,7 +291,8 @@ export default function DashboardOverview({
   const toggleDoc = (id: string) => {
     setChecked((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       saveChecklist(next);
       return next;
     });

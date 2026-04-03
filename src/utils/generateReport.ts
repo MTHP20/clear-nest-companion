@@ -3,14 +3,14 @@ import autoTable from 'jspdf-autotable';
 import type { CapturedItem, ActionItem } from '@/contexts/SessionContext';
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
-const BLUE   = [74, 127, 165] as const;   // #4A7FA5
-const DARK   = [26, 26, 46]   as const;   // #1A1A2E
+const BLUE   = [155, 123, 200] as const;  // #9B7BC8 primary
+const DARK   = [61, 31, 138]   as const;  // #3D1F8A
 const MUTED  = [107, 114, 128] as const;  // #6B7280
 const BORDER = [220, 220, 220] as const;
 const GREEN  = [52, 168, 83]  as const;
-const AMBER  = [245, 124, 0]  as const;
+const AMBER  = [244, 200, 66]  as const;  // #F4C842
 const RED    = [229, 57, 53]  as const;
-const BG     = [253, 250, 245] as const;  // warm paper tone
+const BG     = [245, 240, 232] as const;  // #F5F0E8 cream
 
 const CATEGORY_LABELS: Record<string, string> = {
   bank_accounts:      'Banking & Accounts',

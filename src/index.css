@@ -1,57 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* ClearNest Design System — Light only, no dark mode */
-    --background: 37 50% 97%;       /* Cream #FDFAF5 */
-    --foreground: 0 0% 24%;          /* Warm charcoal #3D3D3D */
+    /* ClearNest brand — cream, purple CTAs, dark purple type, gold alert accent */
+    --background: 40 33% 94%;        /* #F5F0E8 */
+    --foreground: 261 63% 33%;     /* #3D1F8A headlines / primary text */
 
-    --card: 0 0% 100%;               /* White */
-    --card-foreground: 0 0% 24%;
+    --card: 0 0% 100%;
+    --card-foreground: 261 63% 33%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 24%;
+    --popover-foreground: 261 63% 33%;
 
-    --primary: 207 36% 54%;          /* Soft blue #5B8DB8 */
+    --primary: 263 41% 63%;          /* #9B7BC8 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 207 38% 76%;        /* Light blue #A8C5DA */
-    --secondary-foreground: 0 0% 24%;
+    --secondary: 270 60% 94%;        /* #EDE0FF-ish badge / soft UI */
+    --secondary-foreground: 261 55% 30%;
 
-    --muted: 37 50% 97%;
-    --muted-foreground: 0 0% 54%;    /* #8A8A8A */
+    --muted: 40 28% 96%;
+    --muted-foreground: 261 22% 38%; /* AA-friendly on cream for small text */
 
-    --accent: 207 30% 47%;           /* Button blue #4A7FA5 */
+    --accent: 263 38% 52%;           /* deeper purple hover / pressed */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --alert: 27 88% 67%;             /* Soft amber #F4A261 */
-    --alert-foreground: 0 0% 20%;
+    --alert: 46 88% 61%;             /* #F4C842 gold accent */
+    --alert-foreground: 261 63% 28%;
 
-    --border: 207 38% 76%;           /* Light blue borders */
-    --input: 207 38% 86%;
-    --ring: 207 36% 54%;
+    --border: 270 35% 88%;
+    --input: 270 35% 90%;
+    --ring: 263 41% 63%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 213 53% 24%;  /* Deep navy #1C3A5E */
+    --sidebar-background: 261 55% 22%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 207 36% 54%;
+    --sidebar-primary: 263 41% 63%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 213 40% 30%;
+    --sidebar-accent: 261 45% 28%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 213 40% 30%;
-    --sidebar-ring: 207 36% 54%;
+    --sidebar-border: 261 40% 30%;
+    --sidebar-ring: 263 41% 63%;
 
-    /* Fonts */
-    --font-display: 'Playfair Display', Georgia, serif;
-    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-display: Georgia, 'Times New Roman', serif;
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
 
@@ -77,7 +74,7 @@
 }
 
 @layer components {
-  /* Card with blue left border — signature ClearNest pattern */
+  /* Card with soft left border — signature ClearNest pattern */
   .cn-card {
     @apply bg-card rounded-lg p-6;
     border-left: 3px solid hsl(var(--secondary));
@@ -164,7 +161,7 @@
 
 /* ── CHANGE 1: Sidebar person card ─────────────────────────────────────────── */
 .sidebar-person { margin: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; overflow: hidden; cursor: pointer; }
-.sidebar-person-photo-placeholder { width: 100%; height: 130px; background: linear-gradient(135deg, rgba(244,162,97,0.3) 0%, rgba(28,58,94,0.5) 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; }
+.sidebar-person-photo-placeholder { width: 100%; height: 130px; background: linear-gradient(135deg, rgba(244, 200, 66, 0.35) 0%, hsl(261 55% 22% / 0.85) 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; }
 .sidebar-person-info { padding: 12px 14px; }
 .sidebar-person-name { font-size: 14px; font-weight: 600; color: white; margin-bottom: 2px; }
 .sidebar-person-role { font-size: 11px; color: rgba(255,255,255,0.5); }
@@ -172,7 +169,7 @@
 .sidebar-person-badge::before { content: ''; width: 6px; height: 6px; background: #4CAF7D; border-radius: 50%; display: inline-block; }
 
 /* ── CHANGE 3: Readiness ring card ─────────────────────────────────────────── */
-.readiness-card { background: #1C3A5E; border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; }
+.readiness-card { background: hsl(var(--sidebar-background)); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; }
 .readiness-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
 .readiness-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; }
 .readiness-text h3 { font-size: 13px; font-weight: 600; color: white; margin-bottom: 4px; }
@@ -207,5 +204,5 @@
 .session-mood { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); margin-top: 3px; }
 .mood-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .mood-dot.relaxed { background: #4CAF7D; }
-.mood-dot.tired { background: #F4A261; }
+.mood-dot.tired { background: #F4C842; }
 .mood-dot.confused { background: #E57373; }

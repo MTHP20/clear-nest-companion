@@ -73,9 +73,9 @@ const TOPIC_CARDS: Array<{
 // ─── Brand colours ────────────────────────────────────────────────────────────
 const BRAND = {
   red:       '#E53935',
-  blue:      '#5B8DB8',
-  amber:     '#F4A261',
-  blueMuted: '#A8C5DA',
+  blue:      '#9B7BC8',
+  amber:     '#F4C842',
+  blueMuted: '#C9B8E0',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -543,7 +543,7 @@ const Conversation = () => {
               {COVERAGE_AREAS.map((area) => (
                 <div
                   key={area.category}
-                  style={{ ...styles.progressPill, background: coveredCategories.has(area.category) ? '#5B8DB8' : '#E5E7EB' }}
+                  style={{ ...styles.progressPill, background: coveredCategories.has(area.category) ? BRAND.blue : '#E5E7EB' }}
                   title={area.label}
                 />
               ))}
@@ -774,8 +774,8 @@ const Conversation = () => {
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const DM_SANS  = "'DM Sans', system-ui, sans-serif";
-const PLAYFAIR = "'Playfair Display', Georgia, serif";
+const DM_SANS  = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const PLAYFAIR = "Georgia, 'Times New Roman', serif";
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
@@ -851,12 +851,12 @@ const styles: Record<string, React.CSSProperties> = {
     width: 112,
     height: 112,
     borderRadius: '50%',
-    background: '#5B8DB8',
+    background: BRAND.blue,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 16px',
-    boxShadow: '0 4px 16px rgba(91,141,184,0.35)',
+    boxShadow: '0 4px 16px rgba(155,123,200,0.35)',
   },
   claraInitial: { fontSize: 44, color: '#ffffff', fontWeight: 700, fontFamily: PLAYFAIR },
 
@@ -865,7 +865,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 72,
     height: 72,
     borderRadius: '50%',
-    background: '#5B8DB8',
+    background: BRAND.blue,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -874,16 +874,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   claraInitialSmall: { fontSize: 28, color: '#ffffff', fontWeight: 700, fontFamily: PLAYFAIR },
 
-  greetingTitle: { fontSize: 24, fontWeight: 700, color: '#1A1A2E', margin: '0 0 8px', fontFamily: PLAYFAIR },
+  greetingTitle: { fontSize: 24, fontWeight: 700, color: '#3D1F8A', margin: '0 0 8px', fontFamily: PLAYFAIR },
   greetingBody:  { fontSize: 18, color: '#6B7280', lineHeight: 1.65, margin: 0, fontFamily: DM_SANS },
 
   claraMessageCard: {
-    background: '#EBF4FF',
+    background: '#F3EEFF',
     borderRadius: 18,
     padding: '20px 24px',
     width: '100%',
     animation: 'fadeUp 0.4s ease',
-    boxShadow: '0 2px 12px rgba(91,141,184,0.15)',
+    boxShadow: '0 2px 12px rgba(155,123,200,0.12)',
     flexShrink: 0,
   },
 
@@ -891,7 +891,7 @@ const styles: Record<string, React.CSSProperties> = {
   cardLabel: {
     fontSize: 12,
     fontWeight: 600,
-    color: '#5B8DB8',
+    color: BRAND.blue,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.08em',
     margin: '0 0 8px',
@@ -902,7 +902,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: DM_SANS,
   },
   cursor: {
-    display: 'inline-block', marginLeft: 1, color: '#5B8DB8', fontWeight: 200,
+    display: 'inline-block', marginLeft: 1, color: BRAND.blue, fontWeight: 200,
     animation: 'blink 0.75s step-start infinite',
   },
 
@@ -1060,7 +1060,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1, height: 8, borderRadius: 999, transition: 'background 0.5s ease',
   },
   progressPillsLabel: {
-    fontSize: 13, color: '#6B7280', fontFamily: "'DM Sans', system-ui, sans-serif",
+    fontSize: 13, color: '#6B7280', fontFamily: DM_SANS,
     textAlign: 'center' as const, margin: '5px 0 0',
   },
 
@@ -1079,12 +1079,12 @@ const styles: Record<string, React.CSSProperties> = {
     width: 96,
     height: 96,
     borderRadius: '50%',
-    background: '#5B8DB8',
+    background: BRAND.blue,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 20px',
-    boxShadow: '0 4px 16px rgba(91,141,184,0.30)',
+    boxShadow: '0 4px 16px rgba(155,123,200,0.30)',
   },
   goodbyeText: {
     fontSize: 24,
