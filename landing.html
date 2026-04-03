@@ -482,8 +482,9 @@
   .supported-by-strip { background: var(--cream-dark); padding: 40px 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; border-bottom: 1px solid var(--border); }
   .supported-by-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2.5px; color: #9CA3AF; white-space: nowrap; }
   .supported-by-logos { display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap; width: 100%; }
-  .support-badge { display: flex; align-items: center; background: transparent; border: none; padding: 0; }
-  .support-badge:hover { opacity: 0.8; }
+  .support-badge { display: flex; align-items: center; background: transparent; border: none; padding: 0; text-decoration: none; color: inherit; cursor: pointer; }
+  .support-badge:hover { opacity: 0.85; }
+  .support-badge:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; border-radius: 6px; }
   .support-badge-icon { font-size: 20px; line-height: 1; }
   .support-badge-name { font-size: 15px; font-weight: 600; color: var(--navy); line-height: 1.2; }
   .support-badge-sub { font-size: 12px; color: var(--text-soft); line-height: 1.2; }
@@ -831,12 +832,12 @@
 <div class="supported-by-strip">
   <div class="supported-by-label">Supported by</div>
   <div class="supported-by-logos">
-    <div class="support-badge">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/f/f0/ElevenLabs_logo.png" alt="ElevenLabs" style="height:22px;width:auto;object-fit:contain; padding-bottom: 2px;">
-    </div>
-    <div class="support-badge">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/1280px-Stripe_Logo%2C_revised_2016.svg.png" alt="Stripe" style="height:28px;width:auto;object-fit:contain;">
-    </div>
+    <a class="support-badge" href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" aria-label="ElevenLabs — opens in new tab">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/f/f0/ElevenLabs_logo.png" alt="" style="height:22px;width:auto;object-fit:contain; padding-bottom: 2px;">
+    </a>
+    <a class="support-badge" href="https://stripe.com" target="_blank" rel="noopener noreferrer" aria-label="Stripe — opens in new tab">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/1280px-Stripe_Logo%2C_revised_2016.svg.png" alt="" style="height:28px;width:auto;object-fit:contain;">
+    </a>
   </div>
 </div>
 
@@ -2097,7 +2098,12 @@
   }
 
   function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   function renderPosts(posts) {
@@ -2107,21 +2113,22 @@
       grid.innerHTML = '<p style="color:var(--text-soft);font-size:14px;">No posts yet.</p>';
       return;
     }
-    grid.innerHTML = posts.slice(0, 6).map(function (p) {
+    grid.innerHTML = posts.slice(0, 6).filter(function (p) { return p && p.id; }).map(function (p) {
       var colour = CAT_COLOURS[p.category] || '#9CA3AF';
       var icon   = CAT_ICONS[p.category]   || '📝';
+      var safeUrl = p.picture_url ? esc(p.picture_url) : '';
       var imgHtml = p.picture_url
-        ? '<img class="blog-card-img" src="' + p.picture_url + '" alt="" loading="lazy" onerror="this.parentNode.replaceChild(Object.assign(document.createElement(\'div\'),{className:\'blog-card-img-placeholder\',style:\'background:' + colour + '22\',innerHTML:\'' + icon + '\'}),this)">'
+        ? '<img class="blog-card-img" src="' + safeUrl + '" alt="" loading="lazy" onerror="this.parentNode.replaceChild(Object.assign(document.createElement(\'div\'),{className:\'blog-card-img-placeholder\',style:\'background:' + colour + '22\',innerHTML:\'' + icon + '\'}),this)">'
         : '<div class="blog-card-img-placeholder" style="background:' + colour + '22;">' + icon + '</div>';
-      return '<a class="blog-card" href="blog-post.html?id=' + encodeURIComponent(p.id) + '" aria-label="' + esc(p.title) + '">'
+      return '<a class="blog-card" href="/blog-post.html?id=' + encodeURIComponent(p.id) + '" aria-label="' + esc(p.title) + '">'
         + imgHtml
         + '<div class="blog-card-body">'
         + '<div class="blog-card-meta">'
-        + '<span class="blog-cat" style="background:' + colour + '">' + p.category + '</span>'
-        + '<span class="blog-date">' + formatDate(p.date_posted) + '</span>'
+        + '<span class="blog-cat" style="background:' + colour + '">' + esc(p.category) + '</span>'
+        + '<span class="blog-date">' + esc(formatDate(p.date_posted)) + '</span>'
         + '</div>'
-        + '<h3 class="blog-card-title">' + p.title + '</h3>'
-        + '<p class="blog-card-desc">' + p.description + '</p>'
+        + '<h3 class="blog-card-title">' + esc(p.title) + '</h3>'
+        + '<p class="blog-card-desc">' + esc(p.description) + '</p>'
         + '<span class="blog-read-more">Read more →</span>'
         + '</div></a>';
     }).join('');

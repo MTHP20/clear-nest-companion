@@ -1256,7 +1256,7 @@
         + '<div class="card-body">'
         + '<div class="card-title">' + esc(p.title) + '</div>'
         + '<div class="card-desc">' + esc(p.description) + '</div>'
-        + '<div class="card-footer"><a class="card-read-more" href="blog-post.html?id=' + p.id + '">Read more →</a><span class="card-date">' + dateStr + '</span></div>'
+        + '<div class="card-footer"><a class="card-read-more" href="/blog-post.html?id=' + encodeURIComponent(p.id) + '">Read more →</a><span class="card-date">' + dateStr + '</span></div>'
         + '</div></div>';
     }
 
