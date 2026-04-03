@@ -27,8 +27,8 @@ import DashboardSessions from '@/components/dashboard/DashboardSessions';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
-  bgOuter:      '#F0EBE1',
-  bgMain:       '#FAFAF7',
+  bgOuter:      '#0d0f1a',
+  bgMain:       '#0d0f1a',
   bgCard:       '#FFFFFF',
   // Glass sidebar palette
   sidebarBg:    'rgba(13,15,26,0.82)',   // deep dark semi-transparent
@@ -229,10 +229,33 @@ const Dashboard = () => {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [confidenceFilter, setConfidenceFilter] = useState('all');
+  const [activeModal, setActiveModal] = useState<'actions' | 'documents' | null>(null);
+  const [docChecked, setDocChecked] = useState<Set<string>>(() => {
+    try { const r = localStorage.getItem('cn-doc-checklist'); return r ? new Set(JSON.parse(r) as string[]) : new Set(); }
+    catch { return new Set(); }
+  });
+
+  const DOC_ITEMS = [
+    { id: 'will',           label: 'Will — location confirmed' },
+    { id: 'lpa',            label: 'Lasting Power of Attorney — in place' },
+    { id: 'life-insurance', label: 'Life Insurance — provider known' },
+    { id: 'pension',        label: 'Pension details — confirmed' },
+    { id: 'property-deeds', label: 'Property deeds — location known' },
+    { id: 'nhs',            label: 'NHS number — recorded' },
+  ];
+
+  const toggleDoc = (id: string) => {
+    setDocChecked(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      localStorage.setItem('cn-doc-checklist', JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   const {
     actionItems, capturedItems, sessions: sessionList,
-    parentName, childName, userNotes,
+    parentName, childName, userNotes, updateActionStatus,
   } = useSession();
 
   const navigate = useNavigate();
@@ -258,7 +281,7 @@ const Dashboard = () => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'overview':  return <DashboardOverview query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} />;
+      case 'overview':  return <DashboardOverview query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
       case 'actions':   return <DashboardActions query={query} />;
       case 'financial': return <DashboardFinancial query={query} confidenceFilter={confidenceFilter} />;
       case 'documents': return <DashboardDocuments query={query} confidenceFilter={confidenceFilter} />;
@@ -266,7 +289,7 @@ const Dashboard = () => {
       case 'care':      return <DashboardCareWishes query={query} />;
       case 'contacts':  return <DashboardContacts query={query} confidenceFilter={confidenceFilter} />;
       case 'sessions':  return <DashboardSessions query={query} />;
-      default:          return <DashboardOverview query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} />;
+      default:          return <DashboardOverview query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
     }
   };
 
@@ -291,7 +314,6 @@ const Dashboard = () => {
     { label: 'Items Captured',      value: capturedItems.length,   dot: C.teal },
     { label: 'Tasks Open',          value: activeActions,           dot: C.red  },
     { label: 'Needs Follow Up',     value: needsFollowUpCount,      dot: C.gold },
-    { label: 'Family Readiness',    value: `${readinessScore}%`,    dot: C.teal },
   ];
 
   const sidebarProps: SidebarInnerProps = {
@@ -337,8 +359,8 @@ const Dashboard = () => {
           boxShadow: '0 4px 30px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08)',
         }}>
 
-          {/* Desktop + mobile: two-column layout matching the Crowz header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 20, alignItems: 'center' }}>
+          {/* Desktop + mobile: three-column layout */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 20, alignItems: 'center' }}>
 
             {/* Left: title + 4 stats */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -349,16 +371,6 @@ const Dashboard = () => {
                 color: 'white', lineHeight: 1,
               }}>
                 {parentName}'s Dashboard
-                <span style={{
-                  background: C.red, color: 'white',
-                  fontSize: 12, fontWeight: 700,
-                  width: 22, height: 22, borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginTop: 6, flexShrink: 0,
-                  boxShadow: '0 0 10px rgba(255,95,82,0.7)',
-                }}>
-                  {activeActions > 0 ? activeActions : '!'}
-                </span>
                 <span style={{
                   fontSize: 18, color: 'rgba(255,255,255,0.45)',
                   cursor: 'pointer', marginTop: 6,
@@ -396,11 +408,60 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* Middle: quick-access icon buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+              {/* Urgent Actions button */}
+              <button
+                onClick={() => setActiveModal('actions')}
+                title="Urgent Actions"
+                style={{
+                  width: 54, height: 54, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                  background: activeActions > 0 ? 'rgba(255,95,82,0.18)' : 'rgba(255,255,255,0.07)',
+                  backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                  boxShadow: activeActions > 0
+                    ? '0 0 0 1px rgba(255,95,82,0.4), 0 0 20px rgba(255,95,82,0.3)'
+                    : '0 0 0 1px rgba(255,255,255,0.13), 0 8px 24px rgba(0,0,0,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  position: 'relative', transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+              >
+                <AlertTriangle style={{ width: 22, height: 22, color: activeActions > 0 ? C.red : 'rgba(255,255,255,0.6)' }} />
+                {activeActions > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 2, right: 2,
+                    background: C.red, color: 'white', fontSize: 9, fontWeight: 700,
+                    minWidth: 16, height: 16, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+                    boxShadow: '0 0 8px rgba(255,95,82,0.8)',
+                  }}>{activeActions}</span>
+                )}
+              </button>
+              {/* Critical Documents button */}
+              <button
+                onClick={() => setActiveModal('documents')}
+                title="Critical Documents"
+                style={{
+                  width: 54, height: 54, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                  background: 'rgba(94,207,207,0.14)',
+                  backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                  boxShadow: '0 0 0 1px rgba(94,207,207,0.35), 0 0 20px rgba(94,207,207,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+              >
+                <FileText style={{ width: 22, height: 22, color: C.teal }} />
+              </button>
+            </div>
+
             {/* Right: Chat to Clara card */}
             <div
               onClick={() => navigate('/conversation')}
               style={{
-                width: 200, flexShrink: 0, cursor: 'pointer',
+                width: 230, flexShrink: 0, cursor: 'pointer',
                 background: 'rgba(155,123,200,0.18)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
@@ -530,10 +591,151 @@ const Dashboard = () => {
         )}
 
         {/* Page content */}
-        <main style={{ padding: '20px 24px 80px', flex: 1 }}>
+        <main style={{ padding: '20px 48px 80px', flex: 1 }}>
           {renderPage()}
         </main>
       </div>
+
+      {/* ── Modals ───────────────────────────────────────────────────────────── */}
+      {activeModal && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setActiveModal(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 50,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+            }}
+          />
+          {/* Modal panel */}
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            zIndex: 51, width: '90%', maxWidth: 520, maxHeight: '80vh',
+            background: 'rgba(18,20,36,0.96)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
+            boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.09)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            {/* Modal header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '20px 24px 16px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {activeModal === 'actions' ? (
+                  <AlertTriangle style={{ width: 20, height: 20, color: C.red }} />
+                ) : (
+                  <FileText style={{ width: 20, height: 20, color: C.teal }} />
+                )}
+                <span style={{ fontFamily: FRAUNCES, fontSize: 20, fontWeight: 700, color: '#fff' }}>
+                  {activeModal === 'actions' ? 'Urgent Actions' : 'Critical Documents'}
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveModal(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: 'rgba(255,255,255,0.6)',
+                  fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'system-ui',
+                }}
+              >×</button>
+            </div>
+
+            {/* Modal body */}
+            <div style={{ overflowY: 'auto', padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {activeModal === 'actions' && (
+                actionItems.filter(a => a.status !== 'done').length === 0 ? (
+                  <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.48)', textAlign: 'center', padding: '24px 0' }}>
+                    No urgent actions right now.
+                  </p>
+                ) : (
+                  actionItems.filter(a => a.status !== 'done').map(action => (
+                    <div key={action.id} style={{
+                      background: 'rgba(255,95,82,0.08)', border: '1px solid rgba(255,95,82,0.2)',
+                      borderRadius: 14, padding: '14px 16px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                        <span style={{
+                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 5,
+                          background: action.severity === 'red' ? C.red : C.gold,
+                          boxShadow: `0 0 6px ${action.severity === 'red' ? C.red : C.gold}99`,
+                        }} />
+                        <span style={{ fontFamily: FRAUNCES, fontSize: 15, fontWeight: 600, color: '#fff', flex: 1 }}>
+                          {action.title}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 12, paddingLeft: 16 }}>
+                        {action.description}
+                      </p>
+                      <div style={{ display: 'flex', gap: 8, paddingLeft: 16, flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => updateActionStatus(action.id, 'in-progress')}
+                          style={{
+                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#fff', cursor: 'pointer',
+                            fontFamily: 'Figtree, system-ui, sans-serif',
+                          }}
+                        >Start task</button>
+                        {action.learnMoreUrl && (
+                          <a href={action.learnMoreUrl} target="_blank" rel="noopener noreferrer" style={{
+                            background: 'rgba(94,207,207,0.12)', border: '1px solid rgba(94,207,207,0.25)',
+                            borderRadius: 8, padding: '5px 12px', fontSize: 12, color: C.teal,
+                            textDecoration: 'none', fontFamily: 'Figtree, system-ui, sans-serif',
+                          }}>Open guidance</a>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )
+              )}
+
+              {activeModal === 'documents' && (
+                <>
+                  {DOC_ITEMS.map(doc => {
+                    const isChecked = docChecked.has(doc.id);
+                    return (
+                      <button
+                        key={doc.id}
+                        onClick={() => toggleDoc(doc.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          background: isChecked ? 'rgba(94,207,207,0.08)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${isChecked ? 'rgba(94,207,207,0.25)' : 'rgba(255,255,255,0.09)'}`,
+                          borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
+                          textAlign: 'left', transition: 'background 0.15s, border-color 0.15s',
+                        }}
+                      >
+                        <span style={{
+                          width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                          border: isChecked ? 'none' : '2px solid rgba(255,193,64,0.7)',
+                          background: isChecked ? C.teal : 'rgba(255,193,64,0.08)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: isChecked ? `0 0 8px ${C.teal}88` : 'none',
+                        }}>
+                          {isChecked && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0d0f1a" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5"/></svg>}
+                        </span>
+                        <span style={{
+                          fontSize: 14, color: isChecked ? 'rgba(255,255,255,0.45)' : '#fff',
+                          textDecoration: isChecked ? 'line-through' : 'none',
+                          fontFamily: 'Figtree, system-ui, sans-serif',
+                          transition: 'color 0.15s',
+                        }}>{doc.label}</span>
+                      </button>
+                    );
+                  })}
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', paddingTop: 4 }}>
+                    {docChecked.size} of {DOC_ITEMS.length} confirmed
+                  </p>
+                </>
+              )}
+
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Mobile bottom tab bar ─────────────────────────────────────────────── */}
       <nav
