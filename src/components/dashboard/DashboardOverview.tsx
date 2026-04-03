@@ -195,6 +195,142 @@ function ProgressRing({ score }: { score: number }) {
   );
 }
 
+// ─── Activity Chart ────────────────────────────────────────────────────────────
+function ActivityChart({ sessions }: { sessions: { date: Date; itemsCaptured: number }[] }) {
+  const days = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      return {
+        label: d.toLocaleDateString('en-GB', { day: '2-digit' }),
+        count: sessions.filter(s => new Date(s.date).toDateString() === d.toDateString()).length,
+      };
+    });
+  }, [sessions]);
+
+  const maxCount = Math.max(...days.map(d => d.count), 1);
+  const total = sessions.length;
+  const lastDate = sessions[0]?.date;
+  const W = 400, H = 100, padX = 18, padY = 14;
+  const cW = W - padX * 2, cH = H - padY * 2;
+
+  const pts = days.map((d, i) => ({
+    x: padX + (i / (days.length - 1)) * cW,
+    y: padY + (1 - d.count / maxCount) * cH,
+    ...d,
+  }));
+
+  const linePath = pts.reduce((acc, p, i) => {
+    if (i === 0) return `M${p.x},${p.y}`;
+    const prev = pts[i - 1];
+    const cx = (prev.x + p.x) / 2;
+    return `${acc} C${cx},${prev.y} ${cx},${p.y} ${p.x},${p.y}`;
+  }, '');
+
+  const areaPath = `${linePath} L${pts[pts.length - 1].x},${H - padY} L${pts[0].x},${H - padY}Z`;
+  const gold = '#F0C050';
+  const muted = '#9B9080';
+  const border = '#EDE8DF';
+
+  return (
+    <div style={{
+      background: '#FFFFFF', borderRadius: 20, padding: '18px 20px',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)', flex: 1, minWidth: 0, marginBottom: 24,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>Activity</span>
+        <span style={{ fontSize: 11, color: muted, flex: 1 }}>Active sessions per day</span>
+        <span style={{
+          background: '#F0EBE1', borderRadius: 20, padding: '4px 12px',
+          fontSize: 11, fontWeight: 500, color: '#1A1A1A',
+        }}>Last 7 days</span>
+      </div>
+
+      <div style={{ position: 'relative' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="ovGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={gold} stopOpacity="0.32" />
+              <stop offset="100%" stopColor={gold} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[0.33, 0.66, 1].map((f, i) => (
+            <line key={i} x1={padX} y1={padY + f * cH} x2={W - padX} y2={padY + f * cH} stroke="#f0ece4" strokeWidth="1" />
+          ))}
+          <path d={areaPath} fill="url(#ovGrad)" />
+          <path d={linePath} fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          {pts.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="4.5" fill={gold} stroke="white" strokeWidth="2">
+              <title>{p.label}: {p.count} session{p.count !== 1 ? 's' : ''}</title>
+            </circle>
+          ))}
+        </svg>
+        {total > 0 && (
+          <div style={{
+            position: 'absolute', top: '4%', left: '46%', transform: 'translateX(-50%)',
+            background: 'white', border: '1.5px solid #eee', borderRadius: 10,
+            padding: '3px 10px', boxShadow: '0 3px 10px rgba(0,0,0,0.1)',
+            pointerEvents: 'none', whiteSpace: 'nowrap',
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700, display: 'block', color: '#1A1A1A' }}>{total}</span>
+            <span style={{ fontSize: 10, color: muted }}>Total sessions</span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 2px 0', fontSize: 10, color: muted }}>
+        {days.map(d => <span key={d.label}>{d.label}</span>)}
+      </div>
+
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${border}` }}>
+        <div style={{ fontSize: 12, color: muted }}>
+          Sessions completed <strong style={{ color: '#1A1A1A' }}>{total}</strong>
+        </div>
+        {lastDate && (
+          <div style={{ fontSize: 12, color: muted }}>
+            Last updated <strong style={{ color: '#1A1A1A' }}>
+              {new Date(lastDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            </strong>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Readiness ring ────────────────────────────────────────────────────────────
+function ReadinessCard({ score }: { score: number }) {
+  const r = 28, circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
+  return (
+    <div style={{
+      background: '#EEF6F6', borderRadius: 20, padding: '18px 16px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: 8,
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 24,
+    }}>
+      <div style={{ position: 'relative', width: 70, height: 70 }}>
+        <svg width="70" height="70" viewBox="0 0 70 70" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="35" cy="35" r={r} fill="none" stroke="#CDE9E9" strokeWidth="6" />
+          <circle cx="35" cy="35" r={r} fill="none" stroke="#5ECFCF" strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circ} strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+          />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A' }}>{score}%</span>
+        </div>
+      </div>
+      <p style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A', textAlign: 'center', lineHeight: 1.2, margin: 0 }}>
+        Family<br />Readiness
+      </p>
+      <p style={{ fontSize: 10, color: '#9B9080', margin: 0 }}>Score</p>
+    </div>
+  );
+}
+
 interface DashboardOverviewProps {
   query?: string;
   categoryFilter?: string;
@@ -300,74 +436,11 @@ export default function DashboardOverview({
 
   return (
     <div className="cn-stagger">
-      {capturedItems.length > 0 && (
-        <div
-          className="rounded-xl p-5 mb-7 flex items-center justify-between gap-4"
-          style={{ background: '#F4A261' }}
-        >
-          <div className="min-w-0">
-            <p className="font-body font-semibold text-white text-lg leading-snug">
-              {needsFollowUpCount > 0
-                ? `Continue with ${parentName}`
-                : `Start a new session with ${parentName}`}
-            </p>
-            <p className="font-body text-white/80 text-sm mt-0.5">
-              {capturedItems.length} topic{capturedItems.length !== 1 ? 's' : ''} captured
-              {needsFollowUpCount > 0 && ` · ${needsFollowUpCount} need follow-up`}
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/conversation')}
-            className="shrink-0 bg-white text-amber-700 font-body font-semibold py-3 px-5 rounded-lg text-sm hover:bg-amber-50 transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <ArrowRight className="w-4 h-4" />
-            Continue
-          </button>
-        </div>
-      )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-9">
-        {[
-          { label: 'Items Captured', value: capturedItems.length },
-          { label: 'Tasks Open', value: activeActions, amber: true, emphasize: true },
-          { label: 'Needs Follow-up', value: needsFollowUpCount, amber: true },
-          { label: 'Sessions Completed', value: sessions.length },
-          {
-            label: 'Last Updated',
-            value: lastUpdated
-              ? lastUpdated.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-              : 'No data',
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className={`cn-card cn-card-hover ${stat.emphasize ? 'ring-1 ring-alert/60 bg-alert/5' : ''}`}
-          >
-            <p className="font-body text-sm text-muted-foreground mb-1">{stat.label}</p>
-            <p className={`font-display text-3xl font-bold ${stat.amber ? 'text-alert' : 'text-foreground'}`}>
-              {stat.value}
-            </p>
-          </div>
-        ))}
-        <ProgressRing score={score} />
-        <div className="readiness-card lg:col-span-2">
-          <div className="readiness-ring">
-            <svg viewBox="0 0 64 64" width="64" height="64" style={{transform: 'rotate(-90deg)'}}>
-              <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.12)" strokeWidth="5" fill="none"/>
-              <circle cx="32" cy="32" r="26" stroke="#F4A261" strokeWidth="5" fill="none"
-                strokeLinecap="round"
-                strokeDasharray="163"
-                strokeDashoffset={163 - (163 * readinessPct / 100)}
-                style={{transition: 'stroke-dashoffset 1.2s ease'}}
-              />
-            </svg>
-            <div className="readiness-pct">{readinessPct}%</div>
-          </div>
-          <div className="readiness-text">
-            <h3>Family Readiness</h3>
-            <p>Your family is {readinessPct}% prepared.</p>
-          </div>
-        </div>
+      {/* Activity chart + readiness ring */}
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+        <ActivityChart sessions={sessions} />
+        <ReadinessCard score={readinessPct} />
       </div>
 
       <div className="grid lg:grid-cols-5 gap-7">
