@@ -482,7 +482,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           ) as { input?: { notes?: unknown[]; actions?: unknown[] } } | undefined;
 
           if (toolUse?.input) {
-            const { notes = [], actions = [] } = toolUse.input;
+            const { notes = [], actions: actionItems = [] } = toolUse.input;
 
             for (const note of notes as Array<{ category: string; content: string; confidence: string }>) {
               if (note.content?.trim()) {
@@ -497,19 +497,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 items++;
               }
             }
-            for (const action of actions as Array<{ title: string; description: string; severity: string }>) {
+            let actionCount = 0;
+            for (const action of actionItems as Array<{ title: string; description: string; severity: string }>) {
               if (action.title?.trim()) {
                 addActionItem({
-                  id: `ai-action-${conversationId}-${ts}-${actions}`,
+                  id: `ai-action-${conversationId}-${ts}-${actionCount}`,
                   title: action.title.trim(),
                   description: action.description ?? '',
                   severity: (action.severity as 'red' | 'amber') ?? 'amber',
                   status: 'todo',
                 });
-                actions++;
+                actionCount++;
               }
             }
-            console.log(`🤖 Claude extracted ${items} notes, ${actions} actions from transcript`);
+            console.log(`🤖 Claude extracted ${items} notes, ${actionCount} actions from transcript`);
           }
         }
       } catch (err) {

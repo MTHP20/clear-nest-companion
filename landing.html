@@ -2096,6 +2096,10 @@
     return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
   function renderPosts(posts) {
     var grid = document.getElementById('blog-grid');
     if (!grid) return;
@@ -2109,7 +2113,7 @@
       var imgHtml = p.picture_url
         ? '<img class="blog-card-img" src="' + p.picture_url + '" alt="" loading="lazy" onerror="this.parentNode.replaceChild(Object.assign(document.createElement(\'div\'),{className:\'blog-card-img-placeholder\',style:\'background:' + colour + '22\',innerHTML:\'' + icon + '\'}),this)">'
         : '<div class="blog-card-img-placeholder" style="background:' + colour + '22;">' + icon + '</div>';
-      return '<a class="blog-card" href="blog.html" aria-label="' + p.title + '">'
+      return '<a class="blog-card" href="blog-post.html?id=' + encodeURIComponent(p.id) + '" aria-label="' + esc(p.title) + '">'
         + imgHtml
         + '<div class="blog-card-body">'
         + '<div class="blog-card-meta">'

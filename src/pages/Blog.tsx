@@ -360,9 +360,16 @@ const Blog = () => {
                   className="group relative rounded-2xl overflow-hidden cursor-pointer transition-transform hover:-translate-y-0.5"
                   style={{ background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
                 >
+                  {!isAdmin && (
+                    <a
+                      href={`/blog-post.html?id=${encodeURIComponent(post.id)}`}
+                      className="absolute inset-0 z-[1] rounded-2xl"
+                      aria-label={`Read more: ${post.title}`}
+                    />
+                  )}
                   {/* Card image area */}
                   <div
-                    className="relative w-full h-44 overflow-hidden flex items-end p-3"
+                    className={`relative z-[2] w-full h-44 overflow-hidden flex items-end p-3 ${!isAdmin ? 'pointer-events-none' : ''}`}
                     style={{ background: catBg(post.category) }}
                   >
                     {post.picture_url ? (
@@ -387,7 +394,7 @@ const Blog = () => {
                   </div>
 
                   {/* Card body */}
-                  <div className="p-4">
+                  <div className={`p-4 relative z-[2] ${!isAdmin ? 'pointer-events-none' : ''}`}>
                     <h2
                       className="font-display font-semibold text-sm leading-snug line-clamp-3 mb-2"
                       style={{ color: '#1A1A2E' }}
@@ -407,8 +414,8 @@ const Blog = () => {
 
                   {/* Admin edit / delete overlay */}
                   {isAdmin && (
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-2xl">
-                      <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <div className="absolute inset-0 z-[3] bg-black/0 group-hover:bg-black/10 transition-colors rounded-2xl">
+                      <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={e => { e.stopPropagation(); openEdit(post); }}
                           className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-purple-600 hover:text-white transition-colors"
