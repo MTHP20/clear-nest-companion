@@ -28,27 +28,76 @@ import DashboardContacts from '@/components/dashboard/DashboardContacts';
 import DashboardSessions from '@/components/dashboard/DashboardSessions';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  bgOuter:      '#0d0f1a',
-  bgMain:       '#0d0f1a',
-  bgCard:       '#FFFFFF',
-  // Glass sidebar palette
-  sidebarBg:    'rgba(13,15,26,0.82)',   // deep dark semi-transparent
-  glassBorder:  'rgba(255,255,255,0.13)',
-  glassActive:  'rgba(255,255,255,0.16)',
-  glassHover:   'rgba(255,255,255,0.09)',
-  sidebarText:  '#ffffff',
-  sidebarMuted: 'rgba(255,255,255,0.46)',
-  // Main palette
-  primary:   '#1A1A1A',
-  muted:     '#9B9080',
-  border:    '#EDE8DF',
-  orange:    '#E07B5A',
-  teal:      '#5ECFCF',
-  gold:      '#F0C050',
-  red:       '#FF5F52',
-  green:     '#5CB85C',
+const THEME_COLORS = {
+  default: {
+    bgOuter:      '#e1f1fd',
+    bgMain:       '#e1f1fd',
+    bgCard:       '#ffffff',
+    sidebarBg:    'rgba(70,99,172,0.97)',
+    headerBg:     'rgba(200,217,237,0.90)',
+    headerText:   '#1e2d4f',
+    headerMuted:  'rgba(30,45,79,0.52)',
+    glassBorder:  'rgba(70,99,172,0.16)',
+    glassActive:  'rgba(255,255,255,0.22)',
+    glassHover:   'rgba(255,255,255,0.13)',
+    sidebarText:  '#ffffff',
+    sidebarMuted: 'rgba(255,255,255,0.65)',
+    primary:      '#4663ac',
+    muted:        'rgba(46,62,107,0.55)',
+    border:       '#c8d9ed',
+    orange:       '#E07B5A',
+    teal:         '#5ECFCF',
+    gold:         '#F0C050',
+    red:          '#FF5F52',
+    green:        '#5CB85C',
+  },
+  dark: {
+    bgOuter:      '#0d0f1a',
+    bgMain:       '#0d0f1a',
+    bgCard:       '#1a1c2e',
+    sidebarBg:    'rgba(13,15,26,0.88)',
+    headerBg:     'rgba(13,15,26,0.88)',
+    headerText:   '#ffffff',
+    headerMuted:  'rgba(255,255,255,0.46)',
+    glassBorder:  'rgba(255,255,255,0.13)',
+    glassActive:  'rgba(255,255,255,0.16)',
+    glassHover:   'rgba(255,255,255,0.09)',
+    sidebarText:  '#ffffff',
+    sidebarMuted: 'rgba(255,255,255,0.46)',
+    primary:      '#a78bfa',
+    muted:        'rgba(255,255,255,0.46)',
+    border:       'rgba(255,255,255,0.13)',
+    orange:       '#E07B5A',
+    teal:         '#5ECFCF',
+    gold:         '#F0C050',
+    red:          '#FF5F52',
+    green:        '#5CB85C',
+  },
+  orange: {
+    bgOuter:      '#fdf0e8',
+    bgMain:       '#fdf0e8',
+    bgCard:       '#ffffff',
+    sidebarBg:    'rgba(156,55,66,0.97)',
+    headerBg:     'rgba(242,159,121,0.22)',
+    headerText:   '#5c2229',
+    headerMuted:  'rgba(92,34,41,0.52)',
+    glassBorder:  'rgba(199,98,91,0.20)',
+    glassActive:  'rgba(255,255,255,0.22)',
+    glassHover:   'rgba(255,255,255,0.14)',
+    sidebarText:  '#ffffff',
+    sidebarMuted: 'rgba(255,255,255,0.62)',
+    primary:      '#d87458',
+    muted:        'rgba(92,34,41,0.52)',
+    border:       '#f29f79',
+    orange:       '#f08b5c',
+    teal:         '#5ECFCF',
+    gold:         '#F0C050',
+    red:          '#c7625b',
+    green:        '#5CB85C',
+  },
 } as const;
+
+type ThemeColors = (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
 
 const FRAUNCES = 'Figtree, system-ui, sans-serif';
 
@@ -82,9 +131,10 @@ interface SidebarInnerProps {
   activeActions: number;
   lastSession: Date | undefined;
   onNavClick: (id: NavId) => void;
+  colors: ThemeColors;
 }
 
-function SidebarInner({ parentName, activePage, activeActions, lastSession, onNavClick }: SidebarInnerProps) {
+function SidebarInner({ parentName, activePage, activeActions, lastSession, onNavClick, colors: C }: SidebarInnerProps) {
   return (
     <>
       {/* Logo */}
@@ -226,6 +276,8 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 const Dashboard = () => {
+  const [theme, setTheme] = useState<'default' | 'dark' | 'orange'>('default');
+  const C = THEME_COLORS[theme];
   const [activePage, setActivePage] = useState<NavId>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -325,10 +377,11 @@ const Dashboard = () => {
     activeActions,
     lastSession: sessionList[0]?.date,
     onNavClick: handleNavClick,
+    colors: C,
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: C.bgOuter }}>
+    <div data-theme={theme} style={{ minHeight: '100vh', display: 'flex', background: C.bgOuter }}>
 
       {/* ── Desktop sidebar ──────────────────────────────────────────────────── */}
       <aside
@@ -352,14 +405,14 @@ const Dashboard = () => {
         style={{ display: 'flex', flexDirection: 'column', background: C.bgMain, minHeight: '100vh' }}
       >
 
-        {/* Top header — glass morphism panel */}
+        {/* Top header — light glass panel */}
         <header style={{
           padding: '18px 48px',
-          background: C.sidebarBg,
+          background: C.headerBg,
           backdropFilter: 'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
-          borderBottom: `1px solid ${C.glassBorder}`,
-          boxShadow: '0 4px 30px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08)',
+          borderBottom: `1px solid rgba(70,99,172,0.15)`,
+          boxShadow: '0 2px 16px rgba(70,99,172,0.10), inset 0 -1px 0 rgba(255,255,255,0.5)',
         }}>
 
           {/* Desktop + mobile: three-column layout */}
@@ -371,13 +424,13 @@ const Dashboard = () => {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 fontFamily: FRAUNCES, fontSize: 42, fontWeight: 900,
-                color: 'white', lineHeight: 1,
+                color: C.headerText, lineHeight: 1,
               }}>
                 {parentName}'s Dashboard
                 <span
                   onClick={() => setSettingsOpen(v => !v)}
                   style={{
-                    fontSize: 18, color: settingsOpen ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
+                    fontSize: 18, color: settingsOpen ? C.primary : C.headerMuted,
                     cursor: 'pointer', marginTop: 6,
                     transition: 'transform 0.4s, color 0.2s',
                     display: 'inline-block',
@@ -393,7 +446,7 @@ const Dashboard = () => {
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 5,
-                      fontSize: 12, color: 'rgba(255,255,255,0.48)', fontWeight: 500,
+                      fontSize: 12, color: C.headerMuted, fontWeight: 500,
                     }}>
                       <span style={{
                         width: 15, height: 15, borderRadius: '50%', background: s.dot,
@@ -405,7 +458,7 @@ const Dashboard = () => {
                     </div>
                     <div style={{
                       fontFamily: FRAUNCES, fontSize: 28, fontWeight: 700,
-                      color: 'white', lineHeight: 1,
+                      color: C.headerText, lineHeight: 1,
                     }}>
                       {s.value}
                     </div>
@@ -422,18 +475,18 @@ const Dashboard = () => {
                 title="Urgent Actions"
                 style={{
                   width: 54, height: 54, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                  background: activeActions > 0 ? 'rgba(255,95,82,0.18)' : 'rgba(255,255,255,0.07)',
+                  background: activeActions > 0 ? 'rgba(255,95,82,0.12)' : 'rgba(255,255,255,0.55)',
                   backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
                   boxShadow: activeActions > 0
-                    ? '0 0 0 1px rgba(255,95,82,0.4), 0 0 20px rgba(255,95,82,0.3)'
-                    : '0 0 0 1px rgba(255,255,255,0.13), 0 8px 24px rgba(0,0,0,0.3)',
+                    ? '0 0 0 1px rgba(255,95,82,0.35), 0 0 16px rgba(255,95,82,0.2)'
+                    : '0 0 0 1px rgba(70,99,172,0.18), 0 4px 12px rgba(70,99,172,0.10)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   position: 'relative', transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
               >
-                <AlertTriangle style={{ width: 22, height: 22, color: activeActions > 0 ? C.red : 'rgba(255,255,255,0.6)' }} />
+                <AlertTriangle style={{ width: 22, height: 22, color: activeActions > 0 ? C.red : 'rgba(46,62,107,0.5)' }} />
                 {activeActions > 0 && (
                   <span style={{
                     position: 'absolute', top: 2, right: 2,
@@ -450,9 +503,9 @@ const Dashboard = () => {
                 title="Critical Documents"
                 style={{
                   width: 54, height: 54, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                  background: 'rgba(94,207,207,0.14)',
+                  background: 'rgba(70,99,172,0.10)',
                   backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-                  boxShadow: '0 0 0 1px rgba(94,207,207,0.35), 0 0 20px rgba(94,207,207,0.2)',
+                  boxShadow: '0 0 0 1px rgba(70,99,172,0.22), 0 4px 12px rgba(70,99,172,0.10)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
@@ -617,16 +670,16 @@ const Dashboard = () => {
           <div style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
             zIndex: 51, width: '90%', maxWidth: 520, maxHeight: '80vh',
-            background: 'rgba(18,20,36,0.96)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
-            boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.09)',
+            background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(70,99,172,0.18)', borderRadius: 22,
+            boxShadow: '0 20px 60px rgba(70,99,172,0.20), inset 0 1px 0 rgba(255,255,255,0.9)',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
             {/* Modal header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '20px 24px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid rgba(70,99,172,0.10)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {activeModal === 'actions' ? (
@@ -634,15 +687,15 @@ const Dashboard = () => {
                 ) : (
                   <FileText style={{ width: 20, height: 20, color: C.teal }} />
                 )}
-                <span style={{ fontFamily: FRAUNCES, fontSize: 20, fontWeight: 700, color: '#fff' }}>
+                <span style={{ fontFamily: FRAUNCES, fontSize: 20, fontWeight: 700, color: '#1e2d4f' }}>
                   {activeModal === 'actions' ? 'Urgent Actions' : 'Critical Documents'}
                 </span>
               </div>
               <button
                 onClick={() => setActiveModal(null)}
                 style={{
-                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: 'rgba(255,255,255,0.6)',
+                  background: 'rgba(70,99,172,0.08)', border: '1px solid rgba(70,99,172,0.18)',
+                  borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: 'rgba(30,45,79,0.6)',
                   fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'system-ui',
                 }}
@@ -654,7 +707,7 @@ const Dashboard = () => {
 
               {activeModal === 'actions' && (
                 actionItems.filter(a => a.status !== 'done').length === 0 ? (
-                  <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.48)', textAlign: 'center', padding: '24px 0' }}>
+                  <p style={{ fontSize: 14, color: 'rgba(30,45,79,0.5)', textAlign: 'center', padding: '24px 0' }}>
                     No urgent actions right now.
                   </p>
                 ) : (
@@ -669,19 +722,19 @@ const Dashboard = () => {
                           background: action.severity === 'red' ? C.red : C.gold,
                           boxShadow: `0 0 6px ${action.severity === 'red' ? C.red : C.gold}99`,
                         }} />
-                        <span style={{ fontFamily: FRAUNCES, fontSize: 15, fontWeight: 600, color: '#fff', flex: 1 }}>
+                        <span style={{ fontFamily: FRAUNCES, fontSize: 15, fontWeight: 600, color: '#1e2d4f', flex: 1 }}>
                           {action.title}
                         </span>
                       </div>
-                      <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 12, paddingLeft: 16 }}>
+                      <p style={{ fontSize: 13, color: 'rgba(30,45,79,0.58)', marginBottom: 12, paddingLeft: 16 }}>
                         {action.description}
                       </p>
                       <div style={{ display: 'flex', gap: 8, paddingLeft: 16, flexWrap: 'wrap' }}>
                         <button
                           onClick={() => updateActionStatus(action.id, 'in-progress')}
                           style={{
-                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#fff', cursor: 'pointer',
+                            background: 'rgba(70,99,172,0.08)', border: '1px solid rgba(70,99,172,0.20)',
+                            borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#4663ac', cursor: 'pointer',
                             fontFamily: 'Figtree, system-ui, sans-serif',
                           }}
                         >Start task</button>
@@ -708,23 +761,23 @@ const Dashboard = () => {
                         onClick={() => toggleDoc(doc.id)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 12,
-                          background: isChecked ? 'rgba(94,207,207,0.08)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${isChecked ? 'rgba(94,207,207,0.25)' : 'rgba(255,255,255,0.09)'}`,
+                          background: isChecked ? 'rgba(70,99,172,0.08)' : 'rgba(70,99,172,0.04)',
+                          border: `1px solid ${isChecked ? 'rgba(70,99,172,0.25)' : 'rgba(70,99,172,0.12)'}`,
                           borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
                           textAlign: 'left', transition: 'background 0.15s, border-color 0.15s',
                         }}
                       >
                         <span style={{
                           width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                          border: isChecked ? 'none' : '2px solid rgba(255,193,64,0.7)',
-                          background: isChecked ? C.teal : 'rgba(255,193,64,0.08)',
+                          border: isChecked ? 'none' : '2px solid rgba(70,99,172,0.4)',
+                          background: isChecked ? C.primary : 'rgba(70,99,172,0.06)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           boxShadow: isChecked ? `0 0 8px ${C.teal}88` : 'none',
                         }}>
                           {isChecked && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0d0f1a" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5"/></svg>}
                         </span>
                         <span style={{
-                          fontSize: 14, color: isChecked ? 'rgba(255,255,255,0.45)' : '#fff',
+                          fontSize: 14, color: isChecked ? 'rgba(30,45,79,0.4)' : '#1e2d4f',
                           textDecoration: isChecked ? 'line-through' : 'none',
                           fontFamily: 'Figtree, system-ui, sans-serif',
                           transition: 'color 0.15s',
@@ -732,7 +785,7 @@ const Dashboard = () => {
                       </button>
                     );
                   })}
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', paddingTop: 4 }}>
+                  <p style={{ fontSize: 11, color: 'rgba(30,45,79,0.4)', textAlign: 'center', paddingTop: 4 }}>
                     {docChecked.size} of {DOC_ITEMS.length} confirmed
                   </p>
                 </>
@@ -756,30 +809,30 @@ const Dashboard = () => {
           <div style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
             zIndex: 51, width: 360,
-            background: 'rgba(18,20,36,0.97)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-            border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
-            boxShadow: '0 30px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.09)',
+            background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
+            border: '1px solid rgba(70,99,172,0.18)', borderRadius: 22,
+            boxShadow: '0 20px 60px rgba(70,99,172,0.18), inset 0 1px 0 rgba(255,255,255,0.9)',
             overflow: 'hidden',
           }}>
             {/* Header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '20px 22px 18px',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid rgba(70,99,172,0.10)',
             }}>
-              <span style={{ fontFamily: FRAUNCES, fontSize: 18, fontWeight: 700, color: '#fff' }}>Settings</span>
+              <span style={{ fontFamily: FRAUNCES, fontSize: 18, fontWeight: 700, color: '#1e2d4f' }}>Settings</span>
               <button
                 onClick={() => setSettingsOpen(false)}
                 style={{
-                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(70,99,172,0.07)', border: '1px solid rgba(70,99,172,0.18)',
                   borderRadius: '50%', width: 30, height: 30, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.14)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(70,99,172,0.14)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(70,99,172,0.07)'; }}
               >
-                <X style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.6)' }} />
+                <X style={{ width: 14, height: 14, color: 'rgba(30,45,79,0.55)' }} />
               </button>
             </div>
 
@@ -789,8 +842,8 @@ const Dashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 {/* Label */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <Palette style={{ width: 18, height: 18, color: 'rgba(255,255,255,0.6)' }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', fontFamily: FRAUNCES }}>Theme</span>
+                  <Palette style={{ width: 18, height: 18, color: 'rgba(30,45,79,0.55)' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1e2d4f', fontFamily: FRAUNCES }}>Theme</span>
                 </div>
 
                 {/* Joined tab group */}
@@ -799,31 +852,35 @@ const Dashboard = () => {
                   border: '1px solid rgba(255,255,255,0.13)',
                   borderRadius: 10, overflow: 'hidden',
                 }}>
-                  {[
-                    { label: 'Default', disabled: true },
-                    { label: 'Orange',  disabled: true },
-                    { label: 'Dark',    disabled: false },
-                  ].map((tab, i, arr) => (
-                    <button
-                      key={tab.label}
-                      disabled={tab.disabled}
-                      style={{
-                        padding: '7px 14px',
-                        fontSize: 12, fontWeight: 600,
-                        fontFamily: FRAUNCES,
-                        cursor: tab.disabled ? 'not-allowed' : 'default',
-                        background: !tab.disabled ? 'rgba(167,139,250,0.18)' : 'rgba(255,255,255,0.04)',
-                        color: tab.disabled ? 'rgba(255,255,255,0.25)' : '#c4b5fd',
-                        border: 'none',
-                        borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.10)' : 'none',
-                        boxShadow: !tab.disabled ? 'inset 0 1px 0 rgba(167,139,250,0.2)' : 'none',
-                        transition: 'background 0.15s, color 0.15s',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                  {([
+                    { label: 'Default', key: 'default' as const, disabled: false },
+                    { label: 'Orange',  key: 'orange'  as const, disabled: false },
+                    { label: 'Dark',    key: 'dark'    as const, disabled: false },
+                  ] as const).map((tab, i, arr) => {
+                    const isActive = theme === tab.key;
+                    return (
+                      <button
+                        key={tab.label}
+                        disabled={tab.disabled}
+                        onClick={tab.disabled ? undefined : () => setTheme(tab.key)}
+                        style={{
+                          padding: '7px 14px',
+                          fontSize: 12, fontWeight: 600,
+                          fontFamily: FRAUNCES,
+                          cursor: tab.disabled ? 'not-allowed' : 'pointer',
+                          background: isActive ? 'rgba(70,99,172,0.14)' : 'rgba(70,99,172,0.03)',
+                          color: tab.disabled ? 'rgba(30,45,79,0.30)' : isActive ? '#4663ac' : 'rgba(30,45,79,0.55)',
+                          border: 'none',
+                          borderRight: i < arr.length - 1 ? '1px solid rgba(70,99,172,0.12)' : 'none',
+                          boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.6)' : 'none',
+                          transition: 'background 0.15s, color 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

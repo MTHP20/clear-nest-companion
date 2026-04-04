@@ -51,6 +51,77 @@
 
     --font-display: 'Figtree', system-ui, sans-serif;
     --font-body:    'Figtree', system-ui, sans-serif;
+
+    /* ── Overview card tokens — Default (light blue) ── */
+    --ov-card-bg:       rgba(255,255,255,0.72);
+    --ov-card-border:   rgba(70,99,172,0.14);
+    --ov-shadow:        0 8px 30px rgba(70,99,172,0.12), inset 0 1px 0 rgba(255,255,255,0.85);
+    --ov-text:          #1e2d4f;
+    --ov-muted:         rgba(30,45,79,0.52);
+    --ov-accent:        #4663ac;
+    --ov-accent-2:      #2d4b9a;
+    --ov-grid:          rgba(70,99,172,0.10);
+    --ov-svg-text:      rgba(30,45,79,0.45);
+    --ov-svg-strong:    rgba(30,45,79,0.85);
+    --ov-inner:         rgba(70,99,172,0.04);
+    --ov-tooltip:       rgba(255,255,255,0.92);
+    --ov-nav-hover-bg:  rgba(255,255,255,0.95);
+  }
+
+  [data-theme="orange"] {
+    /* ── Overview card tokens — Orange ── */
+    --ov-card-bg:       rgba(255,255,255,0.78);
+    --ov-card-border:   rgba(199,98,91,0.18);
+    --ov-shadow:        0 8px 30px rgba(199,98,91,0.14), inset 0 1px 0 rgba(255,255,255,0.85);
+    --ov-text:          #5c2229;
+    --ov-muted:         rgba(92,34,41,0.52);
+    --ov-accent:        #d87458;
+    --ov-accent-2:      #c7625b;
+    --ov-grid:          rgba(199,98,91,0.10);
+    --ov-svg-text:      rgba(92,34,41,0.45);
+    --ov-svg-strong:    rgba(92,34,41,0.85);
+    --ov-inner:         rgba(199,98,91,0.06);
+    --ov-tooltip:       rgba(255,255,255,0.95);
+    --ov-nav-hover-bg:  rgba(255,255,255,0.97);
+  }
+
+  [data-theme="dark"] {
+    --background:           232 33%  7%;
+    --foreground:             0  0% 100%;
+    --card:                 232 28% 11%;
+    --card-foreground:        0  0% 100%;
+    --popover:              232 28%  9%;
+    --popover-foreground:     0  0% 100%;
+    --primary:              255 92% 76%;
+    --primary-foreground:     0  0% 100%;
+    --secondary:            232 20% 18%;
+    --secondary-foreground:   0  0% 65%;
+    --muted:                232 25% 14%;
+    --muted-foreground:       0  0% 48%;
+    --accent:               180 54% 59%;
+    --accent-foreground:      0  0% 100%;
+    --destructive:            4 100% 66%;
+    --destructive-foreground: 0   0% 100%;
+    --alert:                 46  84% 63%;
+    --alert-foreground:     232  33%  7%;
+    --border:               232  20% 20%;
+    --input:                232  20% 16%;
+    --ring:                 255  92% 76%;
+
+    /* ── Overview card tokens — Dark ── */
+    --ov-card-bg:       rgba(255,255,255,0.07);
+    --ov-card-border:   rgba(255,255,255,0.13);
+    --ov-shadow:        0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.09);
+    --ov-text:          #ffffff;
+    --ov-muted:         rgba(255,255,255,0.48);
+    --ov-accent:        #a78bfa;
+    --ov-accent-2:      #7c3aed;
+    --ov-grid:          rgba(255,255,255,0.06);
+    --ov-svg-text:      rgba(255,255,255,0.28);
+    --ov-svg-strong:    rgba(255,255,255,0.85);
+    --ov-inner:         rgba(255,255,255,0.035);
+    --ov-tooltip:       rgba(30,32,48,0.85);
+    --ov-nav-hover-bg:  rgba(255,255,255,0.12);
   }
 }
 

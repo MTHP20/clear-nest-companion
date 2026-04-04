@@ -79,44 +79,44 @@ function ProgressMomentum({
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.07)',
+      background: 'var(--ov-card-bg)',
       backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-      border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
-      boxShadow: '0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.09)',
+      border: '1px solid var(--ov-card-border)', borderRadius: 22,
+      boxShadow: 'var(--ov-shadow)',
       padding: '22px 22px 16px', flex: 1, minWidth: 0,
       display: 'flex', flexDirection: 'column', gap: 0,
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <span style={{ fontSize: 16, color: '#a78bfa', filter: 'drop-shadow(0 0 6px rgba(167,139,250,0.7))' }}>↗</span>
-        <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+        <span style={{ fontSize: 16, color: 'var(--ov-accent)', filter: 'drop-shadow(0 0 6px rgba(70,99,172,0.7))' }}>↗</span>
+        <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 18, fontWeight: 700, color: 'var(--ov-text)' }}>
           Progress Momentum
         </span>
         {delta !== null && delta > 0 && (
           <span style={{
             marginLeft: 'auto', fontSize: 11, fontWeight: 600,
             padding: '3px 10px', borderRadius: 20,
-            background: 'rgba(167,139,250,0.15)', color: '#a78bfa',
-            border: '1px solid rgba(167,139,250,0.25)',
+            background: 'rgba(70,99,172,0.15)', color: 'var(--ov-accent)',
+            border: '1px solid rgba(70,99,172,0.25)',
           }}>+{delta}% this session</span>
         )}
       </div>
 
       {/* Chart area */}
       <div style={{
-        background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)',
         borderRadius: 14, padding: '10px 14px 6px', marginBottom: 18,
         position: 'relative', height: 200,
       }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="none" overflow="visible">
           <defs>
             <linearGradient id="mFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+              <stop offset="0%" stopColor="#4663ac" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#4663ac" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="mLine" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#7c3aed" />
-              <stop offset="100%" stopColor="#a78bfa" />
+              <stop offset="0%" stopColor="#2d4b9a" />
+              <stop offset="100%" stopColor="#4663ac" />
             </linearGradient>
           </defs>
 
@@ -125,8 +125,8 @@ function ProgressMomentum({
             const y = padY + (1 - pct / 100) * cH;
             return (
               <g key={pct}>
-                <text x={0} y={y + 3} fontSize="8" fill="rgba(255,255,255,0.22)" fontFamily="Figtree,system-ui,sans-serif">{pct}%</text>
-                <line x1={padX} y1={y} x2={W} y2={y} stroke={pct === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.05)'} strokeWidth="1" />
+                <text x={0} y={y + 3} fontSize="8" fill="var(--ov-svg-text)" fontFamily="Figtree,system-ui,sans-serif">{pct}%</text>
+                <line x1={padX} y1={y} x2={W} y2={y} stroke={pct === 0 ? 'var(--ov-card-border)' : 'var(--ov-grid)'} strokeWidth="1" />
               </g>
             );
           })}
@@ -136,12 +136,12 @@ function ProgressMomentum({
               <path d={areaPath} fill="url(#mFill)" />
               <path d={linePath} fill="none" stroke="url(#mLine)" strokeWidth="2.5"
                 strokeLinecap="round" strokeLinejoin="round"
-                style={{ filter: 'drop-shadow(0 0 6px rgba(167,139,250,0.65))' }} />
+                style={{ filter: 'drop-shadow(0 0 6px rgba(70,99,172,0.65))' }} />
               {points.map((p, i) => (
                 <circle key={i} cx={p.x} cy={p.y} r={i === 0 || i === points.length - 1 ? 4 : 3.5}
-                  fill={i === points.length - 1 ? '#a78bfa' : '#8b5cf6'}
-                  stroke="rgba(255,255,255,0.35)" strokeWidth="1.5"
-                  style={i === 0 || i === points.length - 1 ? { filter: 'drop-shadow(0 0 5px rgba(167,139,250,0.9))' } : undefined}>
+                  fill={i === points.length - 1 ? '#4663ac' : '#8b5cf6'}
+                  stroke="rgba(70,99,172,0.25)" strokeWidth="1.5"
+                  style={i === 0 || i === points.length - 1 ? { filter: 'drop-shadow(0 0 5px rgba(70,99,172,0.9))' } : undefined}>
                   <title>{p.date}: {p.score}%</title>
                 </circle>
               ))}
@@ -153,8 +153,8 @@ function ProgressMomentum({
                 return (
                   <g>
                     <rect x={lx - 17} y={ly - 9} width={34} height={12} rx={4}
-                      fill="rgba(167,139,250,0.18)" stroke="rgba(167,139,250,0.35)" strokeWidth={0.75} />
-                    <text x={lx} y={ly - 0.5} fontSize="8" fill="rgba(255,255,255,0.85)"
+                      fill="rgba(70,99,172,0.18)" stroke="rgba(70,99,172,0.35)" strokeWidth={0.75} />
+                    <text x={lx} y={ly - 0.5} fontSize="8" fill="var(--ov-svg-strong)"
                       fontFamily="Figtree,system-ui,sans-serif" textAnchor="middle" fontWeight="600">
                       {last.score}%
                     </text>
@@ -166,7 +166,7 @@ function ProgressMomentum({
             /* Flat line at bottom when no history */
             <line x1={padX} y1={H - padY} x2={W} y2={H - padY}
               stroke="url(#mLine)" strokeWidth="2.5" strokeLinecap="round"
-              style={{ filter: 'drop-shadow(0 0 6px rgba(167,139,250,0.65))' }} />
+              style={{ filter: 'drop-shadow(0 0 6px rgba(70,99,172,0.65))' }} />
           )}
         </svg>
       </div>
@@ -174,18 +174,18 @@ function ProgressMomentum({
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr 1px 1fr', gap: 6, textAlign: 'center', alignItems: 'center' }}>
         <div>
-          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 26, fontWeight: 700, lineHeight: 1, marginBottom: 4, color: '#a78bfa', textShadow: '0 0 10px rgba(167,139,250,0.5)' }}>{verifiedCount}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)' }}>Verified</div>
+          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 26, fontWeight: 700, lineHeight: 1, marginBottom: 4, color: 'var(--ov-accent)', textShadow: '0 0 10px rgba(70,99,172,0.5)' }}>{verifiedCount}</div>
+          <div style={{ fontSize: 11, color: 'var(--ov-muted)' }}>Verified</div>
         </div>
-        <div style={{ width: 1, background: 'rgba(255,255,255,0.13)', alignSelf: 'stretch', margin: '4px 0' }} />
+        <div style={{ width: 1, background: 'var(--ov-card-border)', alignSelf: 'stretch', margin: '4px 0' }} />
         <div>
-          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 26, fontWeight: 700, lineHeight: 1, marginBottom: 4, color: '#fff' }}>{checklistSize}/{docTotal}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)' }}>Checklist</div>
+          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 26, fontWeight: 700, lineHeight: 1, marginBottom: 4, color: 'var(--ov-text)' }}>{checklistSize}/{docTotal}</div>
+          <div style={{ fontSize: 11, color: 'var(--ov-muted)' }}>Checklist</div>
         </div>
-        <div style={{ width: 1, background: 'rgba(255,255,255,0.13)', alignSelf: 'stretch', margin: '4px 0' }} />
+        <div style={{ width: 1, background: 'var(--ov-card-border)', alignSelf: 'stretch', margin: '4px 0' }} />
         <div>
           <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 26, fontWeight: 700, lineHeight: 1, marginBottom: 4, color: '#F0C050', textShadow: '0 0 10px rgba(240,192,80,0.5)' }}>{activeActions}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)' }}>Tasks open</div>
+          <div style={{ fontSize: 11, color: 'var(--ov-muted)' }}>Tasks open</div>
         </div>
       </div>
     </div>
@@ -255,17 +255,17 @@ function GlassDropdown({
         onClick={() => setOpen(v => !v)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          background: 'rgba(255,255,255,0.07)',
+          background: 'var(--ov-card-bg)',
           backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-          border: '1px solid rgba(255,255,255,0.13)', borderRadius: 10,
+          border: '1px solid var(--ov-card-border)', borderRadius: 10,
           padding: '9px 14px', fontFamily: 'Figtree, system-ui, sans-serif',
-          fontSize: 13, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 130,
-          boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.07)',
+          fontSize: 13, color: 'var(--ov-text)', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 130,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.72)',
         }}
       >
         <span style={{ flex: 1 }}>{selected.label}</span>
         <span style={{
-          fontSize: 10, color: 'rgba(255,255,255,0.48)',
+          fontSize: 10, color: 'var(--ov-muted)',
           transition: 'transform 0.25s', display: 'inline-block',
           transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
         }}>▾</span>
@@ -273,8 +273,8 @@ function GlassDropdown({
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', left: 0, minWidth: '100%',
-          background: 'rgba(18,20,36,0.95)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14, overflow: 'hidden',
+          background: 'var(--ov-tooltip)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid var(--ov-card-border)', borderRadius: 14, overflow: 'hidden',
           boxShadow: '0 16px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10)',
           zIndex: 100,
         }}>
@@ -284,7 +284,7 @@ function GlassDropdown({
               onClick={() => { onChange(opt.value); setOpen(false); }}
               style={{
                 padding: '10px 16px', fontSize: 13,
-                color: opt.value === value ? '#fff' : 'rgba(255,255,255,0.48)',
+                color: opt.value === value ? 'var(--ov-text)' : 'var(--ov-muted)',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9,
                 background: opt.value === value ? 'rgba(94,207,207,0.12)' : undefined,
                 fontWeight: opt.value === value ? 600 : 400,
@@ -294,7 +294,7 @@ function GlassDropdown({
             >
               <span style={{
                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                border: opt.value === value ? 'none' : '1.5px solid rgba(255,255,255,0.13)',
+                border: opt.value === value ? 'none' : '1.5px solid var(--ov-card-border)',
                 background: opt.value === value ? '#5ECFCF' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 9, color: opt.value === value ? '#0d0f1a' : 'transparent',
@@ -350,19 +350,19 @@ function ActivityChart({ sessions }: { sessions: { date: Date; itemsCaptured: nu
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.07)',
+      background: 'var(--ov-card-bg)',
       backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-      border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
-      boxShadow: '0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.09)',
+      border: '1px solid var(--ov-card-border)', borderRadius: 22,
+      boxShadow: 'var(--ov-shadow)',
       padding: '22px 22px 14px', flex: 1, minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 700, color: '#fff', marginRight: 'auto' }}>Activity</span>
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)' }}>Active sessions per day</span>
+        <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 700, color: 'var(--ov-text)', marginRight: 'auto' }}>Activity</span>
+        <span style={{ fontSize: 12, color: 'var(--ov-muted)' }}>Active sessions per day</span>
         <div style={{
-          background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.13)',
+          background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)',
           borderRadius: 20, padding: '5px 13px', fontSize: 12, fontWeight: 500,
-          color: '#fff', whiteSpace: 'nowrap',
+          color: 'var(--ov-text)', whiteSpace: 'nowrap',
         }}>{dateRange}</div>
       </div>
 
@@ -376,11 +376,11 @@ function ActivityChart({ sessions }: { sessions: { date: Date; itemsCaptured: nu
           </defs>
           {[0, 1, 2, 3].map(i => (
             <line key={i} x1={padX} y1={padY + i * (cH / 3)} x2={W - 16} y2={padY + i * (cH / 3)}
-              stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              stroke="var(--ov-grid)" strokeWidth="1" />
           ))}
           {[maxCount, Math.round(maxCount * 0.66), Math.round(maxCount * 0.33), 0].map((v, i) => (
             <text key={i} x={0} y={padY + i * (cH / 3) + 4} fontSize="10"
-              fill="rgba(255,255,255,0.28)" fontFamily="Figtree,system-ui,sans-serif">{v}</text>
+              fill="var(--ov-svg-text)" fontFamily="Figtree,system-ui,sans-serif">{v}</text>
           ))}
           <path d={areaPath} fill="url(#darkFillGrad)" />
           <path d={linePath} fill="none" stroke="#F0C050" strokeWidth="2.8"
@@ -388,7 +388,7 @@ function ActivityChart({ sessions }: { sessions: { date: Date; itemsCaptured: nu
             style={{ filter: 'drop-shadow(0 0 7px rgba(240,192,80,0.75))' }} />
           {total > 0 && (
             <circle cx={peak.x} cy={peak.y} r="6" fill="#F0C050"
-              stroke="rgba(255,255,255,0.5)" strokeWidth="2.5"
+              stroke="rgba(70,99,172,0.25)" strokeWidth="2.5"
               style={{ filter: 'drop-shadow(0 0 8px rgba(240,192,80,0.95))' }}>
               <title>{peak.label}: {peak.count} session{peak.count !== 1 ? 's' : ''}</title>
             </circle>
@@ -397,17 +397,17 @@ function ActivityChart({ sessions }: { sessions: { date: Date; itemsCaptured: nu
         {total > 0 && (
           <div style={{
             position: 'absolute', top: '10%', left: '46%', transform: 'translateX(-50%)',
-            background: 'rgba(30,32,48,0.85)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.18)', borderRadius: 12, padding: '6px 14px 7px',
+            background: 'var(--ov-tooltip)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid var(--ov-card-border)', borderRadius: 12, padding: '6px 14px 7px',
             pointerEvents: 'none', boxShadow: '0 6px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap',
           }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', display: 'block' }}>{total}</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.48)' }}>Total sessions</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ov-text)', display: 'block' }}>{total}</span>
+            <span style={{ fontSize: 10, color: 'var(--ov-muted)' }}>Total sessions</span>
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 8px 0', fontSize: 11, color: 'rgba(255,255,255,0.48)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 8px 0', fontSize: 11, color: 'var(--ov-muted)' }}>
         {days.map(d => <span key={d.label}>{d.label}</span>)}
       </div>
     </div>
@@ -434,15 +434,15 @@ function ReadinessCard({ score, capturedItems }: { score: number; capturedItems:
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.07)',
+      background: 'var(--ov-card-bg)',
       backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-      border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
-      boxShadow: '0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.09)',
+      border: '1px solid var(--ov-card-border)', borderRadius: 22,
+      boxShadow: 'var(--ov-shadow)',
       padding: '24px 20px', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 18,
       width: 230, flexShrink: 0,
     }}>
-      <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.2 }}>
+      <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-text)', textAlign: 'center', lineHeight: 1.2 }}>
         Readiness<br />Score
       </div>
 
@@ -454,27 +454,27 @@ function ReadinessCard({ score, capturedItems }: { score: number; capturedItems:
               <stop offset="100%" stopColor="#F0C050" />
             </linearGradient>
           </defs>
-          <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="12" />
+          <circle cx="65" cy="65" r={r} fill="none" stroke="var(--ov-card-border)" strokeWidth="12" />
           <circle cx="65" cy="65" r={r} fill="none" stroke="url(#ringGradDark)" strokeWidth="12"
             strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
             style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 8px rgba(94,207,207,0.7))' }} />
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{score}%</span>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.48)', marginTop: 2 }}>prepared</span>
+          <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 28, fontWeight: 900, color: 'var(--ov-text)', lineHeight: 1 }}>{score}%</span>
+          <span style={{ fontSize: 10, color: 'var(--ov-muted)', marginTop: 2 }}>prepared</span>
         </div>
       </div>
 
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 9 }}>
         {legend.map(item => (
-          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: 'rgba(255,255,255,0.48)' }}>
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: 'var(--ov-muted)' }}>
             <div style={{
               width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
               background: item.color,
               boxShadow: item.glow ? `0 0 6px ${item.glow}` : undefined,
             }} />
             <span style={{ flex: 1 }}>{item.label}</span>
-            <span style={{ fontWeight: 600, color: '#fff', fontSize: 12 }}>{item.pct}%</span>
+            <span style={{ fontWeight: 600, color: 'var(--ov-text)', fontSize: 12 }}>{item.pct}%</span>
           </div>
         ))}
       </div>
@@ -622,11 +622,11 @@ export default function DashboardOverview({
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 200,
-            background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-            border: '1px solid rgba(255,255,255,0.13)', borderRadius: 12, padding: '11px 16px',
+            background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+            border: '1px solid var(--ov-card-border)', borderRadius: 12, padding: '11px 16px',
             boxShadow: '0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}>
-            <Search style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.48)', flexShrink: 0 }} />
+            <Search style={{ width: 14, height: 14, color: 'var(--ov-muted)', flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search pension, will, solicitor, provider…"
@@ -635,7 +635,7 @@ export default function DashboardOverview({
               style={{
                 flex: 1, background: 'none', border: 'none', outline: 'none',
                 fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 13,
-                color: '#fff', caretColor: '#5ECFCF',
+                color: 'var(--ov-text)', caretColor: '#4663ac',
               }}
             />
           </div>
@@ -647,17 +647,17 @@ export default function DashboardOverview({
             onClick={onDownload}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-              border: '1px solid rgba(255,255,255,0.13)', borderRadius: 10, padding: '9px 16px',
-              fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 13, fontWeight: 600, color: '#fff',
+              background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid var(--ov-card-border)', borderRadius: 10, padding: '9px 16px',
+              fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 13, fontWeight: 600, color: 'var(--ov-text)',
               cursor: 'pointer', whiteSpace: 'nowrap',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.07)',
+              boxShadow: 'var(--ov-shadow)',
             }}
           >
             ⬇ Download Report
           </button>
         </div>
-        {/* <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', paddingLeft: 4, margin: 0 }}>
+        {/* <p style={{ fontSize: 11, color: 'var(--ov-muted)', paddingLeft: 4, margin: 0 }}>
           Downloads to your device only. Nothing is sent to ClearNest servers.
         </p> */}
       </div>
@@ -689,18 +689,18 @@ export default function DashboardOverview({
 
             {/* Recently Captured sliding card */}
             <div style={{
-              background: 'rgba(255,255,255,0.07)',
+              background: 'var(--ov-card-bg)',
               backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-              border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
-              boxShadow: '0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.09)',
+              border: '1px solid var(--ov-card-border)', borderRadius: 22,
+              boxShadow: 'var(--ov-shadow)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 280,
             }}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 22px 16px', flexShrink: 0 }}>
-                <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: '#a78bfa', textShadow: '0 0 18px rgba(167,139,250,0.45)' }}>
+                <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-accent)', textShadow: '0 0 18px rgba(70,99,172,0.45)' }}>
                   Recently Captured
                 </span>
-                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.48)', fontWeight: 500 }}>
+                <span style={{ fontSize: 14, color: 'var(--ov-muted)', fontWeight: 500 }}>
                   {rcTotal > 0 ? `${safeIdx + 1} / ${rcTotal}` : '0 items'}
                 </span>
               </div>
@@ -708,7 +708,7 @@ export default function DashboardOverview({
               {/* Sliding track */}
               <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
                 {rcTotal === 0 ? (
-                  <div style={{ padding: '0 22px 16px', color: 'rgba(255,255,255,0.48)', fontSize: 14 }}>
+                  <div style={{ padding: '0 22px 16px', color: 'var(--ov-muted)', fontSize: 14 }}>
                     No captures yet. Start a conversation with {parentName}.
                   </div>
                 ) : (
@@ -735,32 +735,32 @@ export default function DashboardOverview({
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                             <div style={{
                               display: 'inline-flex', alignItems: 'center', gap: 5,
-                              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)',
+                              background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)',
                               borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600,
-                              color: 'rgba(255,255,255,0.48)', letterSpacing: '0.4px',
+                              color: 'var(--ov-muted)', letterSpacing: '0.4px',
                             }}>
                               {RC_TAG[item.category] || item.category.replace(/_/g, ' ').toUpperCase()}
                             </div>
-                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: 11, color: 'var(--ov-muted)', whiteSpace: 'nowrap' }}>
                               {item.timestamp.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#a78bfa', lineHeight: 1.45 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-accent)', lineHeight: 1.45 }}>
                             {item.content.length > 140 ? `${item.content.slice(0, 140)}…` : item.content}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.48)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--ov-muted)' }}>
                                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotGlow}`, flexShrink: 0 }} />
                                 {statusLabel}
                               </div>
                               <div style={{
                                 background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
-                                borderRadius: 6, padding: '2px 8px', fontSize: 10, color: 'rgba(255,255,255,0.48)',
+                                borderRadius: 6, padding: '2px 8px', fontSize: 10, color: 'var(--ov-muted)',
                               }}>{item.verificationStatus ?? 'unverified'}</div>
                             </div>
                             {item.sourceQuote && (
-                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ fontSize: 11, color: 'var(--ov-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <MessageSquareQuote style={{ width: 11, height: 11 }} />
                                 {parentName}'s words
                               </div>
@@ -782,8 +782,8 @@ export default function DashboardOverview({
                       onClick={() => setRcIdx(i)}
                       style={{
                         flex: 1, height: 3, borderRadius: 99, cursor: 'pointer',
-                        background: i === safeIdx ? '#a78bfa' : 'rgba(255,255,255,0.12)',
-                        boxShadow: i === safeIdx ? '0 0 6px rgba(167,139,250,0.7)' : 'none',
+                        background: i === safeIdx ? 'var(--ov-accent)' : 'var(--ov-grid)',
+                        boxShadow: i === safeIdx ? '0 0 6px rgba(70,99,172,0.7)' : 'none',
                         transition: 'background 0.3s, box-shadow 0.3s',
                       }}
                     />
@@ -801,8 +801,8 @@ export default function DashboardOverview({
                     if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1);
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#FF5F52'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.48)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                  style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'rgba(255,255,255,0.48)', background: 'none', border: 'none', borderRadius: '0 0 0 22px', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                  style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 0 22px', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
                 >Dispute</button>
                 <div style={{ background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
                 <button
@@ -811,8 +811,8 @@ export default function DashboardOverview({
                     if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1);
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#5DD87A'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.48)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                  style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'rgba(255,255,255,0.48)', background: 'none', border: 'none', borderRadius: '0 0 22px 0', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                  style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 22px 0', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
                 >Verify</button>
               </div>
             </div>
@@ -829,30 +829,30 @@ export default function DashboardOverview({
                     onMouseEnter={() => setHoveredPanel(i)}
                     onMouseLeave={() => setHoveredPanel(null)}
                     style={{
-                      background: isActive ? 'rgba(167,139,250,0.11)' : isHov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)',
+                      background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
                       backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-                      border: `1px solid ${isActive ? 'rgba(167,139,250,0.28)' : isHov ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.13)'}`,
+                      border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
                       borderRadius: 16,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       gap: 10, padding: '20px 10px', cursor: 'pointer',
                       transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
                       transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
                       boxShadow: isActive
-                        ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(167,139,250,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
-                        : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)',
+                        ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
+                        : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
                     }}
                   >
                     <panel.Icon style={{
                       width: 42, height: 42,
-                      color: isActive ? '#c4b5fd' : isHov ? '#fff' : 'rgba(255,255,255,0.7)',
-                      filter: isActive ? 'drop-shadow(0 0 14px rgba(167,139,250,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                      color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
+                      filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
                       transition: 'transform 0.2s, filter 0.2s, color 0.2s',
                       transform: isHov ? 'scale(1.12)' : 'scale(1)',
                       display: 'block', margin: '0 auto',
                     }} />
                     <span style={{
                       fontSize: 10, fontWeight: 600,
-                      color: isActive ? '#c4b5fd' : '#fff',
+                      color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
                       textAlign: 'center', lineHeight: 1.35,
                       opacity: isHov || isActive ? 1 : 0,
                       transition: 'opacity 0.2s, color 0.2s',
