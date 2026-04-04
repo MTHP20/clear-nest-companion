@@ -440,7 +440,6 @@ function ReadinessCard({ score, capturedItems }: { score: number; capturedItems:
       boxShadow: 'var(--ov-shadow)',
       padding: '24px 20px', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 18,
-      width: 230, flexShrink: 0,
     }}>
       <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-text)', textAlign: 'center', lineHeight: 1.2 }}>
         Readiness<br />Score
@@ -483,6 +482,7 @@ function ReadinessCard({ score, capturedItems }: { score: number; capturedItems:
 }
 
 interface DashboardOverviewProps {
+  advancedMode?: boolean;
   query?: string;
   categoryFilter?: string;
   confidenceFilter?: string;
@@ -509,6 +509,7 @@ const CONFIDENCE_OPTIONS = [
 ];
 
 export default function DashboardOverview({
+  advancedMode = false,
   query = '',
   categoryFilter = 'all',
   confidenceFilter = 'all',
@@ -607,6 +608,272 @@ export default function DashboardOverview({
     });
   };
 
+  const hasFollowUps = needsFollowUpCount > 0 || activeActions > 0;
+  const primarySessionLabel = hasFollowUps ? `Continue with ${parentName}` : 'Start New Session';
+
+  const NAV_PANELS = [
+    { Icon: Landmark,           label: 'Financial & Pension', category: 'financial_accounts' },
+    { Icon: FileText,           label: 'Documents & Will',    category: 'documents'          },
+    { Icon: Home,               label: 'Property',            category: 'property'           },
+    { Icon: Heart,              label: 'Care Wishes',         category: 'care_wishes'        },
+    { Icon: Users,              label: 'Key Contacts',        category: 'key_contacts'       },
+    { Icon: MessageSquareQuote, label: 'Conversations',       category: 'conversations'      },
+  ];
+
+  // ── Simple mode (advanced mode OFF) ─────────────────────────────────────────
+  if (!advancedMode) {
+    const rcItems = filteredCaptured.slice(0, 10);
+    const rcTotal = rcItems.length;
+    const safeIdx = rcTotal > 0 ? Math.min(rcIdx, rcTotal - 1) : 0;
+    const currentItem = rcItems[safeIdx];
+    const RC_TAG: Record<string, string> = {
+      bank_accounts: 'FINANCE', financial_accounts: 'FINANCE',
+      documents: 'DOCUMENTS', care_wishes: 'CARE WISHES',
+      property: 'PROPERTY', key_contacts: 'CONTACTS',
+    };
+
+    return (
+      <div className="cn-stagger" style={{ display: 'grid', gridTemplateColumns: '1fr 230px', gap: 18 }}>
+
+        {/* Row 1 col 1: 6 nav panels 3×2 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10 }}>
+          {NAV_PANELS.map((panel, i) => {
+            const isActive = panel.category === categoryFilter;
+            const isHov = hoveredPanel === i;
+            return (
+              <div
+                key={panel.category}
+                onClick={() => panel.category === 'conversations' ? navigate('/conversation') : onCategoryChange(panel.category === categoryFilter ? 'all' : panel.category)}
+                onMouseEnter={() => setHoveredPanel(i)}
+                onMouseLeave={() => setHoveredPanel(null)}
+                style={{
+                  background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
+                  backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                  border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
+                  borderRadius: 16,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 10, padding: '20px 10px', cursor: 'pointer',
+                  transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+                  transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
+                  boxShadow: isActive
+                    ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
+                    : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
+                }}
+              >
+                <panel.Icon style={{
+                  width: 42, height: 42,
+                  color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
+                  filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                  transition: 'transform 0.2s, filter 0.2s, color 0.2s',
+                  transform: isHov ? 'scale(1.12)' : 'scale(1)',
+                  display: 'block', margin: '0 auto',
+                }} />
+                <span style={{
+                  fontSize: 10, fontWeight: 600,
+                  color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
+                  textAlign: 'center', lineHeight: 1.35,
+                  opacity: isHov || isActive ? 1 : 0,
+                  transition: 'opacity 0.2s, color 0.2s',
+                  fontFamily: 'Figtree, system-ui, sans-serif',
+                }}>{panel.label}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Row 1 col 2: Chat to Clara card — full height */}
+        <div
+          onClick={() => navigate('/conversation')}
+          style={{
+            cursor: 'pointer',
+            background: 'rgba(155,123,200,0.18)',
+            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(155,123,200,0.35)',
+            borderRadius: 22, padding: '24px 20px',
+            position: 'relative', overflow: 'hidden',
+            boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          }}
+          onMouseEnter={e => {
+            const d = e.currentTarget as HTMLDivElement;
+            d.style.transform = 'scale(1.02)';
+            d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
+          }}
+          onMouseLeave={e => {
+            const d = e.currentTarget as HTMLDivElement;
+            d.style.transform = 'scale(1)';
+            d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
+          }}
+        >
+          {/* Decorative arcs */}
+          <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
+            {[
+              { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
+              { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
+              { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
+            ].map((arc, i) => (
+              <div key={i} style={{
+                position: 'absolute',
+                width: arc.size, height: arc.size, borderRadius: '50%',
+                border: '5px solid transparent',
+                borderTopColor: arc.color, borderRightColor: arc.color,
+                top: (84 - arc.size) / 2, right: (84 - arc.size) / 2,
+                transform: `rotate(${arc.rot}deg)`,
+              }} />
+            ))}
+          </div>
+          {/* Purple sphere */}
+          <div style={{ position: 'relative', width: 52, height: 52, marginBottom: 14, zIndex: 1 }}>
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+              animation: 'cnSphereRot 12s linear infinite', filter: 'blur(3px)',
+            }} />
+            <div style={{
+              position: 'absolute', inset: 4, borderRadius: '50%',
+              background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+              animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(4px)',
+            }} />
+            <div style={{
+              position: 'absolute', width: 34, height: 22, borderRadius: '50%',
+              background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+              top: 6, left: 5, animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(5px)',
+            }} />
+            <div style={{
+              position: 'absolute', top: 8, left: 10, width: '36%', height: '26%', borderRadius: '50%',
+              background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+            }} />
+          </div>
+          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1 }}>
+            <span style={{ color: '#5ECFCF' }}>Chat</span> to<br />Clara
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1 }}>
+            {primarySessionLabel}
+          </div>
+          <div style={{
+            position: 'absolute', bottom: 18, right: 18,
+            width: 42, height: 42, background: 'linear-gradient(135deg,#9B7BC8,#3D1F8A)',
+            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: 13, fontWeight: 700, zIndex: 2,
+            boxShadow: '0 0 16px rgba(155,123,200,0.7)',
+          }}>GO</div>
+        </div>
+
+        {/* Row 2: Recently Captured + Readiness Score — equal width, spans both columns */}
+        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+
+          {/* Recently Captured */}
+          <div style={{
+            background: 'var(--ov-card-bg)',
+            backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+            border: '1px solid var(--ov-card-border)', borderRadius: 22,
+            boxShadow: 'var(--ov-shadow)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 280,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 22px 16px', flexShrink: 0 }}>
+              <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-accent)', textShadow: '0 0 18px rgba(70,99,172,0.45)' }}>
+                Recently Captured
+              </span>
+              <span style={{ fontSize: 14, color: 'var(--ov-muted)', fontWeight: 500 }}>
+                {rcTotal > 0 ? `${safeIdx + 1} / ${rcTotal}` : '0 items'}
+              </span>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+              {rcTotal === 0 ? (
+                <div style={{ padding: '0 22px 16px', color: 'var(--ov-muted)', fontSize: 14 }}>
+                  No captures yet. Start a conversation with {parentName}.
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex', height: '100%',
+                  transform: `translateX(-${safeIdx * 100}%)`,
+                  transition: 'transform 0.38s cubic-bezier(0.4,0,0.2,1)',
+                }}>
+                  {rcItems.map((item) => {
+                    const dotColor = item.verificationStatus === 'verified' ? '#5DD87A'
+                      : item.verificationStatus === 'disputed' ? '#FF5F52'
+                      : item.confidence === 'needs-follow-up' ? '#F0C050' : '#5ECFCF';
+                    const dotGlow = item.verificationStatus === 'verified' ? 'rgba(93,216,122,0.6)'
+                      : item.verificationStatus === 'disputed' ? 'rgba(255,95,82,0.6)'
+                      : item.confidence === 'needs-follow-up' ? 'rgba(240,192,80,0.6)' : 'rgba(94,207,207,0.6)';
+                    const statusLabel = item.verificationStatus === 'verified' ? 'Confirmed'
+                      : item.verificationStatus === 'disputed' ? 'Disputed'
+                      : item.confidence === 'needs-follow-up' ? 'Needs follow-up' : 'To verify';
+                    return (
+                      <div key={item.id} style={{ minWidth: '100%', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '0 22px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: 'var(--ov-muted)', letterSpacing: '0.4px' }}>
+                            {RC_TAG[item.category] || item.category.replace(/_/g, ' ').toUpperCase()}
+                          </div>
+                          <span style={{ fontSize: 11, color: 'var(--ov-muted)', whiteSpace: 'nowrap' }}>
+                            {item.timestamp.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-accent)', lineHeight: 1.45 }}>
+                          {item.content.length > 140 ? `${item.content.slice(0, 140)}…` : item.content}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--ov-muted)' }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotGlow}`, flexShrink: 0 }} />
+                              {statusLabel}
+                            </div>
+                            <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, padding: '2px 8px', fontSize: 10, color: 'var(--ov-muted)' }}>
+                              {item.verificationStatus ?? 'unverified'}
+                            </div>
+                          </div>
+                          {item.sourceQuote && (
+                            <div style={{ fontSize: 11, color: 'var(--ov-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <MessageSquareQuote style={{ width: 11, height: 11 }} />
+                              {parentName}'s words
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {rcTotal > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 22px 6px', flexShrink: 0 }}>
+                {rcItems.map((_, i) => (
+                  <div key={i} onClick={() => setRcIdx(i)} style={{
+                    flex: 1, height: 3, borderRadius: 99, cursor: 'pointer',
+                    background: i === safeIdx ? 'var(--ov-accent)' : 'var(--ov-grid)',
+                    boxShadow: i === safeIdx ? '0 0 6px rgba(70,99,172,0.7)' : 'none',
+                    transition: 'background 0.3s, box-shadow 0.3s',
+                  }} />
+                ))}
+              </div>
+            )}
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', flexShrink: 0 }}>
+              <button
+                onClick={() => { if (currentItem) updateCapturedVerification(currentItem.id, 'disputed'); if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1); }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#FF5F52'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 0 22px', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
+              >Dispute</button>
+              <div style={{ background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
+              <button
+                onClick={() => { if (currentItem) updateCapturedVerification(currentItem.id, 'verified'); if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1); }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#5DD87A'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 22px 0', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
+              >Verify</button>
+            </div>
+          </div>
+
+          {/* Readiness Score */}
+          <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
+        </div>
+
+      </div>
+    );
+  }
+
   return (
     <div className="cn-stagger">
 
@@ -674,15 +941,6 @@ export default function DashboardOverview({
           documents: 'DOCUMENTS', care_wishes: 'CARE WISHES',
           property: 'PROPERTY', key_contacts: 'CONTACTS',
         };
-
-        const NAV_PANELS = [
-          { Icon: Landmark,           label: 'Financial & Pension', category: 'financial_accounts' },
-          { Icon: FileText,           label: 'Documents & Will',    category: 'documents'          },
-          { Icon: Home,               label: 'Property',            category: 'property'           },
-          { Icon: Heart,              label: 'Care Wishes',         category: 'care_wishes'        },
-          { Icon: Users,              label: 'Key Contacts',        category: 'key_contacts'       },
-          { Icon: MessageSquareQuote, label: 'Conversations',       category: 'conversations'      },
-        ];
 
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 230px', gap: 18 }}>
@@ -843,7 +1101,7 @@ export default function DashboardOverview({
                     }}
                   >
                     <panel.Icon style={{
-                      width: 42, height: 42,
+                      width: 64, height: 64,
                       color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
                       filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
                       transition: 'transform 0.2s, filter 0.2s, color 0.2s',

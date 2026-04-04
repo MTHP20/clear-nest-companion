@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { useSession } from '@/contexts/SessionContext';
 import {
@@ -16,6 +16,7 @@ import {
   Search,
   Palette,
   X,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { generateFamilyReportPDF } from '@/utils/generateReport';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
@@ -30,70 +31,70 @@ import DashboardSessions from '@/components/dashboard/DashboardSessions';
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const THEME_COLORS = {
   default: {
-    bgOuter:      '#e1f1fd',
-    bgMain:       '#e1f1fd',
-    bgCard:       '#ffffff',
-    sidebarBg:    'rgba(70,99,172,0.97)',
-    headerBg:     'rgba(200,217,237,0.90)',
-    headerText:   '#1e2d4f',
-    headerMuted:  'rgba(30,45,79,0.52)',
-    glassBorder:  'rgba(70,99,172,0.16)',
-    glassActive:  'rgba(255,255,255,0.22)',
-    glassHover:   'rgba(255,255,255,0.13)',
-    sidebarText:  '#ffffff',
+    bgOuter: '#e1f1fd',
+    bgMain: '#e1f1fd',
+    bgCard: '#ffffff',
+    sidebarBg: 'rgba(70,99,172,0.97)',
+    headerBg: 'rgba(200,217,237,0.90)',
+    headerText: '#1e2d4f',
+    headerMuted: 'rgba(30,45,79,0.52)',
+    glassBorder: 'rgba(70,99,172,0.16)',
+    glassActive: 'rgba(255,255,255,0.22)',
+    glassHover: 'rgba(255,255,255,0.13)',
+    sidebarText: '#ffffff',
     sidebarMuted: 'rgba(255,255,255,0.65)',
-    primary:      '#4663ac',
-    muted:        'rgba(46,62,107,0.55)',
-    border:       '#c8d9ed',
-    orange:       '#E07B5A',
-    teal:         '#5ECFCF',
-    gold:         '#F0C050',
-    red:          '#FF5F52',
-    green:        '#5CB85C',
+    primary: '#4663ac',
+    muted: 'rgba(46,62,107,0.55)',
+    border: '#c8d9ed',
+    orange: '#E07B5A',
+    teal: '#5ECFCF',
+    gold: '#F0C050',
+    red: '#FF5F52',
+    green: '#5CB85C',
   },
   dark: {
-    bgOuter:      '#0d0f1a',
-    bgMain:       '#0d0f1a',
-    bgCard:       '#1a1c2e',
-    sidebarBg:    'rgba(13,15,26,0.88)',
-    headerBg:     'rgba(13,15,26,0.88)',
-    headerText:   '#ffffff',
-    headerMuted:  'rgba(255,255,255,0.46)',
-    glassBorder:  'rgba(255,255,255,0.13)',
-    glassActive:  'rgba(255,255,255,0.16)',
-    glassHover:   'rgba(255,255,255,0.09)',
-    sidebarText:  '#ffffff',
+    bgOuter: '#0d0f1a',
+    bgMain: '#0d0f1a',
+    bgCard: '#1a1c2e',
+    sidebarBg: 'rgba(13,15,26,0.88)',
+    headerBg: 'rgba(13,15,26,0.88)',
+    headerText: '#ffffff',
+    headerMuted: 'rgba(255,255,255,0.46)',
+    glassBorder: 'rgba(255,255,255,0.13)',
+    glassActive: 'rgba(255,255,255,0.16)',
+    glassHover: 'rgba(255,255,255,0.09)',
+    sidebarText: '#ffffff',
     sidebarMuted: 'rgba(255,255,255,0.46)',
-    primary:      '#a78bfa',
-    muted:        'rgba(255,255,255,0.46)',
-    border:       'rgba(255,255,255,0.13)',
-    orange:       '#E07B5A',
-    teal:         '#5ECFCF',
-    gold:         '#F0C050',
-    red:          '#FF5F52',
-    green:        '#5CB85C',
+    primary: '#a78bfa',
+    muted: 'rgba(255,255,255,0.46)',
+    border: 'rgba(255,255,255,0.13)',
+    orange: '#E07B5A',
+    teal: '#5ECFCF',
+    gold: '#F0C050',
+    red: '#FF5F52',
+    green: '#5CB85C',
   },
   orange: {
-    bgOuter:      '#fdf0e8',
-    bgMain:       '#fdf0e8',
-    bgCard:       '#ffffff',
-    sidebarBg:    'rgba(156,55,66,0.97)',
-    headerBg:     'rgba(242,159,121,0.22)',
-    headerText:   '#5c2229',
-    headerMuted:  'rgba(92,34,41,0.52)',
-    glassBorder:  'rgba(199,98,91,0.20)',
-    glassActive:  'rgba(255,255,255,0.22)',
-    glassHover:   'rgba(255,255,255,0.14)',
-    sidebarText:  '#ffffff',
+    bgOuter: '#fdf0e8',
+    bgMain: '#fdf0e8',
+    bgCard: '#ffffff',
+    sidebarBg: 'rgba(156,55,66,0.97)',
+    headerBg: 'rgba(242,159,121,0.22)',
+    headerText: '#5c2229',
+    headerMuted: 'rgba(92,34,41,0.52)',
+    glassBorder: 'rgba(199,98,91,0.20)',
+    glassActive: 'rgba(255,255,255,0.22)',
+    glassHover: 'rgba(255,255,255,0.14)',
+    sidebarText: '#ffffff',
     sidebarMuted: 'rgba(255,255,255,0.62)',
-    primary:      '#d87458',
-    muted:        'rgba(92,34,41,0.52)',
-    border:       '#f29f79',
-    orange:       '#f08b5c',
-    teal:         '#5ECFCF',
-    gold:         '#F0C050',
-    red:          '#c7625b',
-    green:        '#5CB85C',
+    primary: '#d87458',
+    muted: 'rgba(92,34,41,0.52)',
+    border: '#f29f79',
+    orange: '#f08b5c',
+    teal: '#5ECFCF',
+    gold: '#F0C050',
+    red: '#c7625b',
+    green: '#5CB85C',
   },
 } as const;
 
@@ -113,16 +114,16 @@ const NAV_ITEMS: Array<{
   badge?: boolean;
   action?: boolean;
 }> = [
-  { id: 'overview',  label: 'Overview',           icon: LayoutDashboard },
-  { id: 'actions',   label: 'Tasks',               icon: AlertTriangle, badge: true },
-  { id: 'financial', label: 'Financial & Pension', icon: Landmark },
-  { id: 'documents', label: 'Documents & Will',    icon: FileText },
-  { id: 'property',  label: 'Property',            icon: Home },
-  { id: 'care',      label: 'Care Wishes',         icon: Heart },
-  { id: 'contacts',  label: 'Key Contacts',        icon: Users },
-  { id: 'sessions',  label: 'Conversations',       icon: Clock },
-  { id: 'report',    label: 'Family Report',       icon: Download, action: true },
-];
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'actions', label: 'Tasks', icon: AlertTriangle, badge: true },
+    { id: 'financial', label: 'Financial & Pension', icon: Landmark },
+    { id: 'documents', label: 'Documents & Will', icon: FileText },
+    { id: 'property', label: 'Property', icon: Home },
+    { id: 'care', label: 'Care Wishes', icon: Heart },
+    { id: 'contacts', label: 'Key Contacts', icon: Users },
+    { id: 'sessions', label: 'Conversations', icon: Clock },
+    { id: 'report', label: 'Family Report', icon: Download, action: true },
+  ];
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
 interface SidebarInnerProps {
@@ -142,31 +143,6 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
         <ClearNestLogo variant="white" href="/" />
       </div>
 
-      {/* Profile */}
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '0 22px', marginBottom: 30,
-      }}>
-        {/* Avatar — gradient ring + user icon */}
-        <div style={{
-          width: 70, height: 70, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #F0C050, #FF8A60)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 12, flexShrink: 0,
-          boxShadow: '0 0 0 2px rgba(255,255,255,0.15), 0 0 0 5px rgba(255,255,255,0.05), 0 8px 24px rgba(255,138,96,0.45)',
-        }}>
-          <svg viewBox="0 0 24 24" width="36" height="36" fill="white" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" />
-          </svg>
-        </div>
-        <div style={{ fontWeight: 700, fontSize: 14, color: C.sidebarText, textAlign: 'center' }}>
-          {parentName}
-        </div>
-        <div style={{ fontSize: 11, color: C.sidebarMuted, marginTop: 3 }}>
-          Your family member
-        </div>
-      </div>
 
       {/* Nav items */}
       <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto' }}>
@@ -281,6 +257,7 @@ const Dashboard = () => {
   const [activePage, setActivePage] = useState<NavId>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [confidenceFilter, setConfidenceFilter] = useState('all');
@@ -291,12 +268,12 @@ const Dashboard = () => {
   });
 
   const DOC_ITEMS = [
-    { id: 'will',           label: 'Will — location confirmed' },
-    { id: 'lpa',            label: 'Lasting Power of Attorney — in place' },
+    { id: 'will', label: 'Will — location confirmed' },
+    { id: 'lpa', label: 'Lasting Power of Attorney — in place' },
     { id: 'life-insurance', label: 'Life Insurance — provider known' },
-    { id: 'pension',        label: 'Pension details — confirmed' },
+    { id: 'pension', label: 'Pension details — confirmed' },
     { id: 'property-deeds', label: 'Property deeds — location known' },
-    { id: 'nhs',            label: 'NHS number — recorded' },
+    { id: 'nhs', label: 'NHS number — recorded' },
   ];
 
   const toggleDoc = (id: string) => {
@@ -313,12 +290,8 @@ const Dashboard = () => {
     parentName, childName, userNotes, updateActionStatus,
   } = useSession();
 
-  const navigate = useNavigate();
-
   const activeActions = actionItems.filter(a => a.status !== 'done').length;
   const needsFollowUpCount = capturedItems.filter(i => i.confidence === 'needs-follow-up').length;
-  const hasFollowUps = needsFollowUpCount > 0 || activeActions > 0;
-  const primarySessionLabel = hasFollowUps ? `Continue with ${parentName}` : 'Start New Session';
 
   // Readiness score (7 areas)
   const readinessScore = useMemo(() => {
@@ -336,15 +309,15 @@ const Dashboard = () => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'overview':  return <DashboardOverview query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
-      case 'actions':   return <DashboardActions query={query} />;
+      case 'overview': return <DashboardOverview advancedMode={advancedMode} query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
+      case 'actions': return <DashboardActions query={query} />;
       case 'financial': return <DashboardFinancial query={query} confidenceFilter={confidenceFilter} />;
       case 'documents': return <DashboardDocuments query={query} confidenceFilter={confidenceFilter} />;
-      case 'property':  return <DashboardProperty query={query} confidenceFilter={confidenceFilter} />;
-      case 'care':      return <DashboardCareWishes query={query} />;
-      case 'contacts':  return <DashboardContacts query={query} confidenceFilter={confidenceFilter} />;
-      case 'sessions':  return <DashboardSessions query={query} />;
-      default:          return <DashboardOverview query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
+      case 'property': return <DashboardProperty query={query} confidenceFilter={confidenceFilter} />;
+      case 'care': return <DashboardCareWishes query={query} />;
+      case 'contacts': return <DashboardContacts query={query} confidenceFilter={confidenceFilter} />;
+      case 'sessions': return <DashboardSessions query={query} />;
+      default: return <DashboardOverview advancedMode={advancedMode} query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
     }
   };
 
@@ -366,9 +339,9 @@ const Dashboard = () => {
 
   // ── 4 stat pills ──────────────────────────────────────────────────────────────
   const statPills = [
-    { label: 'Items Captured',      value: capturedItems.length,   dot: C.teal },
-    { label: 'Tasks Open',          value: activeActions,           dot: C.red  },
-    { label: 'Needs Follow Up',     value: needsFollowUpCount,      dot: C.gold },
+    { label: 'Items Captured', value: capturedItems.length, dot: C.teal },
+    { label: 'Tasks Open', value: activeActions, dot: C.red },
+    { label: 'Needs Follow Up', value: needsFollowUpCount, dot: C.gold },
   ];
 
   const sidebarProps: SidebarInnerProps = {
@@ -427,17 +400,6 @@ const Dashboard = () => {
                 color: C.headerText, lineHeight: 1,
               }}>
                 {parentName}'s Dashboard
-                <span
-                  onClick={() => setSettingsOpen(v => !v)}
-                  style={{
-                    fontSize: 18, color: settingsOpen ? C.primary : C.headerMuted,
-                    cursor: 'pointer', marginTop: 6,
-                    transition: 'transform 0.4s, color 0.2s',
-                    display: 'inline-block',
-                    transform: settingsOpen ? 'rotate(60deg)' : 'rotate(0deg)',
-                  }}
-                  title="Settings"
-                >⚙</span>
               </div>
 
               {/* 4 stat pills */}
@@ -516,108 +478,82 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* Right: Chat to Clara card */}
-            <div
-              onClick={() => navigate('/conversation')}
-              style={{
-                width: 230, flexShrink: 0, cursor: 'pointer',
-                background: 'rgba(155,123,200,0.18)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(155,123,200,0.35)',
-                borderRadius: 18, padding: '18px 20px 20px',
-                position: 'relative', overflow: 'hidden',
-                boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-              }}
-              onMouseEnter={e => {
-                const d = e.currentTarget as HTMLDivElement;
-                d.style.transform = 'scale(1.03)';
-                d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
-              }}
-              onMouseLeave={e => {
-                const d = e.currentTarget as HTMLDivElement;
-                d.style.transform = 'scale(1)';
-                d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
-              }}
-            >
-              {/* Decorative arcs */}
-              <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
-                {[
-                  { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
-                  { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
-                  { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
-                ].map((arc, i) => (
-                  <div key={i} style={{
-                    position: 'absolute',
-                    width: arc.size, height: arc.size,
-                    borderRadius: '50%',
-                    border: '5px solid transparent',
-                    borderTopColor: arc.color,
-                    borderRightColor: arc.color,
-                    top: (84 - arc.size) / 2,
-                    right: (84 - arc.size) / 2,
-                    transform: `rotate(${arc.rot}deg)`,
-                  }} />
-                ))}
+            {/* Right: Family Bubble Widget — same 230px width as old Chat to Clara card */}
+            <div style={{
+              width: 230, flexShrink: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: 6,
+              padding: '14px 0 16px',
+            }}>
+              {/* Bubble scene — fixed height container so nothing spills */}
+              <div style={{ position: 'relative', width: 180, height: 152 }}>
+                {/* Main orange bubble — elderly person */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0, left: '50%', transform: 'translateX(-50%)',
+                  width: 110, height: 110, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #F5A623 0%, #FF8A60 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 0 0 7px rgba(245,166,35,0.15), 0 0 28px rgba(255,138,96,0.45), 0 10px 32px rgba(255,138,96,0.3)',
+                  zIndex: 2,
+                }}>
+                  <span style={{
+                    color: 'white', fontWeight: 700, fontSize: 15,
+                    textAlign: 'center', padding: '0 10px', lineHeight: 1.25,
+                    fontFamily: FRAUNCES,
+                  }}>
+                    {parentName}
+                  </span>
+                </div>
+
+                {/* Logged-in user bubble — bottom left */}
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 16,
+                  width: 46, height: 46, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #F0C050, #E8955A)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(240,192,80,0.5)',
+                  zIndex: 3,
+                }}>
+                  <svg viewBox="0 0 24 24" width="21" height="21" fill="white" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" />
+                  </svg>
+                </div>
+
+                {/* Add member bubble — bottom right */}
+                <div style={{
+                  position: 'absolute', bottom: 0, right: 16,
+                  width: 40, height: 40, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #F0C050, #FF8A60)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(255,138,96,0.4)',
+                  zIndex: 3, cursor: 'pointer', opacity: 0.88,
+                }}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
               </div>
 
-              {/* Purple sphere (from landing) */}
-              <div style={{
-                position: 'relative', width: 52, height: 52,
-                marginBottom: 10, zIndex: 1,
-              }}>
-                {/* rotating conic layers */}
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: '50%',
-                  background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
-                  animation: 'cnSphereRot 12s linear infinite',
-                  filter: 'blur(3px)',
-                }} />
-                <div style={{
-                  position: 'absolute', inset: 4, borderRadius: '50%',
-                  background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
-                  animation: 'cnSphereRot2 8s linear infinite',
-                  filter: 'blur(4px)',
-                }} />
-                {/* smoke */}
-                <div style={{
-                  position: 'absolute', width: 34, height: 22, borderRadius: '50%',
-                  background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
-                  top: 6, left: 5,
-                  animation: 'cnSphereSmoke1 6.5s ease-in-out infinite',
-                  filter: 'blur(5px)',
-                }} />
-                {/* highlight */}
-                <div style={{
-                  position: 'absolute', top: 8, left: 10,
-                  width: '36%', height: '26%', borderRadius: '50%',
-                  background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)',
-                  zIndex: 9,
-                }} />
-              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                {/* Greeting */}
+                <div style={{ fontSize: 13, color: C.headerMuted, fontWeight: 600 }}>
+                  Hi, {childName}
+                </div>
 
-              <div style={{
-                fontFamily: FRAUNCES, fontSize: 19, fontWeight: 900, lineHeight: 1.2,
-                color: 'white', marginBottom: 5, position: 'relative', zIndex: 1,
-              }}>
-                <span style={{ color: C.teal }}>Chat</span> to<br />Clara
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1 }}>
-                {primarySessionLabel}
-              </div>
-
-              {/* "GO" circle button */}
-              <div style={{
-                position: 'absolute', bottom: 16, right: 16,
-                width: 38, height: 38,
-                background: 'linear-gradient(135deg,#9B7BC8,#3D1F8A)',
-                borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 12, fontWeight: 700, zIndex: 2,
-                boxShadow: '0 0 16px rgba(155,123,200,0.7)',
-              }}>
-                GO
+                {/* Settings icon */}
+                <span
+                  onClick={() => setSettingsOpen(v => !v)}
+                  style={{
+                    fontSize: 17, color: settingsOpen ? C.primary : C.headerMuted,
+                    cursor: 'pointer',
+                    transition: 'transform 0.4s, color 0.2s',
+                    display: 'inline-block',
+                    transform: settingsOpen ? 'rotate(60deg)' : 'rotate(0deg)',
+                  }}
+                  title="Settings"
+                >⚙</span>
               </div>
             </div>
           </div>
@@ -774,7 +710,7 @@ const Dashboard = () => {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           boxShadow: isChecked ? `0 0 8px ${C.teal}88` : 'none',
                         }}>
-                          {isChecked && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0d0f1a" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5"/></svg>}
+                          {isChecked && <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0d0f1a" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" /></svg>}
                         </span>
                         <span style={{
                           fontSize: 14, color: isChecked ? 'rgba(30,45,79,0.4)' : '#1e2d4f',
@@ -837,7 +773,41 @@ const Dashboard = () => {
             </div>
 
             {/* Body */}
-            <div style={{ padding: '20px 22px 24px' }}>
+            <div style={{ padding: '20px 22px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Advanced Mode row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <SlidersHorizontal style={{ width: 18, height: 18, color: 'rgba(30,45,79,0.55)' }} />
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1e2d4f', fontFamily: FRAUNCES, display: 'block' }}>Advanced Mode</span>
+                    <span style={{ fontSize: 11, color: 'rgba(30,45,79,0.45)', fontFamily: FRAUNCES }}>Show activity charts &amp; search</span>
+                  </div>
+                </div>
+                {/* Pill toggle */}
+                <button
+                  onClick={() => setAdvancedMode(v => !v)}
+                  style={{
+                    width: 46, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', flexShrink: 0,
+                    background: advancedMode ? C.primary : 'rgba(70,99,172,0.15)',
+                    position: 'relative', transition: 'background 0.25s',
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3,
+                    left: advancedMode ? 23 : 3,
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: 'white',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.22)',
+                    transition: 'left 0.25s',
+                    display: 'block',
+                  }} />
+                </button>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: 'rgba(70,99,172,0.10)' }} />
+
               {/* Theme row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 {/* Label */}
@@ -854,8 +824,8 @@ const Dashboard = () => {
                 }}>
                   {([
                     { label: 'Default', key: 'default' as const, disabled: false },
-                    { label: 'Orange',  key: 'orange'  as const, disabled: false },
-                    { label: 'Dark',    key: 'dark'    as const, disabled: false },
+                    { label: 'Orange', key: 'orange' as const, disabled: false },
+                    { label: 'Dark', key: 'dark' as const, disabled: false },
                   ] as const).map((tab, i, arr) => {
                     const isActive = theme === tab.key;
                     return (
@@ -902,8 +872,8 @@ const Dashboard = () => {
       >
         {([
           { id: 'overview' as NavId, label: 'Overview', icon: LayoutDashboard },
-          { id: 'actions'  as NavId, label: 'Tasks',    icon: AlertTriangle,  badge: true },
-          { id: 'sessions' as NavId, label: 'Chats',    icon: Clock },
+          { id: 'actions' as NavId, label: 'Tasks', icon: AlertTriangle, badge: true },
+          { id: 'sessions' as NavId, label: 'Chats', icon: Clock },
         ] as const).map(item => (
           <button
             key={item.id}
