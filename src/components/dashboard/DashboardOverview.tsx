@@ -1,28 +1,9 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import type { ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import type { ReadinessSnapshot } from '@/contexts/SessionContext';
-import FamilyNoteField from '@/components/dashboard/FamilyNoteField';
-import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, Search } from 'lucide-react';
+import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, Search, Clock } from 'lucide-react';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  bank_accounts: 'Bank Accounts',
-  financial_accounts: 'Financial Accounts',
-  documents: 'Documents',
-  care_wishes: 'Care Wishes',
-  property: 'Property',
-  key_contacts: 'Key Contacts',
-};
-
-const CATEGORY_STYLES: Record<string, { chip: string; icon: ComponentType<{ className?: string }> }> = {
-  bank_accounts: { chip: 'bg-sky-100 text-sky-700', icon: Landmark },
-  financial_accounts: { chip: 'bg-indigo-100 text-indigo-700', icon: Landmark },
-  documents: { chip: 'bg-emerald-100 text-emerald-700', icon: FileText },
-  care_wishes: { chip: 'bg-rose-100 text-rose-700', icon: Heart },
-  property: { chip: 'bg-amber-100 text-amber-700', icon: Home },
-  key_contacts: { chip: 'bg-violet-100 text-violet-700', icon: Users },
-};
 
 const DOC_ITEMS = [
   { id: 'will', label: 'Will — location confirmed' },
@@ -550,9 +531,8 @@ export default function DashboardOverview({
   } = useSession();
 
   const activeActions = actionItems.filter((a) => a.status !== 'done').length;
-  const [expandedQuote, setExpandedQuote] = useState<string | null>(null);
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'cards' | 'timeline'>('cards');
+  const [rcIdx, setRcIdx] = useState(0);
+  const [hoveredPanel, setHoveredPanel] = useState<number | null>(null);
 
   const filteredCaptured = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -631,7 +611,7 @@ export default function DashboardOverview({
     <div className="cn-stagger">
 
       {/* Activity + Momentum + Readiness row */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 230px', gap: 16, marginBottom: 16 }}>
         <ActivityChart sessions={sessions} />
         <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
         <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
@@ -677,187 +657,215 @@ export default function DashboardOverview({
             ⬇ Download Report
           </button>
         </div>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', paddingLeft: 4, margin: 0 }}>
+        {/* <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', paddingLeft: 4, margin: 0 }}>
           Downloads to your device only. Nothing is sent to ClearNest servers.
-        </p>
+        </p> */}
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-7">
-        <div className="lg:col-span-3 space-y-7">
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-display text-xl font-semibold text-foreground">Recently Captured</h2>
-              <div className="flex items-center gap-2">
+      {/* Recently Captured + Nav Panels */}
+      {(() => {
+        const rcItems = filteredCaptured.slice(0, 10);
+        const rcTotal = rcItems.length;
+        const safeIdx = rcTotal > 0 ? Math.min(rcIdx, rcTotal - 1) : 0;
+        const currentItem = rcItems[safeIdx];
+
+        const RC_TAG: Record<string, string> = {
+          bank_accounts: 'FINANCE', financial_accounts: 'FINANCE',
+          documents: 'DOCUMENTS', care_wishes: 'CARE WISHES',
+          property: 'PROPERTY', key_contacts: 'CONTACTS',
+        };
+
+        const NAV_PANELS = [
+          { Icon: Landmark,           label: 'Financial & Pension', category: 'financial_accounts' },
+          { Icon: FileText,           label: 'Documents & Will',    category: 'documents'          },
+          { Icon: Home,               label: 'Property',            category: 'property'           },
+          { Icon: Heart,              label: 'Care Wishes',         category: 'care_wishes'        },
+          { Icon: Users,              label: 'Key Contacts',        category: 'key_contacts'       },
+          { Icon: MessageSquareQuote, label: 'Conversations',       category: 'conversations'      },
+        ];
+
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 230px', gap: 18 }}>
+
+            {/* Recently Captured sliding card */}
+            <div style={{
+              background: 'rgba(255,255,255,0.07)',
+              backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
+              boxShadow: '0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.09)',
+              display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 280,
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 22px 16px', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: '#a78bfa', textShadow: '0 0 18px rgba(167,139,250,0.45)' }}>
+                  Recently Captured
+                </span>
+                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.48)', fontWeight: 500 }}>
+                  {rcTotal > 0 ? `${safeIdx + 1} / ${rcTotal}` : '0 items'}
+                </span>
+              </div>
+
+              {/* Sliding track */}
+              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+                {rcTotal === 0 ? (
+                  <div style={{ padding: '0 22px 16px', color: 'rgba(255,255,255,0.48)', fontSize: 14 }}>
+                    No captures yet. Start a conversation with {parentName}.
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'flex', height: '100%',
+                    transform: `translateX(-${safeIdx * 100}%)`,
+                    transition: 'transform 0.38s cubic-bezier(0.4,0,0.2,1)',
+                  }}>
+                    {rcItems.map((item) => {
+                      const dotColor = item.verificationStatus === 'verified' ? '#5DD87A'
+                        : item.verificationStatus === 'disputed' ? '#FF5F52'
+                        : item.confidence === 'needs-follow-up' ? '#F0C050'
+                        : '#5ECFCF';
+                      const dotGlow = item.verificationStatus === 'verified' ? 'rgba(93,216,122,0.6)'
+                        : item.verificationStatus === 'disputed' ? 'rgba(255,95,82,0.6)'
+                        : item.confidence === 'needs-follow-up' ? 'rgba(240,192,80,0.6)'
+                        : 'rgba(94,207,207,0.6)';
+                      const statusLabel = item.verificationStatus === 'verified' ? 'Confirmed'
+                        : item.verificationStatus === 'disputed' ? 'Disputed'
+                        : item.confidence === 'needs-follow-up' ? 'Needs follow-up'
+                        : 'To verify';
+                      return (
+                        <div key={item.id} style={{ minWidth: '100%', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '0 22px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 5,
+                              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)',
+                              borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600,
+                              color: 'rgba(255,255,255,0.48)', letterSpacing: '0.4px',
+                            }}>
+                              {RC_TAG[item.category] || item.category.replace(/_/g, ' ').toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', whiteSpace: 'nowrap' }}>
+                              {item.timestamp.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#a78bfa', lineHeight: 1.45 }}>
+                            {item.content.length > 140 ? `${item.content.slice(0, 140)}…` : item.content}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.48)' }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotGlow}`, flexShrink: 0 }} />
+                                {statusLabel}
+                              </div>
+                              <div style={{
+                                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+                                borderRadius: 6, padding: '2px 8px', fontSize: 10, color: 'rgba(255,255,255,0.48)',
+                              }}>{item.verificationStatus ?? 'unverified'}</div>
+                            </div>
+                            {item.sourceQuote && (
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <MessageSquareQuote style={{ width: 11, height: 11 }} />
+                                {parentName}'s words
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination bar */}
+              {rcTotal > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 22px 6px', flexShrink: 0 }}>
+                  {rcItems.map((_, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setRcIdx(i)}
+                      style={{
+                        flex: 1, height: 3, borderRadius: 99, cursor: 'pointer',
+                        background: i === safeIdx ? '#a78bfa' : 'rgba(255,255,255,0.12)',
+                        boxShadow: i === safeIdx ? '0 0 6px rgba(167,139,250,0.7)' : 'none',
+                        transition: 'background 0.3s, box-shadow 0.3s',
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+
+              {/* Dispute / Verify */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', flexShrink: 0 }}>
                 <button
-                  onClick={() => setViewMode('cards')}
-                  className={`text-xs font-body px-3 py-1.5 rounded-full border ${viewMode === 'cards' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}
-                >
-                  Cards
-                </button>
+                  onClick={() => {
+                    if (currentItem) updateCapturedVerification(currentItem.id, 'disputed');
+                    if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1);
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#FF5F52'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.48)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                  style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'rgba(255,255,255,0.48)', background: 'none', border: 'none', borderRadius: '0 0 0 22px', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
+                >Dispute</button>
+                <div style={{ background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
                 <button
-                  onClick={() => setViewMode('timeline')}
-                  className={`text-xs font-body px-3 py-1.5 rounded-full border ${viewMode === 'timeline' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}
-                >
-                  Timeline
-                </button>
+                  onClick={() => {
+                    if (currentItem) updateCapturedVerification(currentItem.id, 'verified');
+                    if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1);
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#5DD87A'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.48)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                  style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'rgba(255,255,255,0.48)', background: 'none', border: 'none', borderRadius: '0 0 22px 0', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
+                >Verify</button>
               </div>
             </div>
 
-            {filteredCaptured.length === 0 ? (
-              <div className="cn-card text-center py-8">
-                <p className="font-body text-muted-foreground">
-                  No matches for the current search/filter. Start or continue a conversation with {parentName}.
-                </p>
-                <button
-                  onClick={() => navigate('/conversation')}
-                  className="mt-4 bg-primary text-primary-foreground font-body font-medium py-2 px-4 rounded-lg text-sm hover:opacity-90 transition-opacity"
-                >
-                  Continue Conversation
-                </button>
-              </div>
-            ) : (
-              <div className={viewMode === 'timeline' ? 'bg-white rounded-xl shadow-sm border border-border overflow-hidden cn-stagger' : 'space-y-4 cn-stagger'}>
-                {filteredCaptured.slice(0, 10).map((item) => {
-                  const quoteOpen = expandedQuote === item.id;
-                  const detailOpen = expandedItem === item.id;
-                  const style = CATEGORY_STYLES[item.category] ?? { chip: 'bg-slate-100 text-slate-700', icon: FileText };
-                  const CategoryIcon = style.icon;
-                  const summary = item.content.split('.').filter(Boolean)[0] ? `${item.content.split('.').filter(Boolean)[0]}.` : item.content;
-                  const notePreview = userNotes[item.id];
+            {/* Nav Panels 3×2 — spans columns 2 & 3 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10, gridColumn: '2 / 4' }}>
+              {NAV_PANELS.map((panel, i) => {
+                const isActive = panel.category === categoryFilter;
+                const isHov = hoveredPanel === i;
+                return (
+                  <div
+                    key={panel.category}
+                    onClick={() => panel.category === 'conversations' ? navigate('/conversation') : onCategoryChange(panel.category === categoryFilter ? 'all' : panel.category)}
+                    onMouseEnter={() => setHoveredPanel(i)}
+                    onMouseLeave={() => setHoveredPanel(null)}
+                    style={{
+                      background: isActive ? 'rgba(167,139,250,0.11)' : isHov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)',
+                      backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                      border: `1px solid ${isActive ? 'rgba(167,139,250,0.28)' : isHov ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.13)'}`,
+                      borderRadius: 16,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 10, padding: '20px 10px', cursor: 'pointer',
+                      transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+                      transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
+                      boxShadow: isActive
+                        ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(167,139,250,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
+                        : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    <panel.Icon style={{
+                      width: 42, height: 42,
+                      color: isActive ? '#c4b5fd' : isHov ? '#fff' : 'rgba(255,255,255,0.7)',
+                      filter: isActive ? 'drop-shadow(0 0 14px rgba(167,139,250,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                      transition: 'transform 0.2s, filter 0.2s, color 0.2s',
+                      transform: isHov ? 'scale(1.12)' : 'scale(1)',
+                      display: 'block', margin: '0 auto',
+                    }} />
+                    <span style={{
+                      fontSize: 10, fontWeight: 600,
+                      color: isActive ? '#c4b5fd' : '#fff',
+                      textAlign: 'center', lineHeight: 1.35,
+                      opacity: isHov || isActive ? 1 : 0,
+                      transition: 'opacity 0.2s, color 0.2s',
+                      fontFamily: 'Figtree, system-ui, sans-serif',
+                    }}>{panel.label}</span>
+                  </div>
+                );
+              })}
+            </div>
 
-                  if (viewMode === 'timeline') {
-                    const catClass = item.category?.includes('bank') || item.category?.includes('financial') ? 'cat-financial' : item.category?.includes('property') ? 'cat-property' : item.category?.includes('document') ? 'cat-legal' : 'cat-general';
-                    return (
-                      <div key={item.id} className="timeline-item">
-                        <div className="timeline-date">{item.timestamp.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'})}</div>
-                        <div className={`timeline-body ${catClass}`}>
-                          <p className="text-sm font-body text-foreground">{item.content}</p>
-                          <span className="text-xs text-muted-foreground capitalize">{item.category?.replace(/_/g, ' ')}</span>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="cn-card cn-card-hover cn-slide-in"
-                    >
-                      {/* cards mode — no timeline decorators */}
-
-                      <div className="flex items-center justify-between mb-3">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-body font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${style.chip}`}>
-                          <CategoryIcon className="w-3.5 h-3.5" />
-                          {CATEGORY_LABELS[item.category] || item.category}
-                        </span>
-                        <span className="text-xs font-body text-muted-foreground">
-                          {item.timestamp.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      <p className="font-body font-medium text-foreground mb-1">{summary}</p>
-                      {!detailOpen && (
-                        <button
-                          onClick={() => setExpandedItem(item.id)}
-                          className="text-xs font-body text-primary hover:underline"
-                        >
-                          View details
-                        </button>
-                      )}
-                      {detailOpen && (
-                        <>
-                          <p className="font-body text-foreground mb-3">{item.content}</p>
-                          <button
-                            onClick={() => setExpandedItem(null)}
-                            className="text-xs font-body text-muted-foreground hover:text-foreground mb-2"
-                          >
-                            Hide details
-                          </button>
-                        </>
-                      )}
-
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`w-2.5 h-2.5 rounded-full ${item.confidence === 'clear' ? 'bg-primary' : 'bg-alert'}`} />
-                          <span className="text-sm text-muted-foreground font-body">
-                            {item.confidence === 'clear' ? 'Clear' : 'Needs follow-up'}
-                          </span>
-                          <span className={`text-xs font-body px-2 py-0.5 rounded-full ${
-                            item.verificationStatus === 'verified'
-                              ? 'bg-green-100 text-green-700'
-                              : item.verificationStatus === 'disputed'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {item.verificationStatus ?? 'unverified'}
-                          </span>
-                          {notePreview && (
-                            <span className="text-xs font-body px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                              {childName}'s note
-                            </span>
-                          )}
-                        </div>
-
-                        {item.sourceQuote && (
-                          <button
-                            onClick={() => setExpandedQuote(quoteOpen ? null : item.id)}
-                            className="flex items-center gap-1 text-xs font-body text-primary hover:text-primary/70 transition-colors"
-                            title={`See what ${parentName} said`}
-                          >
-                            <MessageSquareQuote className="w-3.5 h-3.5" />
-                            <span>{quoteOpen ? 'Hide quote' : `${parentName}'s words`}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Change 6: verified stamp */}
-                      {item.confidence === 'clear' && (
-                        <div className="verified-stamp">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                          Confirmed clear
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-                        <button
-                          onClick={() => updateCapturedVerification(item.id, 'verified')}
-                          className="text-xs font-body px-2.5 py-1 rounded-md bg-green-100 text-green-700 hover:bg-green-200"
-                        >
-                          Verify ({childName})
-                        </button>
-                        <button
-                          onClick={() => updateCapturedVerification(item.id, 'disputed')}
-                          className="text-xs font-body px-2.5 py-1 rounded-md bg-red-100 text-red-700 hover:bg-red-200"
-                        >
-                          Mark disputed
-                        </button>
-                        <button
-                          onClick={() => updateCapturedVerification(item.id, 'unverified')}
-                          className="text-xs font-body px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        >
-                          Reset
-                        </button>
-                      </div>
-
-                      {quoteOpen && item.sourceQuote && (
-                        <div className="mt-3 pt-3 border-t border-border">
-                          <p className="text-xs font-body uppercase tracking-widest text-muted-foreground mb-2">
-                            {parentName} said
-                          </p>
-                          <blockquote className="font-body text-sm text-foreground italic leading-relaxed border-l-2 border-primary/30 pl-3">
-                            "{item.sourceQuote}"
-                          </blockquote>
-                        </div>
-                      )}
-
-                      <FamilyNoteField itemId={item.id} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
-
+        );
+      })()}
 
           {/* Change 4: Topic Progress panel */}
           {/* <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
@@ -897,9 +905,6 @@ export default function DashboardOverview({
               );
             })}
           </div> */}
-
-        </div>
-      </div>
     </div>
   );
 }

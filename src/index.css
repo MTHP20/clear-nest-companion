@@ -6,51 +6,51 @@
 
 @layer base {
   :root {
-    /* ClearNest brand — cream, purple CTAs, dark purple type, gold alert accent */
-    --background: 40 33% 94%;        /* #F5F0E8 */
-    --foreground: 261 63% 33%;     /* #3D1F8A headlines / primary text */
+    /* ClearNest — Dark Glass (active theme) */
+    --background:           232 33%  7%;
+    --foreground:             0  0% 100%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 261 63% 33%;
+    --card:                 232 28% 11%;
+    --card-foreground:        0  0% 100%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 261 63% 33%;
+    --popover:              232 28%  9%;
+    --popover-foreground:     0  0% 100%;
 
-    --primary: 263 41% 63%;          /* #9B7BC8 */
-    --primary-foreground: 0 0% 100%;
+    --primary:              255 92% 76%;
+    --primary-foreground:     0  0% 100%;
 
-    --secondary: 270 60% 94%;        /* #EDE0FF-ish badge / soft UI */
-    --secondary-foreground: 261 55% 30%;
+    --secondary:            232 20% 18%;
+    --secondary-foreground:   0  0% 65%;
 
-    --muted: 40 28% 96%;
-    --muted-foreground: 261 22% 38%; /* AA-friendly on cream for small text */
+    --muted:                232 25% 14%;
+    --muted-foreground:       0  0% 48%;
 
-    --accent: 263 38% 52%;           /* deeper purple hover / pressed */
-    --accent-foreground: 0 0% 100%;
+    --accent:               180 54% 59%;
+    --accent-foreground:      0  0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive:            4 100% 66%;
+    --destructive-foreground: 0   0% 100%;
 
-    --alert: 46 88% 61%;             /* #F4C842 gold accent */
-    --alert-foreground: 261 63% 28%;
+    --alert:                 46  84% 63%;
+    --alert-foreground:     232  33%  7%;
 
-    --border: 270 35% 88%;
-    --input: 270 35% 90%;
-    --ring: 263 41% 63%;
+    --border:               232  20% 20%;
+    --input:                232  20% 16%;
+    --ring:                 255  92% 76%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 261 55% 22%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 263 41% 63%;
+    --sidebar-background:   232  33%  7%;
+    --sidebar-foreground:     0   0% 100%;
+    --sidebar-primary:      255  92% 76%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 261 45% 28%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 261 40% 30%;
-    --sidebar-ring: 263 41% 63%;
+    --sidebar-accent:       232  25% 15%;
+    --sidebar-accent-foreground:  0 0% 100%;
+    --sidebar-border:       232  20% 20%;
+    --sidebar-ring:         255  92% 76%;
 
     --font-display: 'Figtree', system-ui, sans-serif;
-    --font-body: 'Figtree', system-ui, sans-serif;
+    --font-body:    'Figtree', system-ui, sans-serif;
   }
 }
 
@@ -76,17 +76,25 @@
 }
 
 @layer components {
-  /* Card with soft left border — signature ClearNest pattern */
+  /* ── Glass card — dark palette ──────────────────────────────────────────── */
   .cn-card {
-    @apply bg-card rounded-lg p-6;
-    border-left: 3px solid hsl(var(--secondary));
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.07);
   }
 
   .cn-card-amber {
-    @apply bg-card rounded-lg p-6;
-    border-left: 3px solid hsl(var(--alert));
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    background: rgba(240,192,80,0.07);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(240,192,80,0.18);
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
   }
 
   .cn-card-hover {
@@ -94,16 +102,18 @@
   }
 
   .cn-card-hover:hover {
+    background: rgba(255,255,255,0.09);
+    border-color: rgba(255,255,255,0.17);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10);
   }
 
-  /* Staggered fade-in for cards */
+  /* Staggered fade-in */
   .cn-stagger > * {
     opacity: 0;
     animation: cnFadeSlideIn 0.4s ease-out forwards;
   }
-  .cn-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .cn-stagger > *:nth-child(1) { animation-delay:   0ms; }
   .cn-stagger > *:nth-child(2) { animation-delay: 100ms; }
   .cn-stagger > *:nth-child(3) { animation-delay: 200ms; }
   .cn-stagger > *:nth-child(4) { animation-delay: 300ms; }
@@ -112,104 +122,132 @@
   .cn-stagger > *:nth-child(7) { animation-delay: 600ms; }
   .cn-stagger > *:nth-child(8) { animation-delay: 700ms; }
 
-  /* Slide in from left for new items */
   .cn-slide-in {
     animation: cnSlideInLeft 0.3s ease-out forwards;
   }
 
-  /* Pulse for mic button */
   .cn-pulse-listening {
     animation: cnPulse 2s ease-in-out infinite;
   }
 
-  /* Active sidebar item border */
   .cn-nav-active {
-    border-left: 3px solid hsl(var(--primary));
-    background: hsl(var(--sidebar-accent));
+    background: rgba(167,139,250,0.14);
+    border: 1px solid rgba(167,139,250,0.22);
     transition: all 0.2s ease;
   }
+
+  /* ── Verified stamp ─────────────────────────────────────────────────────── */
+  .verified-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(93,216,122,0.12);
+    border: 1px solid rgba(93,216,122,0.25);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 10px;
+    color: #5DD87A;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+
+  /* ── Topic progress bars ────────────────────────────────────────────────── */
+  .topic-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .topic-item:hover { background: rgba(255,255,255,0.04); }
+  .topic-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  .topic-bar-wrap {
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    height: 4px;
+    width: 100%;
+  }
+  .topic-bar { height: 4px; border-radius: 4px; transition: width 0.6s ease; }
+  .topic-pct {
+    font-size: 12px; font-weight: 600;
+    width: 32px; text-align: right; flex-shrink: 0;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* ── POA urgency callout ────────────────────────────────────────────────── */
+  .poa-urgent {
+    display: flex; gap: 12px;
+    background: rgba(255,95,82,0.10);
+    border: 1px solid rgba(255,95,82,0.22);
+    border-radius: 12px; padding: 14px 16px; margin: 12px 16px;
+  }
+  .poa-urgent strong { font-size: 13px; color: #FF5F52; display: block; margin-bottom: 3px; }
+  .poa-urgent p { font-size: 11px; color: rgba(255,95,82,0.75); line-height: 1.4; }
+
+  /* ── Timeline view ──────────────────────────────────────────────────────── */
+  .timeline-item {
+    display: flex; gap: 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .timeline-date {
+    font-size: 11px; color: rgba(255,255,255,0.40);
+    width: 80px; flex-shrink: 0; padding-top: 2px;
+  }
+  .timeline-body { flex: 1; border-left: 3px solid rgba(255,255,255,0.12); padding-left: 14px; }
+  .timeline-body.cat-property  { border-color: #F97316; }
+  .timeline-body.cat-financial { border-color: #5ECFCF; }
+  .timeline-body.cat-legal     { border-color: #a78bfa; }
+  .timeline-body.cat-general   { border-color: #5DD87A; }
+
+  /* ── Session mood indicator ─────────────────────────────────────────────── */
+  .session-mood { display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,0.40); margin-top: 3px; }
+  .mood-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .mood-dot.relaxed  { background: #5DD87A; }
+  .mood-dot.tired    { background: #F0C050; }
+  .mood-dot.confused { background: #FF5F52; }
+
+  /* ── Sidebar person card ────────────────────────────────────────────────── */
+  .sidebar-person { margin: 16px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.11); border-radius: 16px; overflow: hidden; cursor: pointer; }
+  .sidebar-person-photo-placeholder { width: 100%; height: 130px; background: linear-gradient(135deg, rgba(240,192,80,0.25), rgba(167,139,250,0.35)); display: flex; align-items: center; justify-content: center; font-size: 48px; }
+  .sidebar-person-info { padding: 12px 14px; }
+  .sidebar-person-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .sidebar-person-role { font-size: 11px; color: rgba(255,255,255,0.46); }
+  .sidebar-person-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(93,216,122,0.14); border: 1px solid rgba(93,216,122,0.24); border-radius: 20px; padding: 3px 9px; font-size: 10px; color: #5DD87A; margin-top: 8px; font-weight: 500; }
+  .sidebar-person-badge::before { content: ''; width: 6px; height: 6px; background: #5DD87A; border-radius: 50%; display: inline-block; }
+
+  /* ── Readiness ring card ────────────────────────────────────────────────── */
+  .readiness-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.11); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; }
+  .readiness-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+  .readiness-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #fff; }
+  .readiness-text h3 { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .readiness-text p { font-size: 11px; color: rgba(255,255,255,0.46); line-height: 1.4; }
 }
 
 @keyframes cnFadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes cnSlideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes cnPulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.05); }
 }
 
-/* ── CHANGE 1: Sidebar person card ─────────────────────────────────────────── */
-.sidebar-person { margin: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; overflow: hidden; cursor: pointer; }
-.sidebar-person-photo-placeholder { width: 100%; height: 130px; background: linear-gradient(135deg, rgba(244, 200, 66, 0.35) 0%, hsl(261 55% 22% / 0.85) 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; }
-.sidebar-person-info { padding: 12px 14px; }
-.sidebar-person-name { font-size: 14px; font-weight: 600; color: white; margin-bottom: 2px; }
-.sidebar-person-role { font-size: 11px; color: rgba(255,255,255,0.5); }
-.sidebar-person-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(76,175,125,0.2); border: 1px solid rgba(76,175,125,0.3); border-radius: 20px; padding: 3px 9px; font-size: 10px; color: #7de0a8; margin-top: 8px; font-weight: 500; }
-.sidebar-person-badge::before { content: ''; width: 6px; height: 6px; background: #4CAF7D; border-radius: 50%; display: inline-block; }
-
-/* ── CHANGE 3: Readiness ring card ─────────────────────────────────────────── */
-.readiness-card { background: hsl(var(--sidebar-background)); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; }
-.readiness-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
-.readiness-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; }
-.readiness-text h3 { font-size: 13px; font-weight: 600; color: white; margin-bottom: 4px; }
-.readiness-text p { font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.4; }
-
-/* ── CHANGE 4: Topic progress bars ─────────────────────────────────────────── */
-.topic-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.topic-item:hover { background: var(--muted); }
-.topic-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-.topic-bar-wrap { background: #F3F4F6; border-radius: 4px; height: 4px; width: 100%; }
-.topic-bar { height: 4px; border-radius: 4px; transition: width 0.6s ease; }
-.topic-pct { font-size: 12px; font-weight: 600; width: 32px; text-align: right; flex-shrink: 0; }
-
-/* ── CHANGE 5: POA urgency callout ─────────────────────────────────────────── */
-.poa-urgent { display: flex; gap: 12px; background: #FEE8E8; border: 1px solid rgba(229,115,115,0.3); border-radius: 12px; padding: 14px 16px; margin: 12px 16px; }
-.poa-urgent strong { font-size: 13px; color: #c62828; display: block; margin-bottom: 3px; }
-.poa-urgent p { font-size: 11px; color: #b71c1c; line-height: 1.4; }
-
-/* ── CHANGE 6: Verified stamp ───────────────────────────────────────────────── */
-.verified-stamp { display: inline-flex; align-items: center; gap: 5px; background: #ECFDF5; border: 1px solid rgba(76,175,125,0.3); border-radius: 20px; padding: 3px 10px; font-size: 10px; color: #2e7d52; font-weight: 500; margin-top: 8px; }
-
-/* ── CHANGE 7: Timeline view ────────────────────────────────────────────────── */
-.timeline-item { display: flex; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--border); }
-.timeline-date { font-size: 11px; color: var(--muted-foreground); width: 80px; flex-shrink: 0; padding-top: 2px; }
-.timeline-body { flex: 1; border-left: 3px solid var(--border); padding-left: 14px; }
-.timeline-body.cat-property { border-color: #F97316; }
-.timeline-body.cat-financial { border-color: #059669; }
-.timeline-body.cat-legal { border-color: #9333EA; }
-.timeline-body.cat-general { border-color: #4B5BDB; }
-
-/* ── CHANGE 8: Session mood indicator ──────────────────────────────────────── */
-.session-mood { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); margin-top: 3px; }
-.mood-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.mood-dot.relaxed { background: #4CAF7D; }
-.mood-dot.tired { background: #F4C842; }
-.mood-dot.confused { background: #E57373; }
-
-/* ── Clara sphere animations (header card) ─────────────────────────────────── */
+/* ── Clara sphere animations ────────────────────────────────────────────── */
 @keyframes cnSphereRot {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
@@ -219,6 +257,6 @@
   to   { transform: rotate(0deg); }
 }
 @keyframes cnSphereSmoke1 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.85; }
-  50%       { transform: translate(3px, -4px) scale(1.08); opacity: 1; }
+  0%, 100% { transform: translate(0,0) scale(1);       opacity: 0.85; }
+  50%       { transform: translate(3px,-4px) scale(1.08); opacity: 1; }
 }

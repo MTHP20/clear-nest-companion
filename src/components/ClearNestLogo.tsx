@@ -14,7 +14,7 @@ export function ClearNestLogo({ variant = 'default', className = '', href }: Cle
   const inner = (
     <>
       <img src={logoImage} alt="ClearNest bird logo" className={`${size} rounded-full object-cover`} />
-      <span className={`font-display text-xl font-semibold tracking-tight ${textColor}`}>
+      <span className={`text-xl font-semibold tracking-tight ${textColor}`} style={{ fontFamily: 'Figtree, system-ui, sans-serif' }}>
         ClearNest
       </span>
     </>

@@ -14,6 +14,8 @@ import {
   Download,
   Menu,
   Search,
+  Palette,
+  X,
 } from 'lucide-react';
 import { generateFamilyReportPDF } from '@/utils/generateReport';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
@@ -226,6 +228,7 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
 const Dashboard = () => {
   const [activePage, setActivePage] = useState<NavId>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [confidenceFilter, setConfidenceFilter] = useState('all');
@@ -371,12 +374,15 @@ const Dashboard = () => {
                 color: 'white', lineHeight: 1,
               }}>
                 {parentName}'s Dashboard
-                <span style={{
-                  fontSize: 18, color: 'rgba(255,255,255,0.45)',
-                  cursor: 'pointer', marginTop: 6,
-                  transition: 'transform 0.4s, color 0.2s',
-                  display: 'inline-block',
-                }}
+                <span
+                  onClick={() => setSettingsOpen(v => !v)}
+                  style={{
+                    fontSize: 18, color: settingsOpen ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
+                    cursor: 'pointer', marginTop: 6,
+                    transition: 'transform 0.4s, color 0.2s',
+                    display: 'inline-block',
+                    transform: settingsOpen ? 'rotate(60deg)' : 'rotate(0deg)',
+                  }}
                   title="Settings"
                 >⚙</span>
               </div>
@@ -732,6 +738,94 @@ const Dashboard = () => {
                 </>
               )}
 
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Settings modal ───────────────────────────────────────────────────── */}
+      {settingsOpen && (
+        <>
+          <div
+            onClick={() => setSettingsOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 50,
+              background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+            }}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            zIndex: 51, width: 360,
+            background: 'rgba(18,20,36,0.97)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
+            border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22,
+            boxShadow: '0 30px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.09)',
+            overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '20px 22px 18px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <span style={{ fontFamily: FRAUNCES, fontSize: 18, fontWeight: 700, color: '#fff' }}>Settings</span>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '50%', width: 30, height: 30, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.14)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)'; }}
+              >
+                <X style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.6)' }} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 22px 24px' }}>
+              {/* Theme row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                {/* Label */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <Palette style={{ width: 18, height: 18, color: 'rgba(255,255,255,0.6)' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', fontFamily: FRAUNCES }}>Theme</span>
+                </div>
+
+                {/* Joined tab group */}
+                <div style={{
+                  display: 'flex',
+                  border: '1px solid rgba(255,255,255,0.13)',
+                  borderRadius: 10, overflow: 'hidden',
+                }}>
+                  {[
+                    { label: 'Default', disabled: true },
+                    { label: 'Orange',  disabled: true },
+                    { label: 'Dark',    disabled: false },
+                  ].map((tab, i, arr) => (
+                    <button
+                      key={tab.label}
+                      disabled={tab.disabled}
+                      style={{
+                        padding: '7px 14px',
+                        fontSize: 12, fontWeight: 600,
+                        fontFamily: FRAUNCES,
+                        cursor: tab.disabled ? 'not-allowed' : 'default',
+                        background: !tab.disabled ? 'rgba(167,139,250,0.18)' : 'rgba(255,255,255,0.04)',
+                        color: tab.disabled ? 'rgba(255,255,255,0.25)' : '#c4b5fd',
+                        border: 'none',
+                        borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.10)' : 'none',
+                        boxShadow: !tab.disabled ? 'inset 0 1px 0 rgba(167,139,250,0.2)' : 'none',
+                        transition: 'background 0.15s, color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </>
