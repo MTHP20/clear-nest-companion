@@ -309,7 +309,7 @@ const Dashboard = () => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'overview': return <DashboardOverview advancedMode={advancedMode} query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} />;
+      case 'overview': return <DashboardOverview advancedMode={advancedMode} query={query} categoryFilter={categoryFilter} confidenceFilter={confidenceFilter} onQueryChange={setQuery} onCategoryChange={setCategoryFilter} onConfidenceChange={setConfidenceFilter} onDownload={handleDownload} onNavigatePage={handleNavClick} />;
       case 'actions': return <DashboardActions query={query} />;
       case 'financial': return <DashboardFinancial query={query} confidenceFilter={confidenceFilter} />;
       case 'documents': return <DashboardDocuments query={query} confidenceFilter={confidenceFilter} />;
@@ -556,6 +556,7 @@ const Dashboard = () => {
                 >⚙</span>
               </div>
             </div>
+
           </div>
 
         </header>
@@ -586,7 +587,7 @@ const Dashboard = () => {
         )}
 
         {/* Page content */}
-        <main style={{ padding: '20px 48px 80px', flex: 1 }}>
+        <main style={{ padding: `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined }}>
           {renderPage()}
         </main>
       </div>

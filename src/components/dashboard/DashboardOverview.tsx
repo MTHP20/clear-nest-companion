@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import type { ReadinessSnapshot } from '@/contexts/SessionContext';
@@ -238,21 +239,77 @@ function GlassDropdown({
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const selected = options.find(o => o.value === value) ?? options[0];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const handleOpen = () => {
+    if (triggerRef.current) setRect(triggerRef.current.getBoundingClientRect());
+    setOpen(v => !v);
+  };
+
+  const menu = open && rect ? (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: rect.left,
+        minWidth: rect.width,
+        zIndex: 9999,
+        background: 'var(--ov-tooltip)',
+        border: '1px solid var(--ov-card-border)',
+        borderRadius: 14,
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)',
+      }}
+    >
+      {options.map((opt, i) => (
+        <div
+          key={opt.value}
+          onClick={() => { onChange(opt.value); setOpen(false); }}
+          style={{
+            padding: '10px 16px', fontSize: 13,
+            color: opt.value === value ? 'var(--ov-text)' : 'var(--ov-muted)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9,
+            background: opt.value === value ? 'rgba(94,207,207,0.15)' : 'transparent',
+            fontWeight: opt.value === value ? 600 : 400,
+            borderBottom: i < options.length - 1 ? '1px solid var(--ov-grid)' : undefined,
+            fontFamily: 'Figtree, system-ui, sans-serif',
+          }}
+          onMouseEnter={e => { if (opt.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'var(--ov-nav-hover-bg)'; }}
+          onMouseLeave={e => { if (opt.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+        >
+          <span style={{
+            width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+            border: opt.value === value ? 'none' : '1.5px solid rgba(70,99,172,0.25)',
+            background: opt.value === value ? '#5ECFCF' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 9, color: opt.value === value ? '#0d0f1a' : 'transparent',
+            boxShadow: opt.value === value ? '0 0 8px rgba(94,207,207,0.55)' : 'none',
+          }}>✓</span>
+          {opt.label}
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   return (
-    <div ref={ref} style={{ position: 'relative', userSelect: 'none' }}>
+    <div ref={triggerRef} style={{ position: 'relative', userSelect: 'none' }}>
       <div
-        onClick={() => setOpen(v => !v)}
+        onClick={handleOpen}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'var(--ov-card-bg)',
@@ -270,41 +327,7 @@ function GlassDropdown({
           transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
         }}>▾</span>
       </div>
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', left: 0, minWidth: '100%',
-          background: 'var(--ov-tooltip)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid var(--ov-card-border)', borderRadius: 14, overflow: 'hidden',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10)',
-          zIndex: 100,
-        }}>
-          {options.map((opt, i) => (
-            <div
-              key={opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              style={{
-                padding: '10px 16px', fontSize: 13,
-                color: opt.value === value ? 'var(--ov-text)' : 'var(--ov-muted)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9,
-                background: opt.value === value ? 'rgba(94,207,207,0.12)' : undefined,
-                fontWeight: opt.value === value ? 600 : 400,
-                borderBottom: i < options.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined,
-                fontFamily: 'Figtree, system-ui, sans-serif',
-              }}
-            >
-              <span style={{
-                width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                border: opt.value === value ? 'none' : '1.5px solid var(--ov-card-border)',
-                background: opt.value === value ? '#5ECFCF' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 9, color: opt.value === value ? '#0d0f1a' : 'transparent',
-                boxShadow: opt.value === value ? '0 0 8px rgba(94,207,207,0.55)' : 'none',
-              }}>✓</span>
-              {opt.label}
-            </div>
-          ))}
-        </div>
-      )}
+      {createPortal(menu, document.body)}
     </div>
   );
 }
@@ -490,6 +513,7 @@ interface DashboardOverviewProps {
   onCategoryChange?: (v: string) => void;
   onConfidenceChange?: (v: string) => void;
   onDownload?: () => void;
+  onNavigatePage?: (page: string) => void;
 }
 
 const CATEGORY_OPTIONS = [
@@ -517,6 +541,7 @@ export default function DashboardOverview({
   onCategoryChange = () => {},
   onConfidenceChange = () => {},
   onDownload = () => {},
+  onNavigatePage = () => {},
 }: DashboardOverviewProps) {
   const navigate = useNavigate();
   const {
@@ -612,12 +637,12 @@ export default function DashboardOverview({
   const primarySessionLabel = hasFollowUps ? `Continue with ${parentName}` : 'Start New Session';
 
   const NAV_PANELS = [
-    { Icon: Landmark,           label: 'Financial & Pension', category: 'financial_accounts' },
-    { Icon: FileText,           label: 'Documents & Will',    category: 'documents'          },
-    { Icon: Home,               label: 'Property',            category: 'property'           },
-    { Icon: Heart,              label: 'Care Wishes',         category: 'care_wishes'        },
-    { Icon: Users,              label: 'Key Contacts',        category: 'key_contacts'       },
-    { Icon: MessageSquareQuote, label: 'Conversations',       category: 'conversations'      },
+    { Icon: Landmark,           label: 'Financial & Pension', category: 'financial_accounts', page: 'financial' },
+    { Icon: FileText,           label: 'Documents & Will',    category: 'documents',          page: 'documents' },
+    { Icon: Home,               label: 'Property',            category: 'property',           page: 'property'  },
+    { Icon: Heart,              label: 'Care Wishes',         category: 'care_wishes',        page: 'care'      },
+    { Icon: Users,              label: 'Key Contacts',        category: 'key_contacts',       page: 'contacts'  },
+    { Icon: MessageSquareQuote, label: 'Conversations',       category: 'conversations',      page: 'sessions'  },
   ];
 
   // ── Simple mode (advanced mode OFF) ─────────────────────────────────────────
@@ -636,14 +661,14 @@ export default function DashboardOverview({
       <div className="cn-stagger" style={{ display: 'grid', gridTemplateColumns: '1fr 230px', gap: 18 }}>
 
         {/* Row 1 col 1: 6 nav panels 3×2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10, minHeight: 'clamp(260px, 30vh, 340px)' }}>
           {NAV_PANELS.map((panel, i) => {
             const isActive = panel.category === categoryFilter;
             const isHov = hoveredPanel === i;
             return (
               <div
                 key={panel.category}
-                onClick={() => panel.category === 'conversations' ? navigate('/conversation') : onCategoryChange(panel.category === categoryFilter ? 'all' : panel.category)}
+                onClick={() => onNavigatePage(panel.page)}
                 onMouseEnter={() => setHoveredPanel(i)}
                 onMouseLeave={() => setHoveredPanel(null)}
                 style={{
@@ -724,24 +749,24 @@ export default function DashboardOverview({
             ))}
           </div>
           {/* Purple sphere */}
-          <div style={{ position: 'relative', width: 52, height: 52, marginBottom: 14, zIndex: 1 }}>
+          <div style={{ position: 'relative', width: 80, height: 80, marginBottom: 14, zIndex: 1 }}>
             <div style={{
               position: 'absolute', inset: 0, borderRadius: '50%',
               background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
-              animation: 'cnSphereRot 12s linear infinite', filter: 'blur(3px)',
+              animation: 'cnSphereRot 12s linear infinite', filter: 'blur(4px)',
             }} />
             <div style={{
-              position: 'absolute', inset: 4, borderRadius: '50%',
+              position: 'absolute', inset: 6, borderRadius: '50%',
               background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
-              animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(4px)',
+              animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(5px)',
             }} />
             <div style={{
-              position: 'absolute', width: 34, height: 22, borderRadius: '50%',
+              position: 'absolute', width: 52, height: 34, borderRadius: '50%',
               background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
-              top: 6, left: 5, animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(5px)',
+              top: 10, left: 8, animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(6px)',
             }} />
             <div style={{
-              position: 'absolute', top: 8, left: 10, width: '36%', height: '26%', borderRadius: '50%',
+              position: 'absolute', top: 12, left: 16, width: '36%', height: '26%', borderRadius: '50%',
               background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
             }} />
           </div>
@@ -1075,15 +1100,15 @@ export default function DashboardOverview({
               </div>
             </div>
 
-            {/* Nav Panels 3×2 — spans columns 2 & 3 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10, gridColumn: '2 / 4' }}>
+            {/* Nav Panels 3×2 — column 2 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10 }}>
               {NAV_PANELS.map((panel, i) => {
                 const isActive = panel.category === categoryFilter;
                 const isHov = hoveredPanel === i;
                 return (
                   <div
                     key={panel.category}
-                    onClick={() => panel.category === 'conversations' ? navigate('/conversation') : onCategoryChange(panel.category === categoryFilter ? 'all' : panel.category)}
+                    onClick={() => onNavigatePage(panel.page)}
                     onMouseEnter={() => setHoveredPanel(i)}
                     onMouseLeave={() => setHoveredPanel(null)}
                     style={{
@@ -1119,6 +1144,85 @@ export default function DashboardOverview({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Chat to Clara — column 3, aligns with ReadinessCard above */}
+            <div
+              onClick={() => navigate('/conversation')}
+              style={{
+                cursor: 'pointer',
+                background: 'rgba(155,123,200,0.18)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(155,123,200,0.35)',
+                borderRadius: 22, padding: '24px 20px',
+                position: 'relative', overflow: 'hidden',
+                boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              }}
+              onMouseEnter={e => {
+                const d = e.currentTarget as HTMLDivElement;
+                d.style.transform = 'scale(1.02)';
+                d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
+              }}
+              onMouseLeave={e => {
+                const d = e.currentTarget as HTMLDivElement;
+                d.style.transform = 'scale(1)';
+                d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
+              }}
+            >
+              {/* Decorative arcs */}
+              <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
+                {[
+                  { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
+                  { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
+                  { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
+                ].map((arc, i) => (
+                  <div key={i} style={{
+                    position: 'absolute',
+                    width: arc.size, height: arc.size, borderRadius: '50%',
+                    border: '5px solid transparent',
+                    borderTopColor: arc.color, borderRightColor: arc.color,
+                    top: (84 - arc.size) / 2, right: (84 - arc.size) / 2,
+                    transform: `rotate(${arc.rot}deg)`,
+                  }} />
+                ))}
+              </div>
+              {/* Purple sphere */}
+              <div style={{ position: 'relative', width: 52, height: 52, marginBottom: 14, zIndex: 1 }}>
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: '50%',
+                  background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+                  animation: 'cnSphereRot 12s linear infinite', filter: 'blur(3px)',
+                }} />
+                <div style={{
+                  position: 'absolute', inset: 4, borderRadius: '50%',
+                  background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+                  animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(4px)',
+                }} />
+                <div style={{
+                  position: 'absolute', width: 34, height: 22, borderRadius: '50%',
+                  background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+                  top: 6, left: 5, animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(5px)',
+                }} />
+                <div style={{
+                  position: 'absolute', top: 8, left: 10, width: '36%', height: '26%', borderRadius: '50%',
+                  background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+                }} />
+              </div>
+              <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1 }}>
+                <span style={{ color: '#5ECFCF' }}>Chat</span> to<br />Clara
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1 }}>
+                {primarySessionLabel}
+              </div>
+              <div style={{
+                position: 'absolute', bottom: 18, right: 18,
+                width: 42, height: 42, background: 'linear-gradient(135deg,#9B7BC8,#3D1F8A)',
+                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 13, fontWeight: 700, zIndex: 2,
+                boxShadow: '0 0 16px rgba(155,123,200,0.7)',
+              }}>GO</div>
             </div>
 
           </div>
