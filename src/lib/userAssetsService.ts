@@ -15,6 +15,16 @@ export interface AssetFact {
   confidence: 'clear' | 'needs-follow-up';
   source_excerpt?: string;
   captured_at: string; // ISO string
+  // Verification mirrors CapturedItem so the dashboard stays in sync
+  verification_status?: 'unverified' | 'verified' | 'disputed';
+  verified_by_role?: string;
+  verified_at?: string; // ISO string
+}
+
+// ─── Readiness history snapshot ───────────────────────────────────────────────
+export interface ReadinessSnapshotRow {
+  date: string;  // 'YYYY-MM-DD'
+  score: number; // 0–100
 }
 
 // ─── Full user_assets row ────────────────────────────────────────────────────
@@ -30,6 +40,7 @@ export interface UserAssets {
   key_contacts: AssetFact[];
   care_wishes: AssetFact[];
   completion_score: number;
+  readiness_history: ReadinessSnapshotRow[];
   last_session_id?: string;
   last_updated_at: string;
 }
@@ -42,15 +53,19 @@ export type ExtractedDataSourceType =
   | 'manual';
 
 export interface ExtractedFact {
+  item_id?: string;       // CapturedItem.id — links DB row back to runtime state
   family_id: string;
   session_id?: string | null;
   category: string;
   field_name?: string;
   value_json: Record<string, unknown>;
-  confidence?: number;        // 0–1 numeric
+  confidence?: number;    // 0–1 numeric
   source_type?: ExtractedDataSourceType;
   source_excerpt?: string;
   needs_review?: boolean;
+  verification_status?: 'unverified' | 'verified' | 'disputed';
+  verified_by_role?: string;
+  verified_at?: string;
 }
 
 // ─── Session row ─────────────────────────────────────────────────────────────
@@ -95,18 +110,25 @@ export async function upsertUserAssets(assets: Omit<UserAssets, 'id'>): Promise<
   }
 }
 
-// ─── insertExtractedFact ──────────────────────────────────────────────────────
-export async function insertExtractedFact(fact: ExtractedFact): Promise<void> {
-  const { error } = await supabase.from('extracted_data').insert({
-    ...fact,
-    confidence: fact.confidence ?? 1.0,
-    source_type: fact.source_type ?? 'claude_postprocess',
-    needs_review: fact.needs_review ?? false,
-  });
+// ─── updateReadinessHistory ───────────────────────────────────────────────────
+// Merges today's score into the persisted readiness_history on user_assets.
+export async function updateReadinessHistory(
+  familyId: string,
+  history: ReadinessSnapshotRow[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_assets')
+    .upsert(
+      {
+        family_id: familyId,
+        readiness_history: history,
+        last_updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'family_id' }
+    );
 
   if (error) {
-    // Non-fatal — log but don't block the UI
-    console.warn('insertExtractedFact error:', error.message);
+    console.warn('updateReadinessHistory error:', error.message);
   }
 }
 
@@ -119,11 +141,38 @@ export async function insertExtractedFacts(facts: ExtractedFact[]): Promise<void
     confidence: f.confidence ?? 1.0,
     source_type: f.source_type ?? 'claude_postprocess',
     needs_review: f.needs_review ?? false,
+    verification_status: f.verification_status ?? 'unverified',
   }));
 
   const { error } = await supabase.from('extracted_data').insert(rows);
   if (error) {
     console.warn('insertExtractedFacts error:', error.message);
+  }
+}
+
+// ─── updateExtractedDataVerification ─────────────────────────────────────────
+// Called when a user marks a captured item as verified/disputed/unverified.
+// Matches the row by item_id (the CapturedItem.id stored at insert time).
+export async function updateExtractedDataVerification(
+  familyId: string,
+  itemId: string,
+  status: 'verified' | 'disputed' | 'unverified',
+  verifiedByRole?: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('extracted_data')
+    .update({
+      verification_status: status,
+      verified_by_role: verifiedByRole ?? null,
+      verified_at: status === 'unverified' ? null : now,
+    })
+    .eq('family_id', familyId)
+    .eq('item_id', itemId);
+
+  if (error) {
+    console.warn('updateExtractedDataVerification error:', error.message);
   }
 }
 
@@ -161,19 +210,24 @@ export async function upsertSession(session: SessionRow): Promise<string | null>
 
 // ─── buildUserAssetsFromItems ─────────────────────────────────────────────────
 // Converts the runtime CapturedItem[] array into a UserAssets object ready
-// to upsert. Import CapturedItem type inline to avoid circular dependency.
+// to upsert. Preserves verification_status so the DB stays in sync.
 interface CapturedItemLike {
+  id: string;
   category: string;
   content: string;
   confidence: 'clear' | 'needs-follow-up';
   sourceQuote?: string;
   timestamp: Date;
+  verificationStatus?: 'verified' | 'disputed' | 'unverified';
+  verifiedByRole?: string;
+  verifiedAt?: Date;
 }
 
 export function buildUserAssetsFromItems(
   items: CapturedItemLike[],
   familyId: string,
-  lastSessionId?: string
+  lastSessionId?: string,
+  readinessHistory?: ReadinessSnapshotRow[]
 ): Omit<UserAssets, 'id'> {
   const toFacts = (cat: string): AssetFact[] =>
     items
@@ -183,15 +237,14 @@ export function buildUserAssetsFromItems(
         confidence: i.confidence,
         source_excerpt: i.sourceQuote,
         captured_at: new Date(i.timestamp).toISOString(),
+        verification_status: i.verificationStatus ?? 'unverified',
+        verified_by_role: i.verifiedByRole,
+        verified_at: i.verifiedAt ? new Date(i.verifiedAt).toISOString() : undefined,
       }));
 
   const docs = items.filter(i => i.category === 'documents');
-  const lpaItem = docs.find(i =>
-    /power of attorney|lpa/i.test(i.content)
-  );
-  const willItem = docs.find(i =>
-    /\bwill\b|testament/i.test(i.content)
-  );
+  const lpaItem = docs.find(i => /power of attorney|lpa/i.test(i.content));
+  const willItem = docs.find(i => /\bwill\b|testament/i.test(i.content));
   const pensionItem = items.find(i =>
     i.category === 'financial_accounts' && /pension/i.test(i.content)
   );
@@ -213,15 +266,29 @@ export function buildUserAssetsFromItems(
     key_contacts: toFacts('key_contacts'),
     care_wishes: toFacts('care_wishes'),
     pension_status: pensionItem
-      ? { content: pensionItem.content, confidence: pensionItem.confidence }
+      ? {
+          content: pensionItem.content,
+          confidence: pensionItem.confidence,
+          verification_status: pensionItem.verificationStatus ?? 'unverified',
+        }
       : {},
     lpa_confirmed: lpaItem
-      ? { confirmed: true, content: lpaItem.content, confidence: lpaItem.confidence }
+      ? {
+          confirmed: true,
+          content: lpaItem.content,
+          confidence: lpaItem.confidence,
+          verification_status: lpaItem.verificationStatus ?? 'unverified',
+        }
       : {},
     will_location: willItem
-      ? { content: willItem.content, confidence: willItem.confidence }
+      ? {
+          content: willItem.content,
+          confidence: willItem.confidence,
+          verification_status: willItem.verificationStatus ?? 'unverified',
+        }
       : {},
     completion_score: score,
+    readiness_history: readinessHistory ?? [],
     last_session_id: lastSessionId,
     last_updated_at: new Date().toISOString(),
   };
@@ -229,6 +296,7 @@ export function buildUserAssetsFromItems(
 
 // ─── buildExtractedFacts ──────────────────────────────────────────────────────
 // Converts CapturedItems to ExtractedFact rows for the extracted_data table.
+// item_id stores the CapturedItem.id so verification updates can find the row.
 export function buildExtractedFacts(
   items: CapturedItemLike[],
   familyId: string,
@@ -236,6 +304,7 @@ export function buildExtractedFacts(
   sourceType: ExtractedDataSourceType = 'claude_postprocess'
 ): ExtractedFact[] {
   return items.map(item => ({
+    item_id: item.id,
     family_id: familyId,
     session_id: sessionId ?? undefined,
     category: item.category,
@@ -247,5 +316,8 @@ export function buildExtractedFacts(
     source_type: sourceType,
     source_excerpt: item.sourceQuote,
     needs_review: item.confidence === 'needs-follow-up',
+    verification_status: item.verificationStatus ?? 'unverified',
+    verified_by_role: item.verifiedByRole,
+    verified_at: item.verifiedAt ? new Date(item.verifiedAt).toISOString() : undefined,
   }));
 }

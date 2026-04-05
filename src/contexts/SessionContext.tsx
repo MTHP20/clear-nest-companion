@@ -7,6 +7,8 @@ import {
   insertExtractedFacts,
   buildUserAssetsFromItems,
   buildExtractedFacts,
+  updateExtractedDataVerification,
+  updateReadinessHistory,
 } from '@/lib/userAssetsService';
 
 export interface CapturedItem {
@@ -202,7 +204,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { saveLS('cn-captured-items', capturedItems); }, [capturedItems]);
   useEffect(() => { saveLS('cn-action-items', actionItems); }, [actionItems]);
-  useEffect(() => { saveLS('cn-readiness-history', readinessHistory); }, [readinessHistory]);
+  useEffect(() => {
+    saveLS('cn-readiness-history', readinessHistory);
+    // Persist to Supabase so the chart survives across devices/sessions
+    if (familyId && familyId !== 'unknown' && readinessHistory.length > 0) {
+      updateReadinessHistory(familyId, readinessHistory).catch(() => {
+        // Non-fatal — localStorage is the fallback
+      });
+    }
+  }, [readinessHistory, familyId]);
 
   useEffect(() => {
     if (capturedItems.length === 0) return;
@@ -246,15 +256,41 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const updateCapturedVerification = useCallback(
     (id: string, status: 'verified' | 'disputed' | 'unverified') => {
+      const now = new Date();
+      const role = 'family';
+
+      // Update runtime state
       setCapturedItems(prev =>
         prev.map(i =>
           i.id === id
-            ? { ...i, verificationStatus: status, verifiedByRole: 'dad', verifiedAt: new Date() }
+            ? { ...i, verificationStatus: status, verifiedByRole: role, verifiedAt: now }
             : i
         )
       );
+
+      // Persist to extracted_data in Supabase (non-blocking)
+      if (familyId && familyId !== 'unknown') {
+        updateExtractedDataVerification(familyId, id, status, role).catch(err =>
+          console.warn('Failed to persist verification to Supabase:', err)
+        );
+
+        // Also reflect the verification change in user_assets JSONB arrays
+        // by re-building from the updated item list (deferred to next tick so state has settled)
+        setTimeout(() => {
+          const allItems = loadLS<CapturedItem[]>('cn-captured-items', []);
+          const updatedItems = allItems.map(i =>
+            i.id === id
+              ? { ...i, verificationStatus: status, verifiedByRole: role, verifiedAt: now }
+              : i
+          );
+          const assets = buildUserAssetsFromItems(updatedItems, familyId, undefined, undefined);
+          upsertUserAssets(assets).catch(err =>
+            console.warn('Failed to update user_assets after verification:', err)
+          );
+        }, 0);
+      }
     },
-    []
+    [familyId]
   );
 
   // ─── ElevenLabs tool call handler (live session) ──────────────────────────
@@ -589,8 +625,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           await insertExtractedFacts(facts);
         }
 
-        // 4) Upsert user_assets with the full aggregated state
-        const assets = buildUserAssetsFromItems(allItems, familyId, sessionRowId ?? undefined);
+        // 4) Upsert user_assets with the full aggregated state (including readiness history)
+        const currentHistory = loadLS<ReadinessSnapshot[]>('cn-readiness-history', []);
+        const assets = buildUserAssetsFromItems(allItems, familyId, sessionRowId ?? undefined, currentHistory);
         await upsertUserAssets(assets);
 
         console.log('☁️ Structured data persisted to Supabase');
@@ -649,7 +686,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const assets = await getUserAssets(familyId);
 
       if (assets) {
-        type AssetFact = { content: string; confidence: string; source_excerpt?: string };
+        type AssetFact = {
+          content: string;
+          confidence: string;
+          source_excerpt?: string;
+          verification_status?: 'verified' | 'disputed' | 'unverified';
+          verified_by_role?: string;
+          verified_at?: string;
+        };
 
         const addFact = (id: string, category: string, fact: AssetFact) => {
           if (!fact.content?.trim()) return;
@@ -661,23 +705,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             flag: false,
             timestamp: now,
             sourceQuote: fact.source_excerpt,
+            verificationStatus: fact.verification_status ?? 'unverified',
+            verifiedByRole: fact.verified_by_role,
+            verifiedAt: fact.verified_at ? new Date(fact.verified_at) : undefined,
           });
         };
 
         (assets.bank_accounts ?? []).forEach((f, i) =>
-          addFact(`ua-bank-${i}`, 'bank_accounts', f)
+          addFact(`ua-bank-${i}`, 'bank_accounts', f as AssetFact)
         );
         (assets.financial_accounts ?? []).forEach((f, i) =>
-          addFact(`ua-fin-${i}`, 'financial_accounts', f)
+          addFact(`ua-fin-${i}`, 'financial_accounts', f as AssetFact)
         );
         (assets.property_details ?? []).forEach((f, i) =>
-          addFact(`ua-prop-${i}`, 'property', f)
+          addFact(`ua-prop-${i}`, 'property', f as AssetFact)
         );
         (assets.key_contacts ?? []).forEach((f, i) =>
-          addFact(`ua-contact-${i}`, 'key_contacts', f)
+          addFact(`ua-contact-${i}`, 'key_contacts', f as AssetFact)
         );
         (assets.care_wishes ?? []).forEach((f, i) =>
-          addFact(`ua-care-${i}`, 'care_wishes', f)
+          addFact(`ua-care-${i}`, 'care_wishes', f as AssetFact)
         );
 
         if ((assets.lpa_confirmed as AssetFact)?.content) {
@@ -688,6 +735,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
         if ((assets.pension_status as AssetFact)?.content) {
           addFact('ua-pension', 'financial_accounts', assets.pension_status as AssetFact);
+        }
+
+        // Restore readiness history if localStorage is empty or server has more
+        if (assets.readiness_history?.length) {
+          setReadinessHistory(prev => {
+            if (prev.length >= assets.readiness_history.length) return prev;
+            return assets.readiness_history;
+          });
         }
 
         console.log('☁️ user_assets hydrated into dashboard');

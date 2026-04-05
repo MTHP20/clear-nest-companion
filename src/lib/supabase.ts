@@ -31,6 +31,7 @@ export interface Database {
       extracted_data: {
         Row: {
           id: string;
+          item_id: string | null;
           family_id: string;
           session_id: string | null;
           category: string;
@@ -40,6 +41,9 @@ export interface Database {
           source_type: 'elevenlabs_live' | 'claude_postprocess' | 'fallback_keyword' | 'manual';
           source_excerpt: string | null;
           needs_review: boolean;
+          verification_status: 'unverified' | 'verified' | 'disputed';
+          verified_by_role: string | null;
+          verified_at: string | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['extracted_data']['Row'], 'id' | 'created_at'>;
@@ -59,6 +63,7 @@ export interface Database {
           key_contacts: Array<{ content: string; confidence: string; source_excerpt?: string; captured_at: string }>;
           care_wishes: Array<{ content: string; confidence: string; source_excerpt?: string; captured_at: string }>;
           completion_score: number;
+          readiness_history: Array<{ date: string; score: number }>;
           last_session_id: string | null;
           last_updated_at: string;
         };
