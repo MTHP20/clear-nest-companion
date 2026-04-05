@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { supabase as sharedSupabase } from '@/lib/supabase';
+import {
+  getUserAssets,
+  upsertUserAssets,
+  upsertSession,
+  insertExtractedFacts,
+  buildUserAssetsFromItems,
+  buildExtractedFacts,
+} from '@/lib/userAssetsService';
 
 export interface CapturedItem {
   id: string;
@@ -547,8 +555,52 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       saveLS('cn-synced-ids-v2', [...syncedIds.current]);
     }
     console.log(`✅ Synced conversation ${conversationId}: ${items} items, ${actions} actions`);
+
+    // ── Persist to Supabase structured tables ──────────────────────────────
+    if (familyId && familyId !== 'unknown') {
+      try {
+        // 1) Upsert the session record and get its UUID
+        const transcriptText2 = ((data as { transcript?: Array<{ role: string; message?: string }> }).transcript ?? [])
+          .filter(t => t.message?.trim())
+          .map(t => `${t.role === 'agent' ? 'Clara' : parentName}: ${t.message}`)
+          .join('\n');
+
+        const sessionRowId = await upsertSession({
+          conversation_id: conversationId,
+          family_id: familyId,
+          transcript: transcriptText2.slice(0, 8000),
+          source: 'voice',
+          status: 'completed',
+          duration_seconds: (data as { metadata?: { call_duration_secs?: number } }).metadata?.call_duration_secs ?? 0,
+        });
+
+        // 2) Get the current full item list from localStorage to build facts
+        const allItems = loadLS<CapturedItem[]>('cn-captured-items', []);
+
+        // 3) Insert extracted facts for items captured in this sync
+        const newItems = allItems.filter(i =>
+          i.id.includes(conversationId) || i.id.startsWith('ai-') || i.id.startsWith('sync-') || i.id.startsWith('keyword-')
+        );
+        if (newItems.length > 0) {
+          const sourceType = newItems[0].id.startsWith('ai-') ? 'claude_postprocess'
+            : newItems[0].id.startsWith('keyword-') ? 'fallback_keyword'
+            : 'elevenlabs_live';
+          const facts = buildExtractedFacts(newItems, familyId, sessionRowId, sourceType);
+          await insertExtractedFacts(facts);
+        }
+
+        // 4) Upsert user_assets with the full aggregated state
+        const assets = buildUserAssetsFromItems(allItems, familyId, sessionRowId ?? undefined);
+        await upsertUserAssets(assets);
+
+        console.log('☁️ Structured data persisted to Supabase');
+      } catch (err) {
+        console.warn('Supabase structured persist failed (non-fatal):', err);
+      }
+    }
+
     return { items, actions, alreadySynced: false };
-  }, [addCapturedItem, addActionItem, parentName]);
+  }, [addCapturedItem, addActionItem, parentName, familyId]);
 
   // ─── Auto-sync all unsynced ElevenLabs conversations ────────────────────
   const autoSyncLatest = useCallback(async (): Promise<SyncResult | null> => {
@@ -584,13 +636,65 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [syncFromConversation]);
 
-  // ─── Supabase profile hydration ──────────────────────────────────────────
-  // After ElevenLabs sync, pull the structured profiles row from Supabase and
-  // merge any server-extracted data that isn't already in localStorage.
+  // ─── Supabase hydration from user_assets (structured) ────────────────────
+  // Reads the materialized user_assets row and merges into runtime state.
+  // Falls back to the legacy profiles table if user_assets is empty.
   const hydrateFromSupabase = useCallback(async () => {
     if (!familyId || familyId === 'unknown') return;
 
     try {
+      const now = new Date();
+
+      // ── Primary: read from user_assets ──────────────────────────────────
+      const assets = await getUserAssets(familyId);
+
+      if (assets) {
+        type AssetFact = { content: string; confidence: string; source_excerpt?: string };
+
+        const addFact = (id: string, category: string, fact: AssetFact) => {
+          if (!fact.content?.trim()) return;
+          addCapturedItem({
+            id,
+            category,
+            content: fact.content,
+            confidence: (fact.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
+            flag: false,
+            timestamp: now,
+            sourceQuote: fact.source_excerpt,
+          });
+        };
+
+        (assets.bank_accounts ?? []).forEach((f, i) =>
+          addFact(`ua-bank-${i}`, 'bank_accounts', f)
+        );
+        (assets.financial_accounts ?? []).forEach((f, i) =>
+          addFact(`ua-fin-${i}`, 'financial_accounts', f)
+        );
+        (assets.property_details ?? []).forEach((f, i) =>
+          addFact(`ua-prop-${i}`, 'property', f)
+        );
+        (assets.key_contacts ?? []).forEach((f, i) =>
+          addFact(`ua-contact-${i}`, 'key_contacts', f)
+        );
+        (assets.care_wishes ?? []).forEach((f, i) =>
+          addFact(`ua-care-${i}`, 'care_wishes', f)
+        );
+
+        if ((assets.lpa_confirmed as AssetFact)?.content) {
+          addFact('ua-lpa', 'documents', assets.lpa_confirmed as AssetFact);
+        }
+        if ((assets.will_location as AssetFact)?.content) {
+          addFact('ua-will', 'documents', assets.will_location as AssetFact);
+        }
+        if ((assets.pension_status as AssetFact)?.content) {
+          addFact('ua-pension', 'financial_accounts', assets.pension_status as AssetFact);
+        }
+
+        console.log('☁️ user_assets hydrated into dashboard');
+        return;
+      }
+
+      // ── Fallback: legacy profiles table ─────────────────────────────────
       const { data, error } = await supabase
         .from('profiles')
         .select('bank_accounts, financial_accounts, property_details, pension_status, will_location, key_contacts, care_wishes, lpa_confirmed')
@@ -599,9 +703,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       if (error || !data) return;
 
-      const now = new Date();
-
-      // Convert each structured field into CapturedItems and merge
       type BankRow = { bank_name: string; account_type: string; notes: string };
       for (const row of (data.bank_accounts ?? []) as BankRow[]) {
         if (row.bank_name) {
@@ -609,9 +710,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             id: `sb-bank-${row.bank_name.toLowerCase().replace(/\s+/g, '-')}`,
             category: 'bank_accounts',
             content: `${row.bank_name} — ${row.account_type}${row.notes ? `. ${row.notes}` : ''}`,
-            confidence: 'clear',
-            flag: false,
-            timestamp: now,
+            confidence: 'clear', flag: false, timestamp: now,
           });
         }
       }
@@ -623,9 +722,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             id: `sb-fin-${(row.provider || row.type).toLowerCase().replace(/\s+/g, '-')}`,
             category: 'financial_accounts',
             content: `${row.type}${row.provider ? ` with ${row.provider}` : ''}${row.notes ? `. ${row.notes}` : ''}`,
-            confidence: 'clear',
-            flag: false,
-            timestamp: now,
+            confidence: 'clear', flag: false, timestamp: now,
           });
         }
       }
@@ -637,9 +734,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             id: `sb-prop-${row.description.slice(0, 20).toLowerCase().replace(/\s+/g, '-')}`,
             category: 'property',
             content: `${row.description} (${row.ownership_type})${row.notes ? `. ${row.notes}` : ''}`,
-            confidence: 'clear',
-            flag: false,
-            timestamp: now,
+            confidence: 'clear', flag: false, timestamp: now,
           });
         }
       }
@@ -651,58 +746,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             id: `sb-contact-${row.name.toLowerCase().replace(/\s+/g, '-')}`,
             category: 'key_contacts',
             content: `${row.name} (${row.role})${row.phone ? ` — ${row.phone}` : ''}`,
-            confidence: 'clear',
-            flag: false,
-            timestamp: now,
+            confidence: 'clear', flag: false, timestamp: now,
           });
         }
       }
 
       if (data.pension_status) {
-        addCapturedItem({
-          id: 'sb-pension',
-          category: 'financial_accounts',
-          content: data.pension_status,
-          confidence: 'clear',
-          flag: false,
-          timestamp: now,
-        });
+        addCapturedItem({ id: 'sb-pension', category: 'financial_accounts', content: data.pension_status as string, confidence: 'clear', flag: false, timestamp: now });
       }
-
       if (data.will_location) {
-        addCapturedItem({
-          id: 'sb-will',
-          category: 'documents',
-          content: `Will stored at: ${data.will_location}`,
-          confidence: 'clear',
-          flag: false,
-          timestamp: now,
-        });
+        addCapturedItem({ id: 'sb-will', category: 'documents', content: `Will stored at: ${data.will_location}`, confidence: 'clear', flag: false, timestamp: now });
       }
-
       if (data.lpa_confirmed) {
-        addCapturedItem({
-          id: 'sb-lpa',
-          category: 'documents',
-          content: 'Lasting Power of Attorney is confirmed and signed.',
-          confidence: 'clear',
-          flag: false,
-          timestamp: now,
-        });
+        addCapturedItem({ id: 'sb-lpa', category: 'documents', content: 'Lasting Power of Attorney is confirmed and signed.', confidence: 'clear', flag: false, timestamp: now });
       }
-
       if (data.care_wishes) {
-        addCapturedItem({
-          id: 'sb-care',
-          category: 'care_wishes',
-          content: data.care_wishes,
-          confidence: 'clear',
-          flag: false,
-          timestamp: now,
-        });
+        addCapturedItem({ id: 'sb-care', category: 'care_wishes', content: data.care_wishes as string, confidence: 'clear', flag: false, timestamp: now });
       }
 
-      console.log('☁️ Supabase profile hydrated into dashboard');
+      console.log('☁️ Legacy profiles hydrated into dashboard');
     } catch (err) {
       console.warn('Supabase hydration failed (non-fatal):', err);
     }
