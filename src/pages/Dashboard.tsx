@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { useSession } from '@/contexts/SessionContext';
@@ -252,6 +253,7 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 const Dashboard = () => {
+  const isMobile = useIsMobile();
   const [theme, setTheme] = useState<'default' | 'dark' | 'orange'>('default');
   const C = THEME_COLORS[theme];
   const [activePage, setActivePage] = useState<NavId>('overview');
@@ -380,7 +382,7 @@ const Dashboard = () => {
 
         {/* Top header — light glass panel */}
         <header style={{
-          padding: '18px 48px',
+          padding: isMobile ? '12px 16px' : '18px 48px',
           background: C.headerBg,
           backdropFilter: 'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
@@ -389,21 +391,21 @@ const Dashboard = () => {
         }}>
 
           {/* Desktop + mobile: three-column layout */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 20, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr auto' : '1fr auto auto', gap: isMobile ? 10 : 20, alignItems: 'center' }}>
 
             {/* Left: title + 4 stats */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Page title row */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                fontFamily: FRAUNCES, fontSize: 42, fontWeight: 900,
+                fontFamily: FRAUNCES, fontSize: isMobile ? 22 : 42, fontWeight: 900,
                 color: C.headerText, lineHeight: 1,
               }}>
                 {parentName}'s Dashboard
               </div>
 
               {/* 4 stat pills */}
-              <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: isMobile ? 16 : 36, flexWrap: 'wrap' }}>
                 {statPills.map(s => (
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{
@@ -481,7 +483,7 @@ const Dashboard = () => {
             {/* Right: Family Bubble Widget — same 230px width as old Chat to Clara card */}
             <div style={{
               width: 230, flexShrink: 0,
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              display: isMobile ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center',
               justifyContent: 'center', gap: 6,
               padding: '14px 0 16px',
             }}>
@@ -587,7 +589,7 @@ const Dashboard = () => {
         )}
 
         {/* Page content */}
-        <main style={{ padding: `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined }}>
+        <main style={{ padding: isMobile ? `14px 14px ${advancedMode ? '14px' : '76px'}` : `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined }}>
           {renderPage()}
         </main>
       </div>

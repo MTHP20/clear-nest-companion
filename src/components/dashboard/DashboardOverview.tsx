@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
@@ -544,6 +545,7 @@ export default function DashboardOverview({
   onNavigatePage = () => {},
 }: DashboardOverviewProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const {
     capturedItems,
     actionItems,
@@ -658,10 +660,10 @@ export default function DashboardOverview({
     };
 
     return (
-      <div className="cn-stagger" style={{ display: 'grid', gridTemplateColumns: '1fr 230px', gap: 18 }}>
+      <div className="cn-stagger" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 230px', gap: 18 }}>
 
         {/* Row 1 col 1: 6 nav panels 3×2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10, minHeight: 'clamp(260px, 30vh, 340px)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10, minHeight: isMobile ? 'auto' : 'clamp(260px, 30vh, 340px)' }}>
           {NAV_PANELS.map((panel, i) => {
             const isActive = panel.category === categoryFilter;
             const isHov = hoveredPanel === i;
@@ -677,7 +679,7 @@ export default function DashboardOverview({
                   border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
                   borderRadius: 16,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 10, padding: '20px 10px', cursor: 'pointer',
+                  gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
                   transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
                   transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
                   boxShadow: isActive
@@ -686,7 +688,7 @@ export default function DashboardOverview({
                 }}
               >
                 <panel.Icon style={{
-                  width: 42, height: 42,
+                  width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
                   color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
                   filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
                   transition: 'transform 0.2s, filter 0.2s, color 0.2s',
@@ -694,10 +696,10 @@ export default function DashboardOverview({
                   display: 'block', margin: '0 auto',
                 }} />
                 <span style={{
-                  fontSize: 10, fontWeight: 600,
+                  fontSize: isMobile ? 11 : 10, fontWeight: 600,
                   color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
                   textAlign: 'center', lineHeight: 1.35,
-                  opacity: isHov || isActive ? 1 : 0,
+                  opacity: isMobile || isHov || isActive ? 1 : 0,
                   transition: 'opacity 0.2s, color 0.2s',
                   fontFamily: 'Figtree, system-ui, sans-serif',
                 }}>{panel.label}</span>
@@ -786,7 +788,7 @@ export default function DashboardOverview({
         </div>
 
         {/* Row 2: Recently Captured + Readiness Score — equal width, spans both columns */}
-        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18 }}>
 
           {/* Recently Captured */}
           <div style={{
@@ -903,7 +905,7 @@ export default function DashboardOverview({
     <div className="cn-stagger">
 
       {/* Activity + Momentum + Readiness row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 230px', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 230px', gap: 16, marginBottom: 16 }}>
         <ActivityChart sessions={sessions} />
         <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
         <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
@@ -968,7 +970,7 @@ export default function DashboardOverview({
         };
 
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 230px', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 230px', gap: 18 }}>
 
             {/* Recently Captured sliding card */}
             <div style={{
@@ -1101,7 +1103,7 @@ export default function DashboardOverview({
             </div>
 
             {/* Nav Panels 3×2 — column 2 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
               {NAV_PANELS.map((panel, i) => {
                 const isActive = panel.category === categoryFilter;
                 const isHov = hoveredPanel === i;
@@ -1117,7 +1119,7 @@ export default function DashboardOverview({
                       border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
                       borderRadius: 16,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      gap: 10, padding: '20px 10px', cursor: 'pointer',
+                      gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
                       transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
                       transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
                       boxShadow: isActive
@@ -1126,7 +1128,7 @@ export default function DashboardOverview({
                     }}
                   >
                     <panel.Icon style={{
-                      width: 64, height: 64,
+                      width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
                       color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
                       filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
                       transition: 'transform 0.2s, filter 0.2s, color 0.2s',
@@ -1134,10 +1136,10 @@ export default function DashboardOverview({
                       display: 'block', margin: '0 auto',
                     }} />
                     <span style={{
-                      fontSize: 10, fontWeight: 600,
+                      fontSize: isMobile ? 11 : 10, fontWeight: 600,
                       color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
                       textAlign: 'center', lineHeight: 1.35,
-                      opacity: isHov || isActive ? 1 : 0,
+                      opacity: isMobile || isHov || isActive ? 1 : 0,
                       transition: 'opacity 0.2s, color 0.2s',
                       fontFamily: 'Figtree, system-ui, sans-serif',
                     }}>{panel.label}</span>
