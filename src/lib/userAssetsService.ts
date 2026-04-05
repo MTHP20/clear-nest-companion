@@ -324,6 +324,82 @@ export async function removePinnedSection(
   }
 }
 
+// ─── getExtractedItems ───────────────────────────────────────────────────────
+// Reads all extracted_data rows for a family as CapturedItem-compatible objects.
+// This is the primary boot source — ensures real item_ids so deletes work.
+export interface ExtractedItemRow {
+  id: string;              // extracted_data.id (UUID) — used as stable DB key
+  item_id: string | null;  // original CapturedItem.id if set
+  family_id: string;
+  session_id: string | null;
+  category: string;
+  value_json: Record<string, unknown>;
+  confidence: number;
+  source_type: string;
+  source_excerpt: string | null;
+  needs_review: boolean;
+  verification_status: 'unverified' | 'verified' | 'disputed';
+  verified_by_role: string | null;
+  verified_at: string | null;
+  created_at: string;
+}
+
+export async function getExtractedItems(familyId: string): Promise<ExtractedItemRow[]> {
+  const { data, error } = await supabase
+    .from('extracted_data')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('getExtractedItems error:', error.message);
+    return [];
+  }
+  return (data ?? []) as ExtractedItemRow[];
+}
+
+// ─── getVerifiedItems ─────────────────────────────────────────────────────────
+// Returns all extracted_data rows with verification_status = 'verified'.
+// Used by the Conversations page "Recently Captured" panel.
+export async function getVerifiedItems(familyId: string): Promise<ExtractedItemRow[]> {
+  const { data, error } = await supabase
+    .from('extracted_data')
+    .select('*')
+    .eq('family_id', familyId)
+    .eq('verification_status', 'verified')
+    .order('verified_at', { ascending: false });
+
+  if (error) {
+    console.warn('getVerifiedItems error:', error.message);
+    return [];
+  }
+  return (data ?? []) as ExtractedItemRow[];
+}
+
+// ─── insertSingleExtractedFact ────────────────────────────────────────────────
+// Writes one captured item to extracted_data immediately (called from addCapturedItem).
+export async function insertSingleExtractedFact(fact: ExtractedFact): Promise<void> {
+  const { error } = await supabase.from('extracted_data').insert({
+    item_id: fact.item_id,
+    family_id: fact.family_id,
+    session_id: fact.session_id ?? null,
+    category: fact.category,
+    field_name: fact.field_name ?? null,
+    value_json: fact.value_json,
+    confidence: fact.confidence ?? 1.0,
+    source_type: fact.source_type ?? 'elevenlabs_live',
+    source_excerpt: fact.source_excerpt ?? null,
+    needs_review: fact.needs_review ?? false,
+    verification_status: fact.verification_status ?? 'unverified',
+  });
+  if (error) {
+    // Duplicate item_id is fine (idempotent) — ignore unique constraint errors
+    if (error.code !== '23505') {
+      console.warn('insertSingleExtractedFact error:', error.message);
+    }
+  }
+}
+
 // ─── deleteExtractedFact ──────────────────────────────────────────────────────
 // Permanently removes an extracted_data row by its item_id (CapturedItem.id).
 // Called when the user dismisses a captured item.

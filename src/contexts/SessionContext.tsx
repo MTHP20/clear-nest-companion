@@ -5,11 +5,13 @@ import {
   upsertUserAssets,
   upsertSession,
   insertExtractedFacts,
+  insertSingleExtractedFact,
   buildUserAssetsFromItems,
   buildExtractedFacts,
   updateExtractedDataVerification,
   updateReadinessHistory,
   deleteExtractedFact,
+  getExtractedItems,
 } from '@/lib/userAssetsService';
 
 export interface CapturedItem {
@@ -246,7 +248,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (prev.some(e => e.category === item.category && e.content.trim() === item.content.trim())) return prev;
       return [item, ...prev];
     });
-  }, []);
+
+    // Persist to extracted_data so it survives across sessions and devices.
+    // Non-blocking — localStorage is the local fallback if this fails.
+    if (familyId && familyId !== 'unknown') {
+      insertSingleExtractedFact({
+        item_id: item.id,
+        family_id: familyId,
+        category: item.category,
+        value_json: { content: item.content, confidence: item.confidence },
+        confidence: item.confidence === 'clear' ? 1.0 : 0.6,
+        source_type: item.id.startsWith('ai-') ? 'claude_postprocess'
+          : item.id.startsWith('keyword-') ? 'fallback_keyword'
+          : item.id.startsWith('sync-') ? 'elevenlabs_live'
+          : 'elevenlabs_live',
+        source_excerpt: item.sourceQuote,
+        needs_review: item.flag || item.confidence === 'needs-follow-up',
+        verification_status: item.verificationStatus ?? 'unverified',
+      }).catch(() => { /* non-fatal */ });
+    }
+  }, [familyId]);
 
   const addActionItem = useCallback((item: ActionItem) => {
     setActionItems(prev => [item, ...prev]);
@@ -699,71 +720,55 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [syncFromConversation]);
 
-  // ─── Supabase hydration from user_assets (structured) ────────────────────
-  // Reads the materialized user_assets row and merges into runtime state.
-  // Falls back to the legacy profiles table if user_assets is empty.
+  // ─── Supabase hydration from extracted_data ─────────────────────────────
+  // Primary source of truth for capturedItems.
+  // Each row's item_id (or DB id as fallback) becomes CapturedItem.id so
+  // that deletes and verification updates find the right row.
   const hydrateFromSupabase = useCallback(async () => {
     if (!familyId || familyId === 'unknown') return;
 
     try {
-      const now = new Date();
+      // ── Primary: extracted_data table ────────────────────────────────────
+      const rows = await getExtractedItems(familyId);
 
-      // ── Primary: read from user_assets ──────────────────────────────────
-      const assets = await getUserAssets(familyId);
+      if (rows.length > 0) {
+        for (const row of rows) {
+          const content = (row.value_json as { content?: string })?.content ?? '';
+          if (!content.trim()) continue;
 
-      if (assets) {
-        type AssetFact = {
-          content: string;
-          confidence: string;
-          source_excerpt?: string;
-          verification_status?: 'verified' | 'disputed' | 'unverified';
-          verified_by_role?: string;
-          verified_at?: string;
-        };
+          // Use item_id if set (original CapturedItem.id), else DB UUID
+          const id = row.item_id ?? row.id;
 
-        const addFact = (id: string, category: string, fact: AssetFact) => {
-          if (!fact.content?.trim()) return;
           addCapturedItem({
             id,
-            category,
-            content: fact.content,
-            confidence: (fact.confidence as 'clear' | 'needs-follow-up') ?? 'clear',
-            flag: false,
-            timestamp: now,
-            sourceQuote: fact.source_excerpt,
-            verificationStatus: fact.verification_status ?? 'unverified',
-            verifiedByRole: fact.verified_by_role,
-            verifiedAt: fact.verified_at ? new Date(fact.verified_at) : undefined,
+            category: row.category,
+            content,
+            confidence: row.confidence >= 0.8 ? 'clear' : 'needs-follow-up',
+            flag: row.needs_review,
+            timestamp: new Date(row.created_at),
+            sourceQuote: row.source_excerpt ?? undefined,
+            verificationStatus: row.verification_status ?? 'unverified',
+            verifiedByRole: row.verified_by_role ?? undefined,
+            verifiedAt: row.verified_at ? new Date(row.verified_at) : undefined,
           });
-        };
-
-        (assets.bank_accounts ?? []).forEach((f, i) =>
-          addFact(`ua-bank-${i}`, 'bank_accounts', f as AssetFact)
-        );
-        (assets.financial_accounts ?? []).forEach((f, i) =>
-          addFact(`ua-fin-${i}`, 'financial_accounts', f as AssetFact)
-        );
-        (assets.property_details ?? []).forEach((f, i) =>
-          addFact(`ua-prop-${i}`, 'property', f as AssetFact)
-        );
-        (assets.key_contacts ?? []).forEach((f, i) =>
-          addFact(`ua-contact-${i}`, 'key_contacts', f as AssetFact)
-        );
-        (assets.care_wishes ?? []).forEach((f, i) =>
-          addFact(`ua-care-${i}`, 'care_wishes', f as AssetFact)
-        );
-
-        if ((assets.lpa_confirmed as AssetFact)?.content) {
-          addFact('ua-lpa', 'documents', assets.lpa_confirmed as AssetFact);
         }
-        if ((assets.will_location as AssetFact)?.content) {
-          addFact('ua-will', 'documents', assets.will_location as AssetFact);
-        }
-        if ((assets.pension_status as AssetFact)?.content) {
-          addFact('ua-pension', 'financial_accounts', assets.pension_status as AssetFact);
-        }
+        console.log(`☁️ extracted_data hydrated ${rows.length} items into dashboard`);
 
-        // Restore readiness history if localStorage is empty or server has more
+        // Also restore readiness history from user_assets if available
+        const assets = await getUserAssets(familyId);
+        if (assets?.readiness_history?.length) {
+          setReadinessHistory(prev => {
+            if (prev.length >= assets.readiness_history.length) return prev;
+            return assets.readiness_history;
+          });
+        }
+        return;
+      }
+
+      // ── Fallback: user_assets (older data before extracted_data migration) ──
+      const assets = await getUserAssets(familyId);
+      if (assets) {
+        // Restore readiness history
         if (assets.readiness_history?.length) {
           setReadinessHistory(prev => {
             if (prev.length >= assets.readiness_history.length) return prev;
@@ -771,81 +776,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           });
         }
 
-        console.log('☁️ user_assets hydrated into dashboard');
-        return;
-      }
+        type AssetFact = { content: string; confidence: string; source_excerpt?: string };
+        const now = new Date();
+        const addFact = (id: string, category: string, fact: AssetFact) => {
+          if (!fact.content?.trim()) return;
+          addCapturedItem({ id, category, content: fact.content, confidence: (fact.confidence as 'clear' | 'needs-follow-up') ?? 'clear', flag: false, timestamp: now, sourceQuote: fact.source_excerpt });
+        };
 
-      // ── Fallback: legacy profiles table ─────────────────────────────────
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('bank_accounts, financial_accounts, property_details, pension_status, will_location, key_contacts, care_wishes, lpa_confirmed')
-        .eq('family_id', familyId)
-        .maybeSingle();
+        (assets.bank_accounts ?? []).forEach((f, i) => addFact(`ua-bank-${i}`, 'bank_accounts', f as AssetFact));
+        (assets.financial_accounts ?? []).forEach((f, i) => addFact(`ua-fin-${i}`, 'financial_accounts', f as AssetFact));
+        (assets.property_details ?? []).forEach((f, i) => addFact(`ua-prop-${i}`, 'property', f as AssetFact));
+        (assets.key_contacts ?? []).forEach((f, i) => addFact(`ua-contact-${i}`, 'key_contacts', f as AssetFact));
+        (assets.care_wishes ?? []).forEach((f, i) => addFact(`ua-care-${i}`, 'care_wishes', f as AssetFact));
 
-      if (error || !data) return;
+        if ((assets.lpa_confirmed as AssetFact)?.content) addFact('ua-lpa', 'documents', assets.lpa_confirmed as AssetFact);
+        if ((assets.will_location as AssetFact)?.content) addFact('ua-will', 'documents', assets.will_location as AssetFact);
+        if ((assets.pension_status as AssetFact)?.content) addFact('ua-pension', 'financial_accounts', assets.pension_status as AssetFact);
 
-      type BankRow = { bank_name: string; account_type: string; notes: string };
-      for (const row of (data.bank_accounts ?? []) as BankRow[]) {
-        if (row.bank_name) {
-          addCapturedItem({
-            id: `sb-bank-${row.bank_name.toLowerCase().replace(/\s+/g, '-')}`,
-            category: 'bank_accounts',
-            content: `${row.bank_name} — ${row.account_type}${row.notes ? `. ${row.notes}` : ''}`,
-            confidence: 'clear', flag: false, timestamp: now,
-          });
-        }
+        console.log('☁️ user_assets fallback hydrated into dashboard');
       }
-
-      type FinRow = { type: string; provider: string; notes: string };
-      for (const row of (data.financial_accounts ?? []) as FinRow[]) {
-        if (row.type || row.provider) {
-          addCapturedItem({
-            id: `sb-fin-${(row.provider || row.type).toLowerCase().replace(/\s+/g, '-')}`,
-            category: 'financial_accounts',
-            content: `${row.type}${row.provider ? ` with ${row.provider}` : ''}${row.notes ? `. ${row.notes}` : ''}`,
-            confidence: 'clear', flag: false, timestamp: now,
-          });
-        }
-      }
-
-      type PropRow = { description: string; ownership_type: string; notes: string };
-      for (const row of (data.property_details ?? []) as PropRow[]) {
-        if (row.description) {
-          addCapturedItem({
-            id: `sb-prop-${row.description.slice(0, 20).toLowerCase().replace(/\s+/g, '-')}`,
-            category: 'property',
-            content: `${row.description} (${row.ownership_type})${row.notes ? `. ${row.notes}` : ''}`,
-            confidence: 'clear', flag: false, timestamp: now,
-          });
-        }
-      }
-
-      type ContactRow = { name: string; role: string; phone?: string };
-      for (const row of (data.key_contacts ?? []) as ContactRow[]) {
-        if (row.name) {
-          addCapturedItem({
-            id: `sb-contact-${row.name.toLowerCase().replace(/\s+/g, '-')}`,
-            category: 'key_contacts',
-            content: `${row.name} (${row.role})${row.phone ? ` — ${row.phone}` : ''}`,
-            confidence: 'clear', flag: false, timestamp: now,
-          });
-        }
-      }
-
-      if (data.pension_status) {
-        addCapturedItem({ id: 'sb-pension', category: 'financial_accounts', content: data.pension_status as string, confidence: 'clear', flag: false, timestamp: now });
-      }
-      if (data.will_location) {
-        addCapturedItem({ id: 'sb-will', category: 'documents', content: `Will stored at: ${data.will_location}`, confidence: 'clear', flag: false, timestamp: now });
-      }
-      if (data.lpa_confirmed) {
-        addCapturedItem({ id: 'sb-lpa', category: 'documents', content: 'Lasting Power of Attorney is confirmed and signed.', confidence: 'clear', flag: false, timestamp: now });
-      }
-      if (data.care_wishes) {
-        addCapturedItem({ id: 'sb-care', category: 'care_wishes', content: data.care_wishes as string, confidence: 'clear', flag: false, timestamp: now });
-      }
-
-      console.log('☁️ Legacy profiles hydrated into dashboard');
     } catch (err) {
       console.warn('Supabase hydration failed (non-fatal):', err);
     }

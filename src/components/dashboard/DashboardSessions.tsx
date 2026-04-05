@@ -13,6 +13,8 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  CheckCircle2,
+  Tag,
 } from 'lucide-react';
 import {
   getSessionList,
@@ -20,10 +22,12 @@ import {
   setSessionPinned,
   addPinnedSection,
   removePinnedSection,
+  getVerifiedItems,
   type SessionListRow,
   type SessionDetailRow,
   type PinnedSection,
   type TranscriptTurn,
+  type ExtractedItemRow,
 } from '@/lib/userAssetsService';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -366,6 +370,110 @@ function TranscriptView({
   );
 }
 
+// ─── Category label map ──────────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, string> = {
+  bank_accounts: 'Bank',
+  financial_accounts: 'Finance',
+  property: 'Property',
+  documents: 'Documents',
+  key_contacts: 'Contact',
+  care_wishes: 'Care',
+  general: 'General',
+};
+
+// ─── Recently Captured panel ─────────────────────────────────────────────────
+// Shows all verified captured items for a family, loaded directly from
+// extracted_data WHERE verification_status = 'verified'.
+
+function RecentlyCapturedPanel({ familyId }: { familyId: string }) {
+  const [items, setItems] = useState<ExtractedItemRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (!familyId || familyId === 'unknown') { setLoading(false); return; }
+    getVerifiedItems(familyId)
+      .then(rows => { setItems(rows); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [familyId]);
+
+  if (!loading && items.length === 0) return null;
+
+  return (
+    <div className="cn-card mb-6 border border-primary/20">
+      {/* Header */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-4"
+      >
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+          <span className="font-body font-semibold text-foreground text-sm">
+            Recently Captured
+          </span>
+          {!loading && (
+            <span className="ml-1 text-xs font-body text-muted-foreground">
+              · {items.length} verified item{items.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        {loading
+          ? <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+          : open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        }
+      </button>
+
+      {open && !loading && (
+        <div className="border-t border-border divide-y divide-border">
+          {items.map(item => {
+            const content = (item.value_json as { content?: string })?.content ?? '';
+            const catLabel = CATEGORY_LABELS[item.category] ?? item.category.replace(/_/g, ' ');
+            return (
+              <div key={item.id} className="px-5 py-3 flex items-start gap-3">
+                {/* Category pill */}
+                <span className="mt-0.5 inline-flex items-center gap-1 shrink-0 bg-primary/10 text-primary text-[10px] font-body font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  <Tag className="w-2.5 h-2.5" />
+                  {catLabel}
+                </span>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-body text-sm text-foreground leading-relaxed line-clamp-2">
+                    {content}
+                  </p>
+                  {item.source_excerpt && (
+                    <p className="font-body text-xs text-muted-foreground mt-0.5 italic line-clamp-1">
+                      &ldquo;{item.source_excerpt}&rdquo;
+                    </p>
+                  )}
+                  <p className="font-body text-[10px] text-muted-foreground mt-1">
+                    Verified {item.verified_at
+                      ? new Date(item.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {item.verified_by_role && ` by ${item.verified_by_role}`}
+                  </p>
+                </div>
+
+                {/* Verified badge */}
+                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+              </div>
+            );
+          })}
+
+          {items.length === 0 && (
+            <div className="px-5 py-6 text-center">
+              <p className="font-body text-sm text-muted-foreground">
+                No verified captures yet. Verify items from the dashboard to save them here.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface DashboardSessionsProps {
@@ -449,6 +557,9 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
       <p className="font-body text-sm text-muted-foreground mb-6">
         All Clara sessions with {parentName || 'you'}. Pinned sessions are kept forever — others auto-delete after 30 days.
       </p>
+
+      {/* Recently Captured — verified items from extracted_data */}
+      <RecentlyCapturedPanel familyId={familyId} />
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
