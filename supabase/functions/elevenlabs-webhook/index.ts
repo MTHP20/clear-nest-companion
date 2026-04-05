@@ -48,6 +48,8 @@ interface ElevenLabsConversationDetail {
   metadata?: {
     start_time_unix_secs?: number;
     call_duration_secs?: number;
+    call_summary_title?: string;
+    transcript_summary?: string;
     [key: string]: unknown;
   };
 }
@@ -459,12 +461,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // ── Insert session row ──────────────────────────────────────────────────────
+  // transcript_turns stores the raw structured JSONB — the frontend renders
+  // chat bubbles directly from this without ever calling ElevenLabs again.
+  const cleanTurns = (conversation.transcript ?? []).filter(
+    (t) => t.message && t.message.trim().length > 0
+  );
+
   const { error: sessionError } = await supabase.from("sessions").insert({
     conversation_id,
     family_id,
     transcript: encryptedTranscript,
+    transcript_turns: cleanTurns,
+    call_summary_title: conversation.metadata?.call_summary_title ?? null,
+    transcript_summary: conversation.metadata?.transcript_summary ?? null,
+    message_count: cleanTurns.length,
     duration_seconds: Math.round(duration),
     topics_covered: extracted.topics_covered,
+    source: "voice",
+    status: "completed",
+    started_at: conversation.metadata?.start_time_unix_secs
+      ? new Date(conversation.metadata.start_time_unix_secs * 1000).toISOString()
+      : new Date().toISOString(),
+    ended_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   });
 
   if (sessionError) {

@@ -176,6 +176,154 @@ export async function updateExtractedDataVerification(
   }
 }
 
+// ─── Session list / detail types ─────────────────────────────────────────────
+
+export interface TranscriptTurn {
+  role: 'user' | 'agent';
+  message: string;
+  time_in_call_secs?: number;
+}
+
+export interface PinnedSection {
+  label: string;
+  excerpt: string;
+  turn_indices: number[];
+  pinned_at: string; // ISO string
+}
+
+export interface SessionListRow {
+  id: string;
+  conversation_id: string;
+  family_id: string;
+  started_at: string | null;
+  duration_seconds: number;
+  message_count: number;
+  call_summary_title: string | null;
+  transcript_summary: string | null;
+  is_pinned: boolean;
+  topics_covered: string[];
+  created_at: string;
+}
+
+export interface SessionDetailRow extends SessionListRow {
+  transcript_turns: TranscriptTurn[];
+  pinned_sections: PinnedSection[];
+}
+
+// ─── getSessionList ───────────────────────────────────────────────────────────
+// Paginated list query — no OFFSET, uses keyset pagination via `before` cursor.
+export async function getSessionList(
+  familyId: string,
+  limit = 20,
+  before?: string // ISO timestamp — fetch sessions older than this
+): Promise<SessionListRow[]> {
+  let query = supabase
+    .from('sessions')
+    .select(
+      'id, conversation_id, family_id, started_at, duration_seconds, message_count, call_summary_title, transcript_summary, is_pinned, topics_covered, created_at'
+    )
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (before) {
+    query = query.lt('created_at', before);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.warn('getSessionList error:', error.message);
+    return [];
+  }
+  return (data ?? []) as SessionListRow[];
+}
+
+// ─── getSessionDetail ─────────────────────────────────────────────────────────
+// Fetches a single session with full transcript_turns and pinned_sections.
+export async function getSessionDetail(
+  familyId: string,
+  conversationId: string
+): Promise<SessionDetailRow | null> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('family_id', familyId)
+    .eq('conversation_id', conversationId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('getSessionDetail error:', error.message);
+    return null;
+  }
+  return data as SessionDetailRow | null;
+}
+
+// ─── setSessionPinned ─────────────────────────────────────────────────────────
+// Pins or unpins a session. Pinned sessions survive the 30-day auto-delete.
+export async function setSessionPinned(
+  familyId: string,
+  conversationId: string,
+  pinned: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from('sessions')
+    .update({ is_pinned: pinned, updated_at: new Date().toISOString() })
+    .eq('family_id', familyId)
+    .eq('conversation_id', conversationId);
+
+  if (error) {
+    console.warn('setSessionPinned error:', error.message);
+    throw error;
+  }
+}
+
+// ─── addPinnedSection ─────────────────────────────────────────────────────────
+// Appends a new saved section excerpt to a session's pinned_sections array.
+export async function addPinnedSection(
+  familyId: string,
+  conversationId: string,
+  section: PinnedSection,
+  currentSections: PinnedSection[]
+): Promise<void> {
+  const updated = [...currentSections, section];
+  const { error } = await supabase
+    .from('sessions')
+    .update({
+      pinned_sections: updated,
+      is_pinned: true, // saving a section auto-pins the conversation too
+      updated_at: new Date().toISOString(),
+    })
+    .eq('family_id', familyId)
+    .eq('conversation_id', conversationId);
+
+  if (error) {
+    console.warn('addPinnedSection error:', error.message);
+    throw error;
+  }
+}
+
+// ─── removePinnedSection ──────────────────────────────────────────────────────
+export async function removePinnedSection(
+  familyId: string,
+  conversationId: string,
+  sectionIndex: number,
+  currentSections: PinnedSection[]
+): Promise<void> {
+  const updated = currentSections.filter((_, i) => i !== sectionIndex);
+  const { error } = await supabase
+    .from('sessions')
+    .update({
+      pinned_sections: updated,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('family_id', familyId)
+    .eq('conversation_id', conversationId);
+
+  if (error) {
+    console.warn('removePinnedSection error:', error.message);
+  }
+}
+
 // ─── deleteExtractedFact ──────────────────────────────────────────────────────
 // Permanently removes an extracted_data row by its item_id (CapturedItem.id).
 // Called when the user dismisses a captured item.

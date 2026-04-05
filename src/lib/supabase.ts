@@ -14,6 +14,10 @@ export interface Database {
           conversation_id: string;
           family_id: string;
           transcript: string;
+          transcript_turns: Array<{ role: 'user' | 'agent'; message: string; time_in_call_secs?: number }>;
+          call_summary_title: string | null;
+          transcript_summary: string | null;
+          message_count: number;
           duration_seconds: number;
           topics_covered: string[];
           summary: string | null;
@@ -21,6 +25,8 @@ export interface Database {
           status: 'active' | 'completed' | 'failed';
           started_at: string | null;
           ended_at: string | null;
+          is_pinned: boolean;
+          pinned_sections: Array<{ label: string; excerpt: string; turn_indices: number[]; pinned_at: string }>;
           created_at: string;
           updated_at: string;
         };

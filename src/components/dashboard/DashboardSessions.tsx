@@ -1,42 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { ArrowLeft, Clock, MessageSquare, ChevronRight, Loader2, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
-
-// ─── ElevenLabs API types ───────────────────────────────────────────────────
-
-interface ELConversation {
-  conversation_id: string;
-  agent_id: string;
-  start_time_unix_secs: number;
-  call_duration_secs: number;
-  message_count: number;
-  status: string;
-  call_successful: string;
-  transcript_summary?: string;
-  call_summary_title?: string;
-}
-
-interface ELTranscriptTurn {
-  role: 'user' | 'agent';
-  message?: string;
-  time_in_call_secs: number;
-  tool_calls?: unknown[];
-}
-
-interface ELConversationDetail {
-  conversation_id: string;
-  transcript: ELTranscriptTurn[];
-  metadata?: {
-    start_time_unix_secs?: number;
-    call_duration_secs?: number;
-  };
-}
+import {
+  ArrowLeft,
+  Clock,
+  MessageSquare,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  Pin,
+  PinOff,
+  Bookmark,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import {
+  getSessionList,
+  getSessionDetail,
+  setSessionPinned,
+  addPinnedSection,
+  removePinnedSection,
+  type SessionListRow,
+  type SessionDetailRow,
+  type PinnedSection,
+  type TranscriptTurn,
+} from '@/lib/userAssetsService';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-const API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY as string;
-const AGENT_ID = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
-const BASE = 'https://api.elevenlabs.io/v1/convai/conversations';
 
 function formatDuration(secs: number): string {
   const m = Math.floor(secs / 60);
@@ -44,42 +34,33 @@ function formatDuration(secs: number): string {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
-function formatDate(unixSecs: number): string {
-  return new Date(unixSecs * 1000).toLocaleString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function formatTime(unixSecs: number): string {
-  return new Date(unixSecs * 1000).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
+function formatDate(iso: string | null): string {
+  if (!iso) return 'Unknown date';
+  return new Date(iso).toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
 
 // ─── iMessage bubble ────────────────────────────────────────────────────────
 
 function Bubble({
-  role,
-  message,
-  userName,
-  agentName,
-  isFirstInGroup,
+  role, message, userName, agentName, isFirstInGroup, isSelected, onSelect,
 }: {
   role: 'user' | 'agent';
   message: string;
   userName: string;
   agentName: string;
   isFirstInGroup: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
 }) {
   const isUser = role === 'user';
   return (
-    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} mb-1`}>
+    <div
+      className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} mb-1 cursor-pointer group`}
+      onClick={onSelect}
+    >
       {isFirstInGroup && (
         <span className={`text-xs font-body text-muted-foreground mb-1 px-1 ${isUser ? 'text-right' : 'text-left'}`}>
           {isUser ? userName : agentName}
@@ -87,7 +68,8 @@ function Bubble({
       )}
       <div
         className={`
-          max-w-[75%] px-4 py-2.5 font-body text-[15px] leading-relaxed
+          max-w-[75%] px-4 py-2.5 font-body text-[15px] leading-relaxed transition-all
+          ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}
           ${isUser
             ? 'bg-primary text-primary-foreground rounded-[20px] rounded-br-[5px]'
             : 'bg-muted text-foreground rounded-[20px] rounded-bl-[5px]'
@@ -96,83 +78,162 @@ function Bubble({
       >
         {message}
       </div>
+      {isSelected && (
+        <span className="text-[10px] text-primary mt-0.5 px-1 font-body">
+          Selected — click "Save Section" to save
+        </span>
+      )}
     </div>
   );
 }
 
-// ─── Transcript view ─────────────────────────────────────────────────────────
+// ─── Pinned sections panel ──────────────────────────────────────────────────
+
+function PinnedSectionsPanel({
+  sections,
+  onRemove,
+}: {
+  sections: PinnedSection[];
+  onRemove: (index: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (sections.length === 0) return null;
+
+  return (
+    <div className="cn-card mb-4 border border-primary/20">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-body font-semibold text-primary"
+      >
+        <span className="flex items-center gap-1.5">
+          <Bookmark className="w-4 h-4" />
+          {sections.length} Saved Section{sections.length !== 1 ? 's' : ''}
+        </span>
+        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      </button>
+      {open && (
+        <div className="border-t border-border divide-y divide-border">
+          {sections.map((s, i) => (
+            <div key={i} className="px-4 py-3 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="font-body text-xs font-semibold text-primary mb-1">{s.label}</p>
+                <p className="font-body text-sm text-foreground leading-relaxed line-clamp-3">
+                  &ldquo;{s.excerpt}&rdquo;
+                </p>
+                <p className="font-body text-[10px] text-muted-foreground mt-1">
+                  Saved {new Date(s.pinned_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+              <button
+                onClick={() => onRemove(i)}
+                className="text-muted-foreground hover:text-destructive transition-colors shrink-0 mt-0.5"
+                aria-label="Remove saved section"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Transcript detail view ─────────────────────────────────────────────────
 
 function TranscriptView({
   conv,
   onBack,
   parentName,
-  syncFromConversation,
+  familyId,
 }: {
-  conv: ELConversation;
+  conv: SessionListRow;
   onBack: () => void;
   parentName: string;
-  syncFromConversation: (id: string) => Promise<{ items: number; actions: number; alreadySynced: boolean }>;
+  familyId: string;
 }) {
-  const [detail, setDetail] = useState<ELConversationDetail | null>(null);
+  const [detail, setDetail] = useState<SessionDetailRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ items: number; actions: number; alreadySynced: boolean } | null>(null);
+  const [isPinned, setIsPinned] = useState(conv.is_pinned);
+  const [pinning, setPinning] = useState(false);
+  const [selectedTurnIndex, setSelectedTurnIndex] = useState<number | null>(null);
+  const [savingSection, setSavingSection] = useState(false);
+  const [sections, setSections] = useState<PinnedSection[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(`${BASE}/${conv.conversation_id}`, {
-      headers: { 'xi-api-key': API_KEY },
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error(`ElevenLabs error ${r.status}`);
-        return r.json();
-      })
-      .then((data: ELConversationDetail) => {
-        if (!cancelled) {
-          setDetail(data);
-          setLoading(false);
-        }
-      })
-      .catch((err: Error) => {
-        if (!cancelled) {
-          setError(err.message);
-          setLoading(false);
-        }
-      });
+    getSessionDetail(familyId, conv.conversation_id).then(data => {
+      if (!cancelled) {
+        setDetail(data);
+        setSections(data?.pinned_sections ?? []);
+        setLoading(false);
+      }
+    }).catch(err => {
+      if (!cancelled) {
+        setError((err as Error).message);
+        setLoading(false);
+      }
+    });
 
     return () => { cancelled = true; };
-  }, [conv.conversation_id]);
+  }, [conv.conversation_id, familyId]);
 
-  // Only keep turns that have actual message text (skip tool calls etc.)
-  const turns = useMemo(
-    () => (detail?.transcript ?? []).filter((t) => t.message && t.message.trim().length > 0),
-    [detail]
-  );
+  const turns = useMemo<TranscriptTurn[]>(() => {
+    if (!detail?.transcript_turns?.length) return [];
+    return detail.transcript_turns.filter(t => t.message?.trim());
+  }, [detail]);
 
-  // Group consecutive turns to show name only at start of each group
-  const turnsWithGroupFlag = useMemo(() =>
+  const turnsWithGroup = useMemo(() =>
     turns.map((turn, i) => ({
       ...turn,
       isFirstInGroup: i === 0 || turns[i - 1].role !== turn.role,
-    })),
-    [turns]
-  );
+    })), [turns]);
 
-  const handleSync = async () => {
-    setSyncing(true);
+  const handlePin = async () => {
+    setPinning(true);
     try {
-      const result = await syncFromConversation(conv.conversation_id);
-      setSyncResult(result);
-    } catch (err) {
-      console.error('Sync failed:', err);
-    } finally {
-      setSyncing(false);
+      await setSessionPinned(familyId, conv.conversation_id, !isPinned);
+      setIsPinned(v => !v);
+    } catch { /* non-fatal */ } finally {
+      setPinning(false);
     }
   };
+
+  const handleSaveSection = useCallback(async () => {
+    if (selectedTurnIndex === null || !detail) return;
+    const turn = turns[selectedTurnIndex];
+    if (!turn) return;
+
+    const label = window.prompt('Label this saved section:', `${parentName}'s key point`);
+    if (!label?.trim()) return;
+
+    setSavingSection(true);
+    try {
+      const section: PinnedSection = {
+        label: label.trim(),
+        excerpt: turn.message.slice(0, 300),
+        turn_indices: [selectedTurnIndex],
+        pinned_at: new Date().toISOString(),
+      };
+      await addPinnedSection(familyId, conv.conversation_id, section, sections);
+      setSections(prev => [...prev, section]);
+      setIsPinned(true); // saving a section auto-pins
+      setSelectedTurnIndex(null);
+    } catch { /* non-fatal */ } finally {
+      setSavingSection(false);
+    }
+  }, [selectedTurnIndex, detail, turns, familyId, conv.conversation_id, sections, parentName]);
+
+  const handleRemoveSection = useCallback(async (index: number) => {
+    try {
+      await removePinnedSection(familyId, conv.conversation_id, index, sections);
+      setSections(prev => prev.filter((_, i) => i !== index));
+    } catch { /* non-fatal */ }
+  }, [familyId, conv.conversation_id, sections]);
 
   return (
     <div className="flex flex-col h-full">
@@ -188,39 +249,41 @@ function TranscriptView({
         <div className="h-4 w-px bg-border" />
         <div className="flex-1">
           <p className="font-body font-semibold text-foreground text-sm">
-            {formatDate(conv.start_time_unix_secs)}
+            {conv.call_summary_title ?? formatDate(conv.started_at)}
           </p>
           <p className="font-body text-xs text-muted-foreground">
-            {formatDuration(conv.call_duration_secs)} · {conv.message_count} messages
+            {formatDuration(conv.duration_seconds)} · {conv.message_count} messages
+            {isPinned && <span className="ml-2 text-primary">· Pinned — won't auto-delete</span>}
           </p>
         </div>
 
-        {/* Sync to dashboard button */}
-        {syncResult?.alreadySynced ? (
-          <div className="flex items-center gap-1.5 text-xs font-body text-muted-foreground">
-            <CheckCircle2 className="w-4 h-4 text-primary" />
-            Already synced
-          </div>
-        ) : syncResult ? (
-          <div className="flex items-center gap-1.5 text-xs font-body text-primary">
-            <CheckCircle2 className="w-4 h-4" />
-            {syncResult.items} notes &amp; {syncResult.actions} actions added
-          </div>
-        ) : (
+        {/* Save section button */}
+        {selectedTurnIndex !== null && (
           <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-1.5 text-sm font-body font-medium bg-accent text-accent-foreground px-3 py-1.5 rounded-lg hover:bg-primary transition-colors disabled:opacity-60"
+            onClick={handleSaveSection}
+            disabled={savingSection}
+            className="flex items-center gap-1.5 text-sm font-body font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/80 transition-colors disabled:opacity-60"
           >
-            {syncing
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Extracting…</>
-              : <><RefreshCw className="w-3.5 h-3.5" />Sync to Dashboard</>
-            }
+            {savingSection ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bookmark className="w-3.5 h-3.5" />}
+            Save Section
           </button>
         )}
+
+        {/* Pin button */}
+        <button
+          onClick={handlePin}
+          disabled={pinning}
+          title={isPinned ? 'Unpin — will auto-delete after 30 days' : 'Pin — save forever'}
+          className={`flex items-center gap-1.5 text-sm font-body font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60
+            ${isPinned ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground'}`}
+        >
+          {pinning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+            isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+          {isPinned ? 'Unpin' : 'Pin'}
+        </button>
       </div>
 
-      {/* Summary if available */}
+      {/* Summary */}
       {conv.transcript_summary && (
         <div className="bg-primary/8 border border-primary/20 rounded-xl px-4 py-3 mb-4">
           <p className="text-xs font-body uppercase tracking-widest text-primary mb-1">Summary</p>
@@ -228,12 +291,21 @@ function TranscriptView({
         </div>
       )}
 
+      {/* Pinned sections */}
+      <PinnedSectionsPanel sections={sections} onRemove={handleRemoveSection} />
+
+      {/* Select-a-turn hint */}
+      {!loading && !error && turns.length > 0 && selectedTurnIndex === null && (
+        <p className="font-body text-xs text-muted-foreground mb-3 text-center">
+          Tap any message to select it, then click "Save Section" to bookmark it permanently.
+        </p>
+      )}
+
       {/* Chat area */}
       <div className="cn-card flex-1 overflow-y-auto">
-        {/* Date chip at top */}
         <div className="flex justify-center mb-4">
           <span className="text-xs font-body bg-muted text-muted-foreground px-3 py-1 rounded-full">
-            {formatDate(conv.start_time_unix_secs)}
+            {formatDate(conv.started_at)}
           </span>
         </div>
 
@@ -251,32 +323,45 @@ function TranscriptView({
           </div>
         )}
 
-        {!loading && !error && turnsWithGroupFlag.length === 0 && (
+        {!loading && !error && turns.length === 0 && (
           <div className="text-center py-12">
-            <p className="font-body text-sm text-muted-foreground">No transcript available for this conversation.</p>
+            <p className="font-body text-sm text-muted-foreground">
+              Full transcript not available for this session.
+            </p>
+            <p className="font-body text-xs text-muted-foreground mt-1 opacity-60">
+              Transcripts are stored from new sessions onwards.
+            </p>
           </div>
         )}
 
-        {!loading && !error && turnsWithGroupFlag.map((turn, i) => (
+        {!loading && !error && turnsWithGroup.map((turn, i) => (
           <Bubble
             key={i}
             role={turn.role}
-            message={turn.message!}
+            message={turn.message}
             userName={parentName}
             agentName="Clara"
             isFirstInGroup={turn.isFirstInGroup}
+            isSelected={selectedTurnIndex === i}
+            onSelect={() => setSelectedTurnIndex(prev => prev === i ? null : i)}
           />
         ))}
 
-        {/* End chip */}
-        {!loading && !error && turnsWithGroupFlag.length > 0 && (
+        {!loading && !error && turns.length > 0 && (
           <div className="flex justify-center mt-4">
             <span className="text-xs font-body bg-muted text-muted-foreground px-3 py-1 rounded-full">
-              Conversation ended · {formatDuration(conv.call_duration_secs)}
+              Conversation ended · {formatDuration(conv.duration_seconds)}
             </span>
           </div>
         )}
       </div>
+
+      {/* 30-day notice */}
+      {!isPinned && (
+        <p className="font-body text-[10px] text-muted-foreground text-center mt-3 opacity-55">
+          This conversation auto-deletes 30 days after it was recorded · Pin to keep it permanently
+        </p>
+      )}
     </div>
   );
 }
@@ -288,48 +373,60 @@ interface DashboardSessionsProps {
 }
 
 export default function DashboardSessions({ query = '' }: DashboardSessionsProps) {
-  const { parentName, syncFromConversation } = useSession();
-  const [conversations, setConversations] = useState<ELConversation[]>([]);
+  const { parentName, familyId } = useSession();
+  const [conversations, setConversations] = useState<SessionListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<ELConversation | null>(null);
+  const [selected, setSelected] = useState<SessionListRow | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
-    if (!API_KEY || !AGENT_ID) {
-      setError('ElevenLabs API key or Agent ID not configured.');
+    if (!familyId || familyId === 'unknown') {
+      setError('No family profile set up yet.');
       setLoading(false);
       return;
     }
+    setLoading(true);
+    setError(null);
+    getSessionList(familyId, PAGE_SIZE).then(rows => {
+      setConversations(rows);
+      setHasMore(rows.length === PAGE_SIZE);
+      setLoading(false);
+    }).catch(err => {
+      setError((err as Error).message);
+      setLoading(false);
+    });
+  }, [familyId]);
 
-    fetch(`${BASE}?agent_id=${AGENT_ID}&page_size=50`, {
-      headers: { 'xi-api-key': API_KEY },
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error(`ElevenLabs error ${r.status}`);
-        return r.json();
-      })
-      .then((data: { conversations: ELConversation[] }) => {
-        setConversations(data.conversations ?? []);
-        setLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+  const loadMore = useCallback(async () => {
+    if (!familyId || familyId === 'unknown' || loadingMore || !hasMore) return;
+    const oldest = conversations[conversations.length - 1]?.created_at;
+    if (!oldest) return;
+    setLoadingMore(true);
+    try {
+      const more = await getSessionList(familyId, PAGE_SIZE, oldest);
+      setConversations(prev => [...prev, ...more]);
+      setHasMore(more.length === PAGE_SIZE);
+    } catch { /* non-fatal */ } finally {
+      setLoadingMore(false);
+    }
+  }, [familyId, conversations, loadingMore, hasMore]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return conversations;
-    return conversations.filter((c) => {
-      const dateStr = formatDate(c.start_time_unix_secs).toLowerCase();
-      const summary = (c.transcript_summary ?? '').toLowerCase();
+    return conversations.filter(c => {
       const title = (c.call_summary_title ?? '').toLowerCase();
-      return dateStr.includes(q) || summary.includes(q) || title.includes(q);
+      const summary = (c.transcript_summary ?? '').toLowerCase();
+      const date = formatDate(c.started_at).toLowerCase();
+      return title.includes(q) || summary.includes(q) || date.includes(q);
     });
   }, [conversations, query]);
 
-  // ── Transcript detail view ─────────────────────────────────────────────────
+  // ── Detail view ────────────────────────────────────────────────────────────
   if (selected) {
     return (
       <div className="cn-stagger">
@@ -337,7 +434,7 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
           conv={selected}
           onBack={() => setSelected(null)}
           parentName={parentName || 'You'}
-          syncFromConversation={syncFromConversation}
+          familyId={familyId}
         />
       </div>
     );
@@ -350,7 +447,7 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
         Conversations
       </h2>
       <p className="font-body text-sm text-muted-foreground mb-6">
-        All Clara sessions with {parentName || 'you'}. Click any row to read the full transcript.
+        All Clara sessions with {parentName || 'you'}. Pinned sessions are kept forever — others auto-delete after 30 days.
       </p>
 
       {loading && (
@@ -373,68 +470,98 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
       {!loading && !error && filtered.length === 0 && (
         <div className="cn-card text-center py-10">
           <p className="font-body text-muted-foreground">
-            {query ? 'No conversations match your search.' : 'No conversations recorded yet.'}
+            {query ? 'No conversations match your search.' : 'No conversations recorded yet. Start a session with Clara to see them here.'}
           </p>
         </div>
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="space-y-2">
-          {/* Column headers */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 pb-1 text-xs font-body uppercase tracking-widest text-muted-foreground">
-            <span>Date</span>
-            <span className="text-right">Duration</span>
-            <span className="text-right">Messages</span>
-            <span />
+        <>
+          <div className="space-y-2">
+            {/* Column headers */}
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-4 pb-1 text-xs font-body uppercase tracking-widest text-muted-foreground">
+              <span>Date</span>
+              <span className="text-right">Duration</span>
+              <span className="text-right">Messages</span>
+              <span />
+              <span />
+            </div>
+
+            {filtered.map((conv) => (
+              <button
+                key={conv.conversation_id}
+                onClick={() => setSelected(conv)}
+                className="w-full text-left cn-card cn-card-hover group"
+              >
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center">
+                  {/* Date + summary */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-body font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {conv.call_summary_title ?? formatDate(conv.started_at)}
+                      </p>
+                      {conv.is_pinned && (
+                        <Pin className="w-3 h-3 text-primary shrink-0" aria-label="Pinned" />
+                      )}
+                    </div>
+                    {conv.transcript_summary && (
+                      <p className="font-body text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                        {conv.transcript_summary}
+                      </p>
+                    )}
+                    {!conv.call_summary_title && (
+                      <p className="font-body text-xs text-muted-foreground mt-0.5">
+                        {formatDate(conv.started_at)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Duration */}
+                  <div className="flex items-center gap-1 text-sm font-body text-muted-foreground whitespace-nowrap">
+                    <Clock className="w-3.5 h-3.5" />
+                    {formatDuration(conv.duration_seconds)}
+                  </div>
+
+                  {/* Message count */}
+                  <div className="flex items-center gap-1 text-sm font-body text-muted-foreground whitespace-nowrap">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    {conv.message_count}
+                  </div>
+
+                  {/* TTL badge */}
+                  <div className="text-[10px] font-body whitespace-nowrap">
+                    {conv.is_pinned ? (
+                      <span className="text-primary font-semibold">Pinned</span>
+                    ) : (
+                      <span className="text-muted-foreground opacity-60">30d</span>
+                    )}
+                  </div>
+
+                  {/* Arrow */}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </button>
+            ))}
           </div>
 
-          {filtered.map((conv) => (
-            <button
-              key={conv.conversation_id}
-              onClick={() => setSelected(conv)}
-              className="w-full text-left cn-card cn-card-hover group"
-            >
-              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center">
-                {/* Date + summary */}
-                <div>
-                  <p className="font-body font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {formatDate(conv.start_time_unix_secs)}
-                  </p>
-                  {conv.call_summary_title && (
-                    <p className="font-body text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {conv.call_summary_title}
-                    </p>
-                  )}
-                  {conv.transcript_summary && !conv.call_summary_title && (
-                    <p className="font-body text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {conv.transcript_summary}
-                    </p>
-                  )}
-                  {/* Change 8: session mood indicator */}
-                  <div className="session-mood">
-                    <span className="mood-dot relaxed"></span>
-                    {parentName} seemed relaxed · {conv.call_duration_secs ? `${Math.round(conv.call_duration_secs / 60)} min` : 'n/a'} · {conv.message_count || 0} items captured
-                  </div>
-                </div>
+          {/* Load more */}
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="flex items-center gap-2 text-sm font-body font-medium text-primary hover:text-primary/70 transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loadingMore ? 'Loading…' : 'Load older conversations'}
+              </button>
+            </div>
+          )}
 
-                {/* Duration */}
-                <div className="flex items-center gap-1 text-sm font-body text-muted-foreground whitespace-nowrap">
-                  <Clock className="w-3.5 h-3.5" />
-                  {formatDuration(conv.call_duration_secs)}
-                </div>
-
-                {/* Message count */}
-                <div className="flex items-center gap-1 text-sm font-body text-muted-foreground whitespace-nowrap">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  {conv.message_count}
-                </div>
-
-                {/* Arrow */}
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-            </button>
-          ))}
-        </div>
+          <p className="font-body text-[10px] text-muted-foreground text-center mt-4 opacity-55">
+            Conversations auto-delete after 30 days unless pinned · Pinned conversations and saved sections are kept permanently
+          </p>
+        </>
       )}
     </div>
   );
