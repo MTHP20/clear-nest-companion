@@ -672,6 +672,7 @@ export default function DashboardOverview({
     };
 
     return (
+      <>
       <div className="cn-stagger" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 230px', gap: 18 }}>
 
         {/* Row 1 col 1: 6 nav panels 3×2 */}
@@ -914,6 +915,46 @@ export default function DashboardOverview({
         </div>
 
       </div>
+
+      {/* Dismiss confirmation modal — shared across both render paths */}
+      <AlertDialog open={dismissTarget !== null} onOpenChange={open => { if (!open) setDismissTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete this item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dismissTarget && (
+                <>
+                  <span style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                    &ldquo;{dismissTarget.content.length > 100
+                      ? `${dismissTarget.content.slice(0, 100)}…`
+                      : dismissTarget.content}&rdquo;
+                  </span>
+                  This will be removed from your dashboard and permanently deleted from the database.
+                  This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDismissTarget(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (dismissTarget) {
+                  removeCapturedItem(dismissTarget.id);
+                  setRcIdx(prev => Math.max(0, prev - 1));
+                }
+                setDismissTarget(null);
+              }}
+              style={{ background: '#FF5F52', color: 'white' }}
+            >
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </>
     );
   }
 
