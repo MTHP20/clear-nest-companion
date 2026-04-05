@@ -3,8 +3,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
-import type { ReadinessSnapshot } from '@/contexts/SessionContext';
+import type { CapturedItem, ReadinessSnapshot } from '@/contexts/SessionContext';
 import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, Search, Clock } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 
 const DOC_ITEMS = [
@@ -555,12 +565,14 @@ export default function DashboardOverview({
     childName,
     userNotes,
     updateCapturedVerification,
+    removeCapturedItem,
     updateActionStatus,
   } = useSession();
 
   const activeActions = actionItems.filter((a) => a.status !== 'done').length;
   const [rcIdx, setRcIdx] = useState(0);
   const [hoveredPanel, setHoveredPanel] = useState<number | null>(null);
+  const [dismissTarget, setDismissTarget] = useState<CapturedItem | null>(null);
 
   const filteredCaptured = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -878,11 +890,11 @@ export default function DashboardOverview({
             <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', flexShrink: 0 }}>
               <button
-                onClick={() => { if (currentItem) updateCapturedVerification(currentItem.id, 'disputed'); if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1); }}
+                onClick={() => { if (currentItem) setDismissTarget(currentItem); }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#FF5F52'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
                 style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 0 22px', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
-              >Dispute</button>
+              >Dismiss</button>
               <div style={{ background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
               <button
                 onClick={() => { if (currentItem) updateCapturedVerification(currentItem.id, 'verified'); if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1); }}
@@ -890,6 +902,10 @@ export default function DashboardOverview({
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
                 style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 22px 0', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
               >Verify</button>
+            </div>
+            {/* 30-day expiry notice */}
+            <div style={{ padding: '6px 18px 14px', textAlign: 'center', fontSize: 10, color: 'var(--ov-muted)', opacity: 0.55, lineHeight: 1.4 }}>
+              Dismissed items are permanently deleted · All captured data auto-purges after 30 days
             </div>
           </div>
 
@@ -902,6 +918,7 @@ export default function DashboardOverview({
   }
 
   return (
+    <>
     <div className="cn-stagger">
 
       {/* Activity + Momentum + Readiness row */}
@@ -1078,17 +1095,14 @@ export default function DashboardOverview({
 
               <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
 
-              {/* Dispute / Verify */}
+              {/* Dismiss / Verify */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', flexShrink: 0 }}>
                 <button
-                  onClick={() => {
-                    if (currentItem) updateCapturedVerification(currentItem.id, 'disputed');
-                    if (safeIdx < rcTotal - 1) setRcIdx(safeIdx + 1);
-                  }}
+                  onClick={() => { if (currentItem) setDismissTarget(currentItem); }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#FF5F52'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
                   style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 0 22px', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
-                >Dispute</button>
+                >Dismiss</button>
                 <div style={{ background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
                 <button
                   onClick={() => {
@@ -1099,6 +1113,10 @@ export default function DashboardOverview({
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
                   style={{ padding: '14px 10px', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--ov-muted)', background: 'none', border: 'none', borderRadius: '0 0 22px 0', transition: 'background 0.2s, color 0.2s', fontFamily: 'Figtree, system-ui, sans-serif' }}
                 >Verify</button>
+              </div>
+              {/* 30-day expiry notice */}
+              <div style={{ padding: '6px 18px 14px', textAlign: 'center', fontSize: 10, color: 'var(--ov-muted)', opacity: 0.55, lineHeight: 1.4 }}>
+                Dismissed items are permanently deleted · All captured data auto-purges after 30 days
               </div>
             </div>
 
@@ -1270,5 +1288,46 @@ export default function DashboardOverview({
             })}
           </div> */}
     </div>
+
+    {/* ── Dismiss confirmation modal ──────────────────────────────────── */}
+    <AlertDialog open={dismissTarget !== null} onOpenChange={open => { if (!open) setDismissTarget(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Permanently delete this item?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {dismissTarget && (
+              <>
+                <span style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  &ldquo;{dismissTarget.content.length > 100
+                    ? `${dismissTarget.content.slice(0, 100)}…`
+                    : dismissTarget.content}&rdquo;
+                </span>
+                This will be removed from your dashboard and permanently deleted from the database.
+                This action cannot be undone.
+              </>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setDismissTarget(null)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              if (dismissTarget) {
+                removeCapturedItem(dismissTarget.id);
+                // Advance carousel if there are more items
+                setRcIdx(prev => Math.max(0, prev - 1));
+              }
+              setDismissTarget(null);
+            }}
+            style={{ background: '#FF5F52', color: 'white' }}
+          >
+            Delete permanently
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

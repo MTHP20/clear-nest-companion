@@ -9,6 +9,7 @@ import {
   buildExtractedFacts,
   updateExtractedDataVerification,
   updateReadinessHistory,
+  deleteExtractedFact,
 } from '@/lib/userAssetsService';
 
 export interface CapturedItem {
@@ -77,6 +78,7 @@ interface SessionContextType {
   setUserNote: (itemId: string, note: string) => void;
   addCapturedItem: (item: CapturedItem) => void;
   addActionItem: (item: ActionItem) => void;
+  removeCapturedItem: (id: string) => void;
   updateActionStatus: (id: string, status: ActionItem['status']) => void;
   updateCapturedVerification: (id: string, status: 'verified' | 'disputed' | 'unverified') => void;
   setListening: (v: boolean) => void;
@@ -249,6 +251,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const addActionItem = useCallback((item: ActionItem) => {
     setActionItems(prev => [item, ...prev]);
   }, []);
+
+  const removeCapturedItem = useCallback((id: string) => {
+    // Remove from runtime state immediately
+    setCapturedItems(prev => prev.filter(i => i.id !== id));
+
+    // Persist deletion to Supabase (non-blocking)
+    if (familyId && familyId !== 'unknown') {
+      deleteExtractedFact(familyId, id).catch(err =>
+        console.warn('deleteExtractedFact failed (non-fatal):', err)
+      );
+
+      // Rebuild user_assets to reflect the removal
+      setTimeout(() => {
+        const remaining = loadLS<CapturedItem[]>('cn-captured-items', []).filter(i => i.id !== id);
+        const assets = buildUserAssetsFromItems(
+          remaining, familyId, undefined,
+          loadLS<ReadinessSnapshot[]>('cn-readiness-history', [])
+        );
+        upsertUserAssets(assets).catch(err =>
+          console.warn('upsertUserAssets after remove failed (non-fatal):', err)
+        );
+      }, 0);
+    }
+  }, [familyId]);
 
   const updateActionStatus = useCallback((id: string, status: ActionItem['status']) => {
     setActionItems(prev => prev.map(a => (a.id === id ? { ...a, status } : a)));
@@ -855,6 +881,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setUserNote,
         addCapturedItem,
         addActionItem,
+        removeCapturedItem,
         updateActionStatus,
         updateCapturedVerification,
         setListening,

@@ -176,6 +176,21 @@ export async function updateExtractedDataVerification(
   }
 }
 
+// ─── deleteExtractedFact ──────────────────────────────────────────────────────
+// Permanently removes an extracted_data row by its item_id (CapturedItem.id).
+// Called when the user dismisses a captured item.
+export async function deleteExtractedFact(familyId: string, itemId: string): Promise<void> {
+  const { error } = await supabase
+    .from('extracted_data')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('item_id', itemId);
+
+  if (error) {
+    console.warn('deleteExtractedFact error:', error.message);
+  }
+}
+
 // ─── upsertSession ────────────────────────────────────────────────────────────
 // Returns the sessions.id UUID for use as last_session_id in user_assets.
 export async function upsertSession(session: SessionRow): Promise<string | null> {
