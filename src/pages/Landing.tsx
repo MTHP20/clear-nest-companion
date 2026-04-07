@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
-import { Mic, LayoutDashboard, CheckCircle2, Loader2, X, ArrowRight, Lock } from 'lucide-react';
+import { Mic, LayoutDashboard, Loader2, X, ArrowRight } from 'lucide-react';
 
 const CONSENT_KEY = 'cn-consent-v1';
 const PROFILE_KEY = 'cn-user-profile';
@@ -56,7 +56,7 @@ function isOnboarded(): boolean {
   return loadProfile() !== null && hasGivenConsent();
 }
 
-// ─── Onboarding modal (profile + T&Cs) — triggered from Open Dashboard ───────
+// ─── Onboarding modal ─────────────────────────────────────────────────────────
 function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onClose: () => void }) {
   const existingProfile = loadProfile();
   const [page, setPage] = useState<1 | 2>(1);
@@ -207,14 +207,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
                 />
                 <span className="font-body text-sm text-foreground leading-relaxed">
                   I have read and agree to the{' '}
-                  <Link
-                    to="/terms"
+                  <a
+                    href="/terms-of-service.md"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:opacity-80"
                   >
                     Terms of Service
-                  </Link>
+                  </a>
                   , including that ClearNest is not legal or financial advice.
                 </span>
               </label>
@@ -228,14 +228,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
                 />
                 <span className="font-body text-sm text-foreground leading-relaxed">
                   I understand how my data is handled as described in the{' '}
-                  <Link
-                    to="/privacy"
+                  <a
+                    href="/privacy-policy.md"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:opacity-80"
                   >
                     Privacy Policy
-                  </Link>
+                  </a>
                   , including that voice conversations are processed by ElevenLabs.
                 </span>
               </label>
@@ -283,7 +283,7 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
   );
 }
 
-// ─── Post-onboarding prompt — offers Clara or Dashboard ───────────────────────
+// ─── Post-onboarding prompt ───────────────────────────────────────────────────
 function ClaraPromptModal({
   onStartClara,
   onDashboard,
@@ -333,12 +333,40 @@ function ClaraPromptModal({
   );
 }
 
-const cardStyle: React.CSSProperties = {
-  borderLeft: 'none',
-  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-  borderRadius: '12px',
-};
+// ─── Sphere ───────────────────────────────────────────────────────────────────
+function ClaraSphere({ size = 160 }: { size?: number }) {
+  const inset = Math.round(size * 0.09);
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.7) 25%,rgba(200,170,255,0.5) 50%,rgba(100,60,180,0.6) 75%,rgba(155,123,200,0) 100%)',
+        animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+      }} />
+      <div style={{
+        position: 'absolute', inset, borderRadius: '50%',
+        background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.6) 30%,rgba(80,40,160,0.5) 60%,rgba(180,150,230,0) 100%)',
+        animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(7px)',
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: Math.round(size * 0.6), height: Math.round(size * 0.38),
+        borderRadius: '50%',
+        background: 'radial-gradient(ellipse,rgba(196,168,232,0.88) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+        top: Math.round(size * 0.12), left: Math.round(size * 0.09),
+        animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: Math.round(size * 0.13), left: Math.round(size * 0.18),
+        width: '38%', height: '28%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse,rgba(255,255,255,0.65) 0%,transparent 70%)', zIndex: 9,
+      }} />
+    </div>
+  );
+}
 
+// ─── Landing ──────────────────────────────────────────────────────────────────
 const Landing = () => {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
@@ -346,6 +374,7 @@ const Landing = () => {
   const [showClaraPrompt, setShowClaraPrompt] = useState(false);
 
   const onboarded = isOnboarded();
+  const profile = loadProfile();
 
   const goToConversation = () => {
     setShowClaraPrompt(false);
@@ -353,12 +382,16 @@ const Landing = () => {
     setTimeout(() => navigate('/conversation'), 900);
   };
 
-  const handleStartTalking = () => {
-    if (!onboarded || connecting) return;
-    goToConversation();
+  const handleClaraCard = () => {
+    if (connecting) return;
+    if (onboarded) {
+      goToConversation();
+    } else {
+      setShowOnboarding(true);
+    }
   };
 
-  const handleOpenDashboard = () => {
+  const handleDashboard = () => {
     if (onboarded) {
       navigate('/dashboard');
     } else {
@@ -371,176 +404,214 @@ const Landing = () => {
     setShowClaraPrompt(true);
   };
 
+  const greeting = onboarded
+    ? "Hey, it's\ngood to see\nyou again"
+    : "Hey,\nwelcome\naboard!";
+
+  const claraSubtitle = onboarded && profile?.elderlyName
+    ? `Continue with ${profile.elderlyName}`
+    : 'Start your first session';
+
   return (
-    <div className="min-h-dvh overflow-y-auto bg-background flex flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10 pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <div style={{ minHeight: '100dvh', background: '#ECEDF5', position: 'relative', overflow: 'hidden', fontFamily: "'Figtree', system-ui, sans-serif" }}>
+      <style>{`
+        @keyframes cnLandingSlideLeft {
+          from { opacity: 0; transform: translateX(-40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes cnLandingSlideRight {
+          from { opacity: 0; transform: translateX(40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes cnLandingFadeDown {
+          from { opacity: 0; transform: translateY(-12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* Background blobs */}
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 700, height: 700, background: 'rgba(155,123,200,0.15)', top: -200, right: '15%' }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 500, height: 500, background: 'rgba(94,207,207,0.08)', bottom: -100, right: '48%' }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 380, height: 380, background: 'rgba(155,123,200,0.09)', top: '30%', left: 20 }} />
+
+      {/* Modals */}
       {showOnboarding && (
         <OnboardingModal
           onComplete={handleOnboardingComplete}
           onClose={() => setShowOnboarding(false)}
         />
       )}
-
       {showClaraPrompt && (
         <ClaraPromptModal
           onStartClara={goToConversation}
-          onDashboard={() => {
-            setShowClaraPrompt(false);
-            navigate('/dashboard');
-          }}
+          onDashboard={() => { setShowClaraPrompt(false); navigate('/dashboard'); }}
         />
       )}
 
-      <div className="text-center mb-8 sm:mb-10 w-full max-w-lg">
-        <div className="flex justify-center mb-3">
+      {/* Logo — top centre */}
+      <div style={{
+        position: 'absolute', top: 28, left: 0, right: 0, zIndex: 2,
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        animation: 'cnLandingFadeDown 0.5s cubic-bezier(0.22,1,0.36,1) both',
+        pointerEvents: 'none',
+      }}>
+        <div style={{ transform: 'scale(0.8)', transformOrigin: 'center' }}>
           <ClearNestLogo />
         </div>
-        <p className="font-body text-muted-foreground text-base tracking-wide">A gentle way to get organised.</p>
-        <p className="font-body text-sm mt-2 mx-auto leading-relaxed text-muted-foreground max-w-md">
-          When the important details live in one person&apos;s head, the load lands on the family.
-          Clara helps you get it down—together, at an easy pace.
-        </p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-5 w-full max-w-2xl items-stretch">
-        <button
-          type="button"
-          onClick={handleStartTalking}
-          disabled={!onboarded || connecting}
-          className={`cn-card flex-1 flex flex-col items-center text-center p-6 sm:p-8 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hover:scale-[1.01] active:scale-[0.99] md:active:scale-100 ${
-            onboarded ? 'group cursor-pointer' : 'cursor-default opacity-60'
-          } ${connecting ? 'cursor-wait' : ''}`}
-          style={cardStyle}
-          aria-label={onboarded ? 'Start talking to Clara' : 'Complete setup to unlock'}
-        >
+      {/* Scene */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        minHeight: '100dvh',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 'clamp(80px, 8vw, 120px) clamp(32px, 7vw, 140px) clamp(48px, 4vw, 80px)',
+        gap: 'clamp(32px, 4vw, 72px)',
+        flexWrap: 'wrap',
+      }}>
+
+        {/* Greeting — fills left half */}
+        <div style={{
+          fontSize: 'clamp(64px, 8.5vw, 130px)',
+          fontWeight: 900,
+          lineHeight: 1.0,
+          color: '#7A59BE',
+          flex: '1 1 0',
+          minWidth: 0,
+          letterSpacing: '-3px',
+          whiteSpace: 'pre-line',
+          animation: 'cnLandingSlideLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both',
+        }}>
+          {greeting}
+        </div>
+
+        {/* Cards column — right half */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 20,
+          flex: '1 1 0',
+          minWidth: 'min(100%, 360px)',
+          maxWidth: 520,
+          animation: 'cnLandingSlideRight 0.7s cubic-bezier(0.22,1,0.36,1) 0.25s both',
+        }}>
+
+          {/* Clara card — centered contents, big sphere */}
           <div
-            className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 transition-colors duration-200 ${
-              onboarded ? 'bg-primary/10 group-hover:bg-primary/20' : 'bg-muted'
-            }`}
-          >
-            {onboarded ? (
-              <Mic className="w-7 h-7 text-primary" />
-            ) : (
-              <Lock className="w-6 h-6 text-primary/60" />
-            )}
-          </div>
-
-          <h2 className="font-display text-xl font-semibold text-foreground mb-2">I&apos;d like to have a chat</h2>
-          <p className="font-body text-muted-foreground text-sm mb-6 sm:mb-8 leading-relaxed">
-            {onboarded ? 'For Mum, Dad, or a loved one' : 'Complete setup via Open Dashboard first'}
-          </p>
-
-          <div className="flex-1 min-h-0 w-full" />
-
-          <div
-            className={`w-full flex flex-col items-center justify-center gap-2 sm:gap-3 font-bold transition-all duration-200 text-lg sm:text-2xl leading-snug rounded-lg ${
-              connecting
-                ? 'bg-primary/80 text-primary-foreground'
-                : onboarded
-                  ? 'bg-primary text-primary-foreground group-hover:bg-accent'
-                  : 'bg-muted-foreground/30 text-primary-foreground'
-            }`}
+            onClick={handleClaraCard}
             style={{
-              padding: 'clamp(1.25rem,4vw,2rem) clamp(1rem,3vw,1.5rem)',
-              minHeight: '100px',
-              borderRadius: '8px',
+              position: 'relative',
+              background: 'linear-gradient(145deg,rgba(230,222,250,0.60) 0%,rgba(210,200,240,0.44) 50%,rgba(190,175,230,0.40) 100%)',
+              backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
+              border: '1px solid rgba(200,180,240,0.50)',
+              borderRadius: 32, padding: '36px 28px 32px',
+              overflow: 'hidden', cursor: connecting ? 'wait' : 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textAlign: 'center',
+              boxShadow: '0 14px 44px rgba(80,50,160,0.18),0 2px 8px rgba(80,50,160,0.08),inset 0 1.5px 0 rgba(255,255,255,0.60),inset 0 -1px 0 rgba(155,123,200,0.15)',
+              transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1),box-shadow 0.22s ease',
+            }}
+            onMouseEnter={e => {
+              const d = e.currentTarget as HTMLDivElement;
+              d.style.transform = 'translateY(-4px) scale(1.012)';
+              d.style.boxShadow = '0 24px 64px rgba(80,50,160,0.26),0 4px 12px rgba(80,50,160,0.10),inset 0 1.5px 0 rgba(255,255,255,0.65),inset 0 -1px 0 rgba(155,123,200,0.15)';
+            }}
+            onMouseLeave={e => {
+              const d = e.currentTarget as HTMLDivElement;
+              d.style.transform = 'translateY(0) scale(1)';
+              d.style.boxShadow = '0 14px 44px rgba(80,50,160,0.18),0 2px 8px rgba(80,50,160,0.08),inset 0 1.5px 0 rgba(255,255,255,0.60),inset 0 -1px 0 rgba(155,123,200,0.15)';
             }}
           >
-            {connecting ? (
-              <>
-                <Loader2 className="w-7 h-7 sm:w-8 sm:h-8 animate-spin" aria-hidden />
-                <span>Connecting</span>
-                <span>to Clara…</span>
-              </>
-            ) : onboarded ? (
-              <>
-                <Mic className="w-7 h-7 sm:w-8 sm:h-8 mb-0.5" aria-hidden />
-                <span>Start Talking</span>
-                <span>to Clara</span>
-              </>
-            ) : (
-              <>
-                <Lock className="w-7 h-7 mb-1 opacity-70" aria-hidden />
-                <span className="text-base font-semibold">Setup required</span>
-              </>
-            )}
-          </div>
-        </button>
+            {/* Decorative arcs */}
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 140, height: 140, pointerEvents: 'none' }}>
+              {[
+                { size: 118, color: 'rgba(94,207,207,0.50)', rot: -22 },
+                { size: 82,  color: 'rgba(255,255,255,0.35)', rot: -8  },
+                { size: 52,  color: 'rgba(155,123,200,0.75)', rot:  6  },
+              ].map((arc, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  width: arc.size, height: arc.size, borderRadius: '50%',
+                  border: '5px solid transparent',
+                  borderTopColor: arc.color, borderRightColor: arc.color,
+                  top: (118 - arc.size) / 2 + 11, right: (118 - arc.size) / 2 + 11,
+                  transform: `rotate(${arc.rot}deg)`,
+                }} />
+              ))}
+            </div>
 
-        <div className="flex md:hidden items-center gap-3 w-full shrink-0 py-0.5" aria-hidden>
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-sm font-semibold uppercase tracking-widest font-body text-alert shrink-0">or</span>
-          <div className="h-px flex-1 bg-border" />
-        </div>
+            <ClaraSphere size={160} />
 
-        <div
-          className="hidden md:flex flex-col items-center justify-center gap-3 flex-shrink-0 px-1 w-auto self-stretch min-h-[200px]"
-          aria-hidden
-        >
-          <div className="w-px flex-1 bg-border min-h-[40px]" />
-          <span className="text-sm font-semibold uppercase tracking-widest font-body text-alert">or</span>
-          <div className="w-px flex-1 bg-border min-h-[40px]" />
-        </div>
+            {/* Title */}
+            <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.15, color: 'rgba(255,255,255,0.97)', textShadow: '0 1px 14px rgba(80,40,160,0.25)', marginTop: 20, marginBottom: 8, position: 'relative', zIndex: 1 }}>
+              {connecting ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                  <Loader2 style={{ width: 28, height: 28, animation: 'spin 1s linear infinite' }} />
+                  Connecting…
+                </span>
+              ) : (
+                <><span style={{ color: '#5ECFCF' }}>Chat</span> to Clara</>
+              )}
+            </div>
 
-        <div className="cn-card flex-1 flex flex-col items-center text-center p-6 sm:p-8" style={cardStyle}>
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-5 bg-primary/10">
-            <LayoutDashboard className="w-7 h-7 text-primary" />
+            {/* Subtitle */}
+            <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', fontWeight: 400, position: 'relative', zIndex: 1 }}>
+              {claraSubtitle}
+            </div>
           </div>
 
-          <h2 className="font-display text-xl font-semibold text-foreground mb-2">I&apos;m supporting a family member</h2>
-          <p className="font-body text-muted-foreground text-sm mb-6 leading-relaxed">
-            {onboarded ? 'View the family summary and next steps' : 'Start here to set up your profile'}
-          </p>
-
-          <ul className="text-left w-full space-y-3 mb-6 sm:mb-8 flex-1">
-            {(onboarded
-              ? ['See what Clara has captured', 'Track what still needs doing', 'Share with family']
-              : ['Enter your details', 'Review and agree to terms', 'Unlock Start Talking to Clara']
-            ).map((item) => (
-              <li key={item} className="flex items-center gap-2 text-sm font-body text-muted-foreground">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-primary" aria-hidden />
-                {item}
-              </li>
-            ))}
-          </ul>
-
-          <button
-            type="button"
-            onClick={handleOpenDashboard}
-            className="w-full min-h-[48px] flex items-center justify-center gap-3 bg-primary text-primary-foreground font-body font-semibold text-base transition-colors duration-200 hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg py-4 px-6"
+          {/* Dashboard — glassmorphism */}
+          <div
+            onClick={handleDashboard}
+            style={{
+              position: 'relative',
+              background: 'linear-gradient(145deg,rgba(140,100,210,0.38) 0%,rgba(100,60,180,0.30) 60%,rgba(80,40,160,0.26) 100%)',
+              backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
+              border: '1px solid rgba(180,150,240,0.40)',
+              borderRadius: 28, padding: '26px 32px',
+              display: 'flex', alignItems: 'center', gap: 20,
+              cursor: 'pointer',
+              boxShadow: '0 10px 32px rgba(80,50,160,0.22),inset 0 1.5px 0 rgba(255,255,255,0.30),inset 0 -1px 0 rgba(100,60,200,0.20)',
+              transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1),box-shadow 0.22s ease',
+            }}
+            onMouseEnter={e => {
+              const d = e.currentTarget as HTMLDivElement;
+              d.style.transform = 'translateY(-3px) scale(1.012)';
+              d.style.boxShadow = '0 20px 52px rgba(80,50,160,0.32),inset 0 1.5px 0 rgba(255,255,255,0.36),inset 0 -1px 0 rgba(100,60,200,0.20)';
+            }}
+            onMouseLeave={e => {
+              const d = e.currentTarget as HTMLDivElement;
+              d.style.transform = 'translateY(0) scale(1)';
+              d.style.boxShadow = '0 10px 32px rgba(80,50,160,0.22),inset 0 1.5px 0 rgba(255,255,255,0.30),inset 0 -1px 0 rgba(100,60,200,0.20)';
+            }}
           >
-            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
-            {onboarded ? 'Open Dashboard' : 'Get Started'}
-          </button>
+            {/* Grid icon */}
+            <div style={{ width: 34, height: 34, flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+              {[0,1,2,3].map(i => (
+                <span key={i} style={{ background: 'rgba(255,255,255,0.88)', borderRadius: 5, display: 'block' }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: 1.5 }}>DASHBOARD</span>
+          </div>
+
         </div>
       </div>
 
-      <p className="mt-6 sm:mt-8 text-base text-muted-foreground text-center max-w-md leading-relaxed font-body px-1">
-        ClearNest never stores your information on our servers. Everything stays with your family.
-      </p>
-
-      <footer className="mt-6 mb-2 text-center font-body max-w-md px-1">
-        <p className="text-xs text-muted-foreground mb-1">
-          Not legal or financial advice. ClearNest is an organisational tool only.
+      {/* Footer */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 2,
+        padding: '10px 24px', textAlign: 'center',
+        background: 'rgba(236,237,245,0.65)', backdropFilter: 'blur(10px)',
+      }}>
+        <p style={{ fontSize: 11, color: 'rgba(100,90,130,0.65)', margin: 0 }}>
+          Not legal or financial advice. ClearNest is an organisational tool only. &nbsp;·&nbsp;
+          <a href="/admin" style={{ color: 'inherit', textDecoration: 'underline' }}>Admin</a>
+          &nbsp;·&nbsp;
+          <a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Privacy Policy</a>
+          &nbsp;·&nbsp;
+          <a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms of Service</a>
+          &nbsp;·&nbsp;
+          <a href="/safeguarding-policy.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Safeguarding</a>
         </p>
-        <p className="text-xs text-muted-foreground">
-          © 2026 Pannonl Ltd ·{' '}
-          <a href="/admin" className="underline underline-offset-2 hover:opacity-80">
-            Admin
-          </a>
-          {' '}·{' '}
-          <Link to="/privacy" className="underline underline-offset-2 hover:opacity-80">
-            Privacy Policy
-          </Link>
-          {' '}·{' '}
-          <Link to="/terms" className="underline underline-offset-2 hover:opacity-80">
-            Terms of Service
-          </Link>
-          {' '}·{' '}
-          <Link to="/safeguarding" className="underline underline-offset-2 hover:opacity-80">
-            Safeguarding
-          </Link>
-        </p>
-      </footer>
+      </div>
     </div>
   );
 };
