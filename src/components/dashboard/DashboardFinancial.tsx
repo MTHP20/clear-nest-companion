@@ -31,7 +31,7 @@ export default function DashboardFinancial({ query = '', confidenceFilter = 'all
       <div className="mb-6 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
         <span className="text-amber-500 text-base mt-0.5 shrink-0" aria-hidden="true">ℹ</span>
         <p className="font-body text-xs text-amber-800 leading-relaxed">
-          <strong>Not financial advice.</strong> ClearNest is an organisational tool. Always seek independent financial advice before making any financial decisions. Pannonl Ltd is not authorised by the FCA.
+          <strong>Not financial advice.</strong> ClearNest is an organisational tool. Always seek independent financial advice before making any financial decisions. Pannon Ltd is not authorised by the FCA.
         </p>
       </div>
 

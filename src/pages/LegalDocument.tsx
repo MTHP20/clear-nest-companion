@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
+import { type LegalDocId, LEGAL_MARKDOWN } from '@/legal/legalMarkdown';
+
+const PAGE_TITLES: Record<LegalDocId, string> = {
+  privacy: 'Privacy Policy',
+  terms: 'Terms of Service',
+  safeguarding: 'Safeguarding Policy',
+};
 
 export type LegalDocumentProps = {
-  /** Public URL of the markdown file (served from /public) */
-  markdownPath: string;
-  /** Fallback page title if the markdown has no leading # heading */
-  pageTitle: string;
+  doc: LegalDocId;
 };
 
 function parseLegalMarkdown(raw: string, fallbackTitle: string) {
@@ -30,43 +34,19 @@ function parseLegalMarkdown(raw: string, fallbackTitle: string) {
   return { heroTitle, lastUpdated, body: body.trimStart() };
 }
 
-export function LegalDocument({ markdownPath, pageTitle }: LegalDocumentProps) {
-  const [rawContent, setRawContent] = useState<string | null>(null);
-  const [error, setError] = useState(false);
+export function LegalDocument({ doc }: LegalDocumentProps) {
+  const pageTitle = PAGE_TITLES[doc];
+  const rawContent = LEGAL_MARKDOWN[doc];
 
-  useEffect(() => {
-    let cancelled = false;
-    setRawContent(null);
-    setError(false);
-    fetch(markdownPath)
-      .then((r) => {
-        if (!r.ok) throw new Error('fetch failed');
-        return r.text();
-      })
-      .then((text) => {
-        if (!cancelled) setRawContent(text);
-      })
-      .catch(() => {
-        if (!cancelled) setError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [markdownPath]);
-
-  const parsed = useMemo(() => {
-    if (rawContent === null) return null;
-    return parseLegalMarkdown(rawContent, pageTitle);
-  }, [rawContent, pageTitle]);
+  const parsed = useMemo(() => parseLegalMarkdown(rawContent, pageTitle), [rawContent, pageTitle]);
 
   useEffect(() => {
     const prev = document.title;
-    const t = parsed?.heroTitle ?? pageTitle;
-    document.title = `${t} · ClearNest`;
+    document.title = `${parsed.heroTitle} · ClearNest`;
     return () => {
       document.title = prev;
     };
-  }, [parsed?.heroTitle, pageTitle]);
+  }, [parsed.heroTitle]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -82,31 +62,17 @@ export function LegalDocument({ markdownPath, pageTitle }: LegalDocumentProps) {
         </div>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-10 pb-20">
-        {error && (
-          <p className="font-body text-destructive" role="alert">
-            We couldn&apos;t load this document. Please try again or email hello@clearnest.co.uk.
-          </p>
+        <p className="font-body text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-3">Legal</p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl mb-3">
+          {parsed.heroTitle}
+        </h1>
+        {parsed.lastUpdated && (
+          <p className="font-body text-sm text-muted-foreground mb-10">Last updated: {parsed.lastUpdated}</p>
         )}
-        {!error && rawContent === null && (
-          <p className="font-body text-muted-foreground">Loading…</p>
-        )}
-        {parsed && (
-          <>
-            <p className="font-body text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-3">
-              Legal
-            </p>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl mb-3">
-              {parsed.heroTitle}
-            </h1>
-            {parsed.lastUpdated && (
-              <p className="font-body text-sm text-muted-foreground mb-10">Last updated: {parsed.lastUpdated}</p>
-            )}
-            {!parsed.lastUpdated && <div className="mb-10" />}
-            <article className="legal-doc-body prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-20 prose-headings:font-display prose-headings:font-semibold prose-h2:text-lg prose-h2:uppercase prose-h2:tracking-wide prose-p:font-body prose-li:font-body prose-a:text-primary prose-strong:text-foreground">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsed.body}</ReactMarkdown>
-            </article>
-          </>
-        )}
+        {!parsed.lastUpdated && <div className="mb-10" />}
+        <article className="legal-doc-body prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-20 prose-headings:font-display prose-headings:font-semibold prose-h2:text-lg prose-h2:uppercase prose-h2:tracking-wide prose-p:font-body prose-li:font-body prose-a:text-primary prose-strong:text-foreground">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsed.body}</ReactMarkdown>
+        </article>
       </main>
     </div>
   );

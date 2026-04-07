@@ -198,7 +198,7 @@ export default function DashboardActions({ query = '' }: DashboardActionsProps) 
       <div className="mb-8 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
         <span className="text-amber-500 text-base mt-0.5 shrink-0" aria-hidden="true">ℹ</span>
         <p className="font-body text-xs text-amber-800 leading-relaxed">
-          <strong>Not legal or financial advice.</strong> These tasks are organisational reminders only. Always seek independent legal advice for matters relating to wills, Power of Attorney, and estate planning. Always seek independent financial advice for financial decisions. Pannonl Ltd is not a law firm or FCA-authorised adviser.
+          <strong>Not legal or financial advice.</strong> These tasks are organisational reminders only. Always seek independent legal advice for matters relating to wills, Power of Attorney, and estate planning. Always seek independent financial advice for financial decisions. Pannon Ltd is not a law firm or FCA-authorised adviser.
         </p>
       </div>
 

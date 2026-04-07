@@ -27,18 +27,9 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/blog" element={<Blog />} />
-            <Route
-              path="/privacy"
-              element={<LegalDocument markdownPath="/privacy-policy.md" pageTitle="Privacy Policy" />}
-            />
-            <Route
-              path="/terms"
-              element={<LegalDocument markdownPath="/terms-of-service.md" pageTitle="Terms of Service" />}
-            />
-            <Route
-              path="/safeguarding"
-              element={<LegalDocument markdownPath="/safeguarding-policy.md" pageTitle="Safeguarding Policy" />}
-            />
+            <Route path="/privacy" element={<LegalDocument doc="privacy" />} />
+            <Route path="/terms" element={<LegalDocument doc="terms" />} />
+            <Route path="/safeguarding" element={<LegalDocument doc="safeguarding" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

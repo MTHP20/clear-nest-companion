@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Plus, Pencil, Trash2, X, LogOut, ImageOff, Loader2, Search } from 'lucide-react';
@@ -445,12 +445,14 @@ const Blog = () => {
       {/* Footer */}
       <div style={{ background: '#fff', borderTop: '1px solid #E5E7EB' }}>
         <div className="max-w-6xl mx-auto px-6 py-6 text-center text-xs" style={{ color: '#9CA3AF' }}>
-          © 2026 Pannonl Ltd ·{' '}
+          © 2026 Pannon Ltd ·{' '}
           <a href="/admin" className="underline underline-offset-2 hover:opacity-80">Admin</a>
           {' '}·{' '}
-          <a href="/privacy-policy.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">Privacy Policy</a>
+          <Link to="/privacy" className="underline underline-offset-2 hover:opacity-80">Privacy</Link>
           {' '}·{' '}
-          <a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">Terms of Service</a>
+          <Link to="/terms" className="underline underline-offset-2 hover:opacity-80">Terms</Link>
+          {' '}·{' '}
+          <Link to="/safeguarding" className="underline underline-offset-2 hover:opacity-80">Safeguarding</Link>
         </div>
       </div>
 

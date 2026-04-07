@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, LayoutDashboard, Loader2, X, ArrowRight } from 'lucide-react';
 
@@ -207,14 +207,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
                 />
                 <span className="font-body text-sm text-foreground leading-relaxed">
                   I have read and agree to the{' '}
-                  <a
-                    href="/terms-of-service.md"
+                  <Link
+                    to="/terms"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:opacity-80"
                   >
                     Terms of Service
-                  </a>
+                  </Link>
                   , including that ClearNest is not legal or financial advice.
                 </span>
               </label>
@@ -228,14 +228,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
                 />
                 <span className="font-body text-sm text-foreground leading-relaxed">
                   I understand how my data is handled as described in the{' '}
-                  <a
-                    href="/privacy-policy.md"
+                  <Link
+                    to="/privacy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:opacity-80"
                   >
                     Privacy Policy
-                  </a>
+                  </Link>
                   , including that voice conversations are processed by ElevenLabs.
                 </span>
               </label>
@@ -327,151 +327,6 @@ function ClaraPromptModal({
             <LayoutDashboard className="w-4 h-4" />
             Go to Dashboard
           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Policy content ───────────────────────────────────────────────────────────
-const POLICIES = {
-  privacy: {
-    title: 'Privacy Policy',
-    sections: [
-      {
-        heading: 'What we collect',
-        body: 'We collect the name, age, and gender of your loved one, along with your name as the trusted contact. During voice sessions, audio is streamed to ElevenLabs for real-time transcription. The resulting transcript and any facts Clara captures are stored in our Supabase database, scoped to your family.',
-      },
-      {
-        heading: 'How it is used',
-        body: "Your information is used solely to personalise Clara's conversations and display a summary on your family dashboard. We do not use your data for advertising, profiling, or any purpose beyond the ClearNest service.",
-      },
-      {
-        heading: 'Data retention',
-        body: 'Conversation transcripts are automatically deleted after 30 days unless you choose to pin them. Captured facts and profile data remain until you delete them. You can remove your data at any time via the dashboard.',
-      },
-      {
-        heading: 'Third-party processors',
-        body: 'Voice audio is processed by ElevenLabs (elevenlabs.io) under their own privacy policy. Structured data is stored in Supabase (supabase.com). No other third parties receive your personal data.',
-      },
-      {
-        heading: 'Your rights',
-        body: 'You have the right to access, correct, or delete any data we hold about you. To exercise these rights, contact us at privacy@clearnest.app. We will respond within 30 days.',
-      },
-      {
-        heading: 'Cookies',
-        body: 'ClearNest does not use tracking or advertising cookies. We use only essential local storage to remember your session and consent preferences on this device.',
-      },
-    ],
-  },
-  safeguarding: {
-    title: 'Safeguarding Policy',
-    sections: [
-      {
-        heading: 'Our commitment',
-        body: 'ClearNest is committed to the safety and wellbeing of all users, particularly older adults and those who may be vulnerable. We believe everyone has the right to live free from abuse, neglect, and exploitation.',
-      },
-      {
-        heading: 'Informed consent',
-        body: 'Clara should only be used when the person speaking understands what they are sharing and agrees freely — without pressure, coercion, or undue influence from family members or others. If you are unsure whether someone has capacity to consent, do not use ClearNest until appropriate guidance has been sought.',
-      },
-      {
-        heading: 'Not a substitute for professional advice',
-        body: 'ClearNest is an organisational tool only. It does not provide legal, financial, or medical advice. Information captured by Clara should always be reviewed with qualified professionals (solicitors, financial advisers, GPs) before any decisions are made.',
-      },
-      {
-        heading: 'If you have a concern',
-        body: 'If you believe someone is at risk of harm — including financial abuse, coercion, or exploitation — contact your local Adult Social Care team or call the Adult Safeguarding helpline. In an emergency, always call 999.',
-      },
-      {
-        heading: 'Reporting a concern about ClearNest',
-        body: 'If you have a safeguarding concern specifically about how ClearNest is being used, contact us at safeguarding@clearnest.app. We treat all reports seriously and will respond within 2 business days.',
-      },
-      {
-        heading: 'Useful contacts',
-        body: 'Age UK: 0800 678 1602 · Action on Elder Abuse: 080 8808 8141 · NHS: 111 · Emergency: 999',
-      },
-    ],
-  },
-} as const;
-
-type PolicyKey = keyof typeof POLICIES;
-
-// ─── Glass policy modal ────────────────────────────────────────────────────────
-function PolicyModal({ policyKey, onClose }: { policyKey: PolicyKey; onClose: () => void }) {
-  const policy = POLICIES[policyKey];
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(10,8,20,0.72)',
-        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '24px',
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="policy-modal-title"
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'relative',
-          background: 'linear-gradient(145deg,rgba(230,222,250,0.62) 0%,rgba(210,200,240,0.50) 50%,rgba(195,180,235,0.44) 100%)',
-          backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)',
-          border: '1px solid rgba(200,180,240,0.55)',
-          borderRadius: 28,
-          boxShadow: '0 24px 72px rgba(40,20,100,0.32),inset 0 1.5px 0 rgba(255,255,255,0.60)',
-          maxWidth: 600, width: '100%',
-          maxHeight: '80dvh',
-          display: 'flex', flexDirection: 'column',
-          fontFamily: "'Figtree', system-ui, sans-serif",
-        }}
-      >
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '26px 28px 20px',
-          borderBottom: '1px solid rgba(155,123,200,0.20)',
-          flexShrink: 0,
-        }}>
-          <span id="policy-modal-title" style={{ fontSize: 22, fontWeight: 900, color: 'rgba(60,30,120,0.95)' }}>
-            {policy.title}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              background: 'rgba(155,123,200,0.18)', border: '1px solid rgba(155,123,200,0.30)',
-              borderRadius: '50%', width: 34, height: 34,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'rgba(60,30,120,0.8)', fontSize: 18, lineHeight: 1,
-              flexShrink: 0,
-            }}
-          >
-            <X style={{ width: 16, height: 16 }} />
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="cn-policy-scroll" style={{ overflowY: 'auto', scrollbarWidth: 'none', padding: '22px 28px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {policy.sections.map(section => (
-            <div key={section.heading}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(80,40,160,0.85)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                {section.heading}
-              </div>
-              <div style={{ fontSize: 14, lineHeight: 1.7, color: 'rgba(40,20,80,0.80)' }}>
-                {section.body}
-              </div>
-            </div>
-          ))}
-
-          <div style={{ marginTop: 8, paddingTop: 16, borderTop: '1px solid rgba(155,123,200,0.20)', fontSize: 11, color: 'rgba(100,80,150,0.55)', textAlign: 'center' }}>
-            © 2026 Pannonl Ltd · Not legal or financial advice
-          </div>
         </div>
       </div>
     </div>
@@ -593,7 +448,6 @@ const Landing = () => {
   const [connecting, setConnecting] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showClaraPrompt, setShowClaraPrompt] = useState(false);
-  const [policyModal, setPolicyModal] = useState<PolicyKey | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme);
 
   const t = THEMES[theme];
@@ -657,7 +511,6 @@ const Landing = () => {
           from { opacity: 0; transform: translateY(-12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .cn-policy-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* Background blobs */}
@@ -675,10 +528,6 @@ const Landing = () => {
           onDashboard={() => { setShowClaraPrompt(false); navigate('/dashboard'); }}
         />
       )}
-      {policyModal && (
-        <PolicyModal policyKey={policyModal} onClose={() => setPolicyModal(null)} />
-      )}
-
       {/* Logo — top centre */}
       <div style={{
         position: 'absolute', top: 28, left: 0, right: 0, zIndex: 2,
@@ -867,11 +716,11 @@ const Landing = () => {
           Not legal or financial advice. ClearNest is an organisational tool only. &nbsp;·&nbsp;
           <a href="/admin" style={{ color: 'inherit', textDecoration: 'underline' }}>Admin</a>
           &nbsp;·&nbsp;
-          <button type="button" onClick={() => setPolicyModal('privacy')} style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}>Privacy Policy</button>
+          <Link to="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>Privacy</Link>
           &nbsp;·&nbsp;
-          <a href="/terms-of-service.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms of Service</a>
+          <Link to="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms</Link>
           &nbsp;·&nbsp;
-          <button type="button" onClick={() => setPolicyModal('safeguarding')} style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}>Safeguarding</button>
+          <Link to="/safeguarding" style={{ color: 'inherit', textDecoration: 'underline' }}>Safeguarding</Link>
         </p>
       </div>
     </div>

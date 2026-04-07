@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, Volume2, Radio, Loader2 } from 'lucide-react';
 import { useConversation } from '@elevenlabs/react';
@@ -725,8 +725,12 @@ const Conversation = () => {
           <button onClick={handleEndChat} style={styles.backBtn} aria-label="Go back">
             Go back
           </button>
-          <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF' }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.6 }}>
             <a href="/admin" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Admin</a>
+            {' · '}
+            <Link to="/privacy" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Privacy</Link>
+            {' · '}
+            <Link to="/terms" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Terms</Link>
           </div>
         </div>
       )}

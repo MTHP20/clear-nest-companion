@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 import { ClearNestLogo } from '@/components/ClearNestLogo';
@@ -246,6 +247,14 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
         {lastSession
           ? `Last session: ${new Date(lastSession).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
           : 'No sessions yet'}
+      </div>
+
+      <div style={{ padding: '12px 20px 20px', fontSize: 10, color: C.sidebarMuted, lineHeight: 1.6 }}>
+        <Link to="/privacy" style={{ color: C.sidebarMuted, textDecoration: 'underline' }}>Privacy</Link>
+        {' · '}
+        <Link to="/terms" style={{ color: C.sidebarMuted, textDecoration: 'underline' }}>Terms</Link>
+        {' · '}
+        <Link to="/safeguarding" style={{ color: C.sidebarMuted, textDecoration: 'underline' }}>Safeguarding</Link>
       </div>
     </>
   );
