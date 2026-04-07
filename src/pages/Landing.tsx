@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, LayoutDashboard, CheckCircle2, Loader2, X, ArrowRight, Lock } from 'lucide-react';
 
@@ -207,14 +207,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
                 />
                 <span className="font-body text-sm text-foreground leading-relaxed">
                   I have read and agree to the{' '}
-                  <a
-                    href="/terms-of-service.md"
+                  <Link
+                    to="/terms"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:opacity-80"
                   >
                     Terms of Service
-                  </a>
+                  </Link>
                   , including that ClearNest is not legal or financial advice.
                 </span>
               </label>
@@ -228,14 +228,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
                 />
                 <span className="font-body text-sm text-foreground leading-relaxed">
                   I understand how my data is handled as described in the{' '}
-                  <a
-                    href="/privacy-policy.md"
+                  <Link
+                    to="/privacy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:opacity-80"
                   >
                     Privacy Policy
-                  </a>
+                  </Link>
                   , including that voice conversations are processed by ElevenLabs.
                 </span>
               </label>
@@ -528,32 +528,17 @@ const Landing = () => {
             Admin
           </a>
           {' '}·{' '}
-          <a
-            href="/privacy-policy.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:opacity-80"
-          >
+          <Link to="/privacy" className="underline underline-offset-2 hover:opacity-80">
             Privacy Policy
-          </a>
+          </Link>
           {' '}·{' '}
-          <a
-            href="/terms-of-service.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:opacity-80"
-          >
+          <Link to="/terms" className="underline underline-offset-2 hover:opacity-80">
             Terms of Service
-          </a>
+          </Link>
           {' '}·{' '}
-          <a
-            href="/safeguarding-policy.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:opacity-80"
-          >
+          <Link to="/safeguarding" className="underline underline-offset-2 hover:opacity-80">
             Safeguarding
-          </a>
+          </Link>
         </p>
       </footer>
     </div>

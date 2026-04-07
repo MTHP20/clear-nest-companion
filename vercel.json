@@ -6,7 +6,10 @@
     { "source": "/conversation", "destination": "/index.html" },
     { "source": "/dashboard", "destination": "/index.html" },
     { "source": "/blog", "destination": "/index.html" },
-    { "source": "/admin", "destination": "/index.html" }
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/safeguarding", "destination": "/index.html" }
   ],
   "headers": [
     {

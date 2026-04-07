@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminLogin from "./pages/AdminLogin";
 import Blog from "./pages/Blog";
 import NotFound from "./pages/NotFound";
+import { LegalDocument } from "./pages/LegalDocument";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,18 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/blog" element={<Blog />} />
+            <Route
+              path="/privacy"
+              element={<LegalDocument markdownPath="/privacy-policy.md" pageTitle="Privacy Policy" />}
+            />
+            <Route
+              path="/terms"
+              element={<LegalDocument markdownPath="/terms-of-service.md" pageTitle="Terms of Service" />}
+            />
+            <Route
+              path="/safeguarding"
+              element={<LegalDocument markdownPath="/safeguarding-policy.md" pageTitle="Safeguarding Policy" />}
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
