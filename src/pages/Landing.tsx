@@ -478,6 +478,82 @@ function PolicyModal({ policyKey, onClose }: { policyKey: PolicyKey; onClose: ()
   );
 }
 
+// ─── Themes (mirrors Dashboard.tsx THEME_COLORS keys) ────────────────────────
+const THEME_KEY = 'cn-theme-v1';
+export type Theme = 'default' | 'dark' | 'orange';
+
+const THEMES: Record<Theme, {
+  pageBg: string; greetingColor: string; blobs: [string, string, string];
+  cardBg: string; cardBorder: string; cardShadow: string; cardHoverShadow: string;
+  cardTextPrimary: string; cardTextSecondary: string;
+  dashTextColor: string; dashIconColor: string;
+  footerBg: string; footerText: string; swatchBg: string; swatchLabel: string;
+}> = {
+  default: {
+    pageBg: '#e1f1fd',
+    greetingColor: '#1e2d4f',
+    blobs: ['rgba(70,99,172,0.14)', 'rgba(70,99,172,0.08)', 'rgba(70,99,172,0.07)'],
+    cardBg: 'rgba(255,255,255,0.28)',
+    cardBorder: 'rgba(255,255,255,0.58)',
+    cardShadow: '0 14px 44px rgba(70,99,172,0.12),0 2px 8px rgba(70,99,172,0.06),inset 0 1.5px 0 rgba(255,255,255,0.72)',
+    cardHoverShadow: '0 24px 64px rgba(70,99,172,0.20),inset 0 1.5px 0 rgba(255,255,255,0.78)',
+    cardTextPrimary: 'rgba(30,45,79,0.92)',
+    cardTextSecondary: 'rgba(46,62,107,0.52)',
+    dashTextColor: 'rgba(30,45,79,0.88)',
+    dashIconColor: 'rgba(30,45,79,0.65)',
+    footerBg: 'rgba(200,217,237,0.72)',
+    footerText: 'rgba(30,45,79,0.55)',
+    swatchBg: '#4663ac',
+    swatchLabel: 'Default',
+  },
+  orange: {
+    pageBg: '#fdf0e8',
+    greetingColor: '#5c2229',
+    blobs: ['rgba(199,98,91,0.15)', 'rgba(240,143,92,0.10)', 'rgba(199,98,91,0.08)'],
+    cardBg: 'rgba(255,255,255,0.30)',
+    cardBorder: 'rgba(255,255,255,0.62)',
+    cardShadow: '0 14px 44px rgba(156,55,66,0.12),0 2px 8px rgba(156,55,66,0.06),inset 0 1.5px 0 rgba(255,255,255,0.74)',
+    cardHoverShadow: '0 24px 64px rgba(156,55,66,0.20),inset 0 1.5px 0 rgba(255,255,255,0.80)',
+    cardTextPrimary: 'rgba(92,34,41,0.90)',
+    cardTextSecondary: 'rgba(92,34,41,0.50)',
+    dashTextColor: 'rgba(92,34,41,0.88)',
+    dashIconColor: 'rgba(92,34,41,0.62)',
+    footerBg: 'rgba(242,159,121,0.28)',
+    footerText: 'rgba(92,34,41,0.60)',
+    swatchBg: '#d87458',
+    swatchLabel: 'Orange',
+  },
+  dark: {
+    pageBg: '#0d0f1a',
+    greetingColor: '#a78bfa',
+    blobs: ['rgba(167,139,250,0.18)', 'rgba(94,207,207,0.09)', 'rgba(167,139,250,0.10)'],
+    cardBg: 'rgba(255,255,255,0.055)',
+    cardBorder: 'rgba(255,255,255,0.11)',
+    cardShadow: '0 14px 44px rgba(0,0,0,0.42),0 2px 8px rgba(0,0,0,0.22),inset 0 1.5px 0 rgba(255,255,255,0.07)',
+    cardHoverShadow: '0 24px 64px rgba(0,0,0,0.58),inset 0 1.5px 0 rgba(255,255,255,0.10)',
+    cardTextPrimary: 'rgba(240,234,255,0.95)',
+    cardTextSecondary: 'rgba(200,185,240,0.50)',
+    dashTextColor: 'rgba(240,234,255,0.90)',
+    dashIconColor: 'rgba(240,234,255,0.72)',
+    footerBg: 'rgba(13,15,26,0.88)',
+    footerText: 'rgba(167,139,250,0.55)',
+    swatchBg: '#1a1c2e',
+    swatchLabel: 'Dark',
+  },
+};
+
+function loadTheme(): Theme {
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    if (t === 'default' || t === 'orange' || t === 'dark') return t;
+  } catch { /* ignore */ }
+  return 'default';
+}
+
+function saveTheme(t: Theme) {
+  try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
+}
+
 // ─── Sphere ───────────────────────────────────────────────────────────────────
 function ClaraSphere({ size = 160 }: { size?: number }) {
   const inset = Math.round(size * 0.09);
@@ -518,6 +594,14 @@ const Landing = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showClaraPrompt, setShowClaraPrompt] = useState(false);
   const [policyModal, setPolicyModal] = useState<PolicyKey | null>(null);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+
+  const t = THEMES[theme];
+
+  const handleTheme = (next: Theme) => {
+    setTheme(next);
+    saveTheme(next);
+  };
 
   const onboarded = isOnboarded();
   const profile = loadProfile();
@@ -559,7 +643,7 @@ const Landing = () => {
     : 'Start your first session';
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#ECEDF5', position: 'relative', overflow: 'hidden', fontFamily: "'Figtree', system-ui, sans-serif" }}>
+    <div style={{ minHeight: '100dvh', background: t.pageBg, position: 'relative', overflow: 'hidden', fontFamily: "'Figtree', system-ui, sans-serif", transition: 'background 0.4s ease' }}>
       <style>{`
         @keyframes cnLandingSlideLeft {
           from { opacity: 0; transform: translateX(-40px); }
@@ -577,16 +661,13 @@ const Landing = () => {
       `}</style>
 
       {/* Background blobs */}
-      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 700, height: 700, background: 'rgba(155,123,200,0.15)', top: -200, right: '15%' }} />
-      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 500, height: 500, background: 'rgba(94,207,207,0.08)', bottom: -100, right: '48%' }} />
-      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 380, height: 380, background: 'rgba(155,123,200,0.09)', top: '30%', left: 20 }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 700, height: 700, background: t.blobs[0], top: -200, right: '15%', transition: 'background 0.4s ease' }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 500, height: 500, background: t.blobs[1], bottom: -100, right: '48%', transition: 'background 0.4s ease' }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 380, height: 380, background: t.blobs[2], top: '30%', left: 20, transition: 'background 0.4s ease' }} />
 
       {/* Modals */}
       {showOnboarding && (
-        <OnboardingModal
-          onComplete={handleOnboardingComplete}
-          onClose={() => setShowOnboarding(false)}
-        />
+        <OnboardingModal onComplete={handleOnboardingComplete} onClose={() => setShowOnboarding(false)} />
       )}
       {showClaraPrompt && (
         <ClaraPromptModal
@@ -610,32 +691,62 @@ const Landing = () => {
         </div>
       </div>
 
+      {/* Theme switcher — top right */}
+      <div style={{
+        position: 'fixed', top: 24, right: 28, zIndex: 10,
+        display: 'flex', alignItems: 'center', gap: 8,
+        animation: 'cnLandingFadeDown 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s both',
+      }}>
+        {(['default', 'orange', 'dark'] as Theme[]).map(th => (
+          <button
+            key={th}
+            type="button"
+            onClick={() => handleTheme(th)}
+            title={THEMES[th].swatchLabel}
+            style={{
+              width: 22, height: 22, borderRadius: '50%',
+              background: THEMES[th].swatchBg,
+              border: theme === th ? '2.5px solid rgba(255,255,255,0.90)' : '2.5px solid transparent',
+              outline: theme === th ? `2.5px solid ${THEMES[th].swatchBg}` : 'none',
+              outlineOffset: '2px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+              padding: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.2)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+          />
+        ))}
+      </div>
+
       {/* Scene */}
       <div style={{
         position: 'relative', zIndex: 1,
         minHeight: '100dvh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 'clamp(80px, 8vw, 120px) clamp(32px, 7vw, 140px) clamp(48px, 4vw, 80px)',
-        gap: 'clamp(32px, 4vw, 72px)',
+        gap: 'clamp(24px, 3vw, 48px)',
         flexWrap: 'wrap',
       }}>
 
-        {/* Greeting — fills left half */}
+        {/* Greeting */}
         <div style={{
-          fontSize: 'clamp(64px, 8.5vw, 130px)',
+          fontSize: 'clamp(72px, 10vw, 148px)',
           fontWeight: 900,
           lineHeight: 1.0,
-          color: '#7A59BE',
+          color: t.greetingColor,
           flex: '1 1 0',
           minWidth: 0,
           letterSpacing: '-3px',
           whiteSpace: 'pre-line',
           animation: 'cnLandingSlideLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both',
+          transition: 'color 0.4s ease',
         }}>
           {greeting}
         </div>
 
-        {/* Cards column — right half */}
+        {/* Cards column */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: 20,
           flex: '1 1 0',
@@ -644,43 +755,45 @@ const Landing = () => {
           animation: 'cnLandingSlideRight 0.7s cubic-bezier(0.22,1,0.36,1) 0.25s both',
         }}>
 
-          {/* Clara card — centered contents, big sphere */}
+          {/* Clara card — crystal glass */}
           <div
             onClick={handleClaraCard}
             style={{
               position: 'relative',
-              background: 'linear-gradient(145deg,rgba(230,222,250,0.60) 0%,rgba(210,200,240,0.44) 50%,rgba(190,175,230,0.40) 100%)',
-              backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-              border: '1px solid rgba(200,180,240,0.50)',
-              borderRadius: 32, padding: '36px 28px 32px',
+              background: t.cardBg,
+              backdropFilter: 'blur(32px) saturate(1.6)',
+              WebkitBackdropFilter: 'blur(32px) saturate(1.6)',
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 32, padding: '48px 28px 44px',
               overflow: 'hidden', cursor: connecting ? 'wait' : 'pointer',
+              minHeight: 580,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               textAlign: 'center',
-              boxShadow: '0 14px 44px rgba(80,50,160,0.18),0 2px 8px rgba(80,50,160,0.08),inset 0 1.5px 0 rgba(255,255,255,0.60),inset 0 -1px 0 rgba(155,123,200,0.15)',
-              transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1),box-shadow 0.22s ease',
+              boxShadow: t.cardShadow,
+              transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease, background 0.4s ease',
             }}
             onMouseEnter={e => {
               const d = e.currentTarget as HTMLDivElement;
               d.style.transform = 'translateY(-4px) scale(1.012)';
-              d.style.boxShadow = '0 24px 64px rgba(80,50,160,0.26),0 4px 12px rgba(80,50,160,0.10),inset 0 1.5px 0 rgba(255,255,255,0.65),inset 0 -1px 0 rgba(155,123,200,0.15)';
+              d.style.boxShadow = t.cardHoverShadow;
             }}
             onMouseLeave={e => {
               const d = e.currentTarget as HTMLDivElement;
               d.style.transform = 'translateY(0) scale(1)';
-              d.style.boxShadow = '0 14px 44px rgba(80,50,160,0.18),0 2px 8px rgba(80,50,160,0.08),inset 0 1.5px 0 rgba(255,255,255,0.60),inset 0 -1px 0 rgba(155,123,200,0.15)';
+              d.style.boxShadow = t.cardShadow;
             }}
           >
             {/* Decorative arcs */}
             <div style={{ position: 'absolute', top: -20, right: -20, width: 140, height: 140, pointerEvents: 'none' }}>
               {[
-                { size: 118, color: 'rgba(94,207,207,0.50)', rot: -22 },
-                { size: 82,  color: 'rgba(255,255,255,0.35)', rot: -8  },
-                { size: 52,  color: 'rgba(155,123,200,0.75)', rot:  6  },
+                { size: 118, color: 'rgba(94,207,207,0.40)', rot: -22 },
+                { size: 82,  color: 'rgba(255,255,255,0.30)', rot: -8  },
+                { size: 52,  color: 'rgba(200,180,255,0.45)', rot:  6  },
               ].map((arc, i) => (
                 <div key={i} style={{
                   position: 'absolute',
                   width: arc.size, height: arc.size, borderRadius: '50%',
-                  border: '5px solid transparent',
+                  border: '4px solid transparent',
                   borderTopColor: arc.color, borderRightColor: arc.color,
                   top: (118 - arc.size) / 2 + 11, right: (118 - arc.size) / 2 + 11,
                   transform: `rotate(${arc.rot}deg)`,
@@ -690,8 +803,7 @@ const Landing = () => {
 
             <ClaraSphere size={160} />
 
-            {/* Title */}
-            <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.15, color: 'rgba(255,255,255,0.97)', textShadow: '0 1px 14px rgba(80,40,160,0.25)', marginTop: 20, marginBottom: 8, position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.15, color: t.cardTextPrimary, marginTop: 20, marginBottom: 8, position: 'relative', zIndex: 1, transition: 'color 0.4s ease' }}>
               {connecting ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                   <Loader2 style={{ width: 28, height: 28, animation: 'spin 1s linear infinite' }} />
@@ -702,44 +814,43 @@ const Landing = () => {
               )}
             </div>
 
-            {/* Subtitle */}
-            <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', fontWeight: 400, position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: 15, color: t.cardTextSecondary, fontWeight: 400, position: 'relative', zIndex: 1, transition: 'color 0.4s ease' }}>
               {claraSubtitle}
             </div>
           </div>
 
-          {/* Dashboard — glassmorphism */}
+          {/* Dashboard — crystal glass */}
           <div
             onClick={handleDashboard}
             style={{
               position: 'relative',
-              background: 'linear-gradient(145deg,rgba(140,100,210,0.38) 0%,rgba(100,60,180,0.30) 60%,rgba(80,40,160,0.26) 100%)',
-              backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-              border: '1px solid rgba(180,150,240,0.40)',
+              background: t.cardBg,
+              backdropFilter: 'blur(32px) saturate(1.6)',
+              WebkitBackdropFilter: 'blur(32px) saturate(1.6)',
+              border: `1px solid ${t.cardBorder}`,
               borderRadius: 28, padding: '26px 32px',
               display: 'flex', alignItems: 'center', gap: 20,
               cursor: 'pointer',
-              boxShadow: '0 10px 32px rgba(80,50,160,0.22),inset 0 1.5px 0 rgba(255,255,255,0.30),inset 0 -1px 0 rgba(100,60,200,0.20)',
-              transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1),box-shadow 0.22s ease',
+              boxShadow: t.cardShadow,
+              transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease, background 0.4s ease',
             }}
             onMouseEnter={e => {
               const d = e.currentTarget as HTMLDivElement;
               d.style.transform = 'translateY(-3px) scale(1.012)';
-              d.style.boxShadow = '0 20px 52px rgba(80,50,160,0.32),inset 0 1.5px 0 rgba(255,255,255,0.36),inset 0 -1px 0 rgba(100,60,200,0.20)';
+              d.style.boxShadow = t.cardHoverShadow;
             }}
             onMouseLeave={e => {
               const d = e.currentTarget as HTMLDivElement;
               d.style.transform = 'translateY(0) scale(1)';
-              d.style.boxShadow = '0 10px 32px rgba(80,50,160,0.22),inset 0 1.5px 0 rgba(255,255,255,0.30),inset 0 -1px 0 rgba(100,60,200,0.20)';
+              d.style.boxShadow = t.cardShadow;
             }}
           >
-            {/* Grid icon */}
             <div style={{ width: 34, height: 34, flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
               {[0,1,2,3].map(i => (
-                <span key={i} style={{ background: 'rgba(255,255,255,0.88)', borderRadius: 5, display: 'block' }} />
+                <span key={i} style={{ background: t.dashIconColor, borderRadius: 5, display: 'block', transition: 'background 0.4s ease' }} />
               ))}
             </div>
-            <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: 1.5 }}>DASHBOARD</span>
+            <span style={{ fontSize: 22, fontWeight: 900, color: t.dashTextColor, letterSpacing: 1.5, transition: 'color 0.4s ease' }}>DASHBOARD</span>
           </div>
 
         </div>
@@ -749,9 +860,10 @@ const Landing = () => {
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 2,
         padding: '10px 24px', textAlign: 'center',
-        background: 'rgba(236,237,245,0.65)', backdropFilter: 'blur(10px)',
+        background: t.footerBg, backdropFilter: 'blur(10px)',
+        transition: 'background 0.4s ease',
       }}>
-        <p style={{ fontSize: 11, color: 'rgba(100,90,130,0.65)', margin: 0 }}>
+        <p style={{ fontSize: 11, color: t.footerText, margin: 0, transition: 'color 0.4s ease' }}>
           Not legal or financial advice. ClearNest is an organisational tool only. &nbsp;·&nbsp;
           <a href="/admin" style={{ color: 'inherit', textDecoration: 'underline' }}>Admin</a>
           &nbsp;·&nbsp;

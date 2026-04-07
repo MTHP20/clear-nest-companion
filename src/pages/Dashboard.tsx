@@ -254,7 +254,18 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const isMobile = useIsMobile();
-  const [theme, setTheme] = useState<'default' | 'dark' | 'orange'>('default');
+  const [theme, setTheme] = useState<'default' | 'dark' | 'orange'>(() => {
+    try {
+      const t = localStorage.getItem('cn-theme-v1');
+      if (t === 'dark' || t === 'orange' || t === 'default') return t;
+    } catch { /* ignore */ }
+    return 'default';
+  });
+
+  const handleThemeChange = (next: 'default' | 'dark' | 'orange') => {
+    setTheme(next);
+    try { localStorage.setItem('cn-theme-v1', next); } catch { /* ignore */ }
+  };
   const C = THEME_COLORS[theme];
   const [activePage, setActivePage] = useState<NavId>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -835,7 +846,7 @@ const Dashboard = () => {
                       <button
                         key={tab.label}
                         disabled={tab.disabled}
-                        onClick={tab.disabled ? undefined : () => setTheme(tab.key)}
+                        onClick={tab.disabled ? undefined : () => handleThemeChange(tab.key)}
                         style={{
                           padding: '7px 14px',
                           fontSize: 12, fontWeight: 600,
