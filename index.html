@@ -20,8 +20,17 @@
 
   <body>
     <script>
-      if ('%VITE_SET_WAITLIST%' === 'true' && window.location.pathname !== '/admin') {
-        window.location.replace('/landing.html');
+      // Waitlist mode: send marketing traffic to static landing. Do not intercept legal pages or admin.
+      if ('%VITE_SET_WAITLIST%' === 'true') {
+        var path = window.location.pathname;
+        var allowSpa =
+          path === '/admin' ||
+          path === '/privacy' ||
+          path === '/terms' ||
+          path === '/safeguarding';
+        if (!allowSpa) {
+          window.location.replace('/landing.html');
+        }
       }
     </script>
     <div id="root"></div>
