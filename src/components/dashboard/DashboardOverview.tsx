@@ -673,9 +673,9 @@ export default function DashboardOverview({
 
     return (
       <>
-      <div className="cn-stagger" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 230px', gap: 18 }}>
+      <div className="cn-stagger" style={{ display: 'grid', gap: 18 }}>
 
-        {/* Row 1 col 1: 6 nav panels 3×2 */}
+        {/* Row 1: 6 nav panels 3×2 — full width */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10, minHeight: isMobile ? 'auto' : 'clamp(260px, 30vh, 340px)' }}>
           {NAV_PANELS.map((panel, i) => {
             const isActive = panel.category === categoryFilter;
@@ -721,87 +721,8 @@ export default function DashboardOverview({
           })}
         </div>
 
-        {/* Row 1 col 2: Chat to Clara card — full height */}
-        <div
-          onClick={() => navigate('/conversation')}
-          style={{
-            cursor: 'pointer',
-            background: 'rgba(155,123,200,0.18)',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(155,123,200,0.35)',
-            borderRadius: 22, padding: '24px 20px',
-            position: 'relative', overflow: 'hidden',
-            boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          }}
-          onMouseEnter={e => {
-            const d = e.currentTarget as HTMLDivElement;
-            d.style.transform = 'scale(1.02)';
-            d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
-          }}
-          onMouseLeave={e => {
-            const d = e.currentTarget as HTMLDivElement;
-            d.style.transform = 'scale(1)';
-            d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
-          }}
-        >
-          {/* Decorative arcs */}
-          <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
-            {[
-              { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
-              { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
-              { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
-            ].map((arc, i) => (
-              <div key={i} style={{
-                position: 'absolute',
-                width: arc.size, height: arc.size, borderRadius: '50%',
-                border: '5px solid transparent',
-                borderTopColor: arc.color, borderRightColor: arc.color,
-                top: (84 - arc.size) / 2, right: (84 - arc.size) / 2,
-                transform: `rotate(${arc.rot}deg)`,
-              }} />
-            ))}
-          </div>
-          {/* Purple sphere */}
-          <div style={{ position: 'relative', width: 80, height: 80, marginBottom: 14, zIndex: 1 }}>
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
-              animation: 'cnSphereRot 12s linear infinite', filter: 'blur(4px)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 6, borderRadius: '50%',
-              background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
-              animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(5px)',
-            }} />
-            <div style={{
-              position: 'absolute', width: 52, height: 34, borderRadius: '50%',
-              background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
-              top: 10, left: 8, animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(6px)',
-            }} />
-            <div style={{
-              position: 'absolute', top: 12, left: 16, width: '36%', height: '26%', borderRadius: '50%',
-              background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
-            }} />
-          </div>
-          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1 }}>
-            <span style={{ color: '#5ECFCF' }}>Chat</span> to<br />Clara
-          </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1 }}>
-            {primarySessionLabel}
-          </div>
-          <div style={{
-            position: 'absolute', bottom: 18, right: 18,
-            width: 42, height: 42, background: 'linear-gradient(135deg,#9B7BC8,#3D1F8A)',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontSize: 13, fontWeight: 700, zIndex: 2,
-            boxShadow: '0 0 16px rgba(155,123,200,0.7)',
-          }}>GO</div>
-        </div>
-
-        {/* Row 2: Recently Captured + Readiness Score — equal width, spans both columns */}
-        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18 }}>
+        {/* Row 2: Recently Captured | Chat to Clara | Readiness Score */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px 1fr', gap: 18 }}>
 
           {/* Recently Captured */}
           <div style={{
@@ -910,6 +831,78 @@ export default function DashboardOverview({
             </div>
           </div>
 
+          {/* Chat to Clara — center */}
+          <div
+            onClick={() => navigate('/conversation')}
+            style={{
+              cursor: 'pointer',
+              background: 'rgba(155,123,200,0.18)',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(155,123,200,0.35)',
+              borderRadius: 22, padding: '24px 20px',
+              position: 'relative', overflow: 'hidden',
+              boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            }}
+            onMouseEnter={e => {
+              const d = e.currentTarget as HTMLDivElement;
+              d.style.transform = 'scale(1.02)';
+              d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
+            }}
+            onMouseLeave={e => {
+              const d = e.currentTarget as HTMLDivElement;
+              d.style.transform = 'scale(1)';
+              d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
+            }}
+          >
+            {/* Decorative arcs */}
+            <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
+              {[
+                { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
+                { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
+                { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
+              ].map((arc, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  width: arc.size, height: arc.size, borderRadius: '50%',
+                  border: '5px solid transparent',
+                  borderTopColor: arc.color, borderRightColor: arc.color,
+                  top: (84 - arc.size) / 2, right: (84 - arc.size) / 2,
+                  transform: `rotate(${arc.rot}deg)`,
+                }} />
+              ))}
+            </div>
+            {/* Purple sphere — large, fills container */}
+            <div style={{ position: 'absolute', width: '85%', aspectRatio: '1', top: '50%', left: '50%', transform: 'translate(-50%, -58%)', zIndex: 0 }}>
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '50%',
+                background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+                animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+              }} />
+              <div style={{
+                position: 'absolute', inset: '8%', borderRadius: '50%',
+                background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+                animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(8px)',
+              }} />
+              <div style={{
+                position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
+                background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+                top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+              }} />
+              <div style={{
+                position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
+                background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+              }} />
+            </div>
+            <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1, textAlign: 'center' }}>
+              <span style={{ color: '#5ECFCF' }}>Chat</span> to Clara
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+              {primarySessionLabel}
+            </div>
+          </div>
+
           {/* Readiness Score */}
           <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
         </div>
@@ -963,7 +956,7 @@ export default function DashboardOverview({
     <div className="cn-stagger">
 
       {/* Activity + Momentum + Readiness row */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 230px', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: 16, marginBottom: 16 }}>
         <ActivityChart sessions={sessions} />
         <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
         <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
@@ -1028,7 +1021,7 @@ export default function DashboardOverview({
         };
 
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 230px', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px 1fr', gap: 18 }}>
 
             {/* Recently Captured sliding card */}
             <div style={{
@@ -1161,7 +1154,79 @@ export default function DashboardOverview({
               </div>
             </div>
 
-            {/* Nav Panels 3×2 — column 2 */}
+            {/* Chat to Clara — column 2, center */}
+            <div
+              onClick={() => navigate('/conversation')}
+              style={{
+                cursor: 'pointer',
+                background: 'rgba(155,123,200,0.18)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(155,123,200,0.35)',
+                borderRadius: 22, padding: '24px 20px',
+                position: 'relative', overflow: 'hidden',
+                boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              }}
+              onMouseEnter={e => {
+                const d = e.currentTarget as HTMLDivElement;
+                d.style.transform = 'scale(1.02)';
+                d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
+              }}
+              onMouseLeave={e => {
+                const d = e.currentTarget as HTMLDivElement;
+                d.style.transform = 'scale(1)';
+                d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
+              }}
+            >
+              {/* Decorative arcs */}
+              <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
+                {[
+                  { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
+                  { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
+                  { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
+                ].map((arc, i) => (
+                  <div key={i} style={{
+                    position: 'absolute',
+                    width: arc.size, height: arc.size, borderRadius: '50%',
+                    border: '5px solid transparent',
+                    borderTopColor: arc.color, borderRightColor: arc.color,
+                    top: (84 - arc.size) / 2, right: (84 - arc.size) / 2,
+                    transform: `rotate(${arc.rot}deg)`,
+                  }} />
+                ))}
+              </div>
+              {/* Purple sphere — large, fills container */}
+              <div style={{ position: 'absolute', width: '65%', aspectRatio: '1', top: '50%', left: '50%', transform: 'translate(-50%, -58%)', zIndex: 0 }}>
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: '50%',
+                  background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+                  animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+                }} />
+                <div style={{
+                  position: 'absolute', inset: '8%', borderRadius: '50%',
+                  background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+                  animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(8px)',
+                }} />
+                <div style={{
+                  position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
+                  background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+                  top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+                }} />
+                <div style={{
+                  position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
+                  background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+                }} />
+              </div>
+              <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1, textAlign: 'center' }}>
+                <span style={{ color: '#5ECFCF' }}>Chat</span> to Clara
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+                {primarySessionLabel}
+              </div>
+            </div>
+
+            {/* Nav Panels 3×2 — column 3 */}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
               {NAV_PANELS.map((panel, i) => {
                 const isActive = panel.category === categoryFilter;
@@ -1205,85 +1270,6 @@ export default function DashboardOverview({
                   </div>
                 );
               })}
-            </div>
-
-            {/* Chat to Clara — column 3, aligns with ReadinessCard above */}
-            <div
-              onClick={() => navigate('/conversation')}
-              style={{
-                cursor: 'pointer',
-                background: 'rgba(155,123,200,0.18)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(155,123,200,0.35)',
-                borderRadius: 22, padding: '24px 20px',
-                position: 'relative', overflow: 'hidden',
-                boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              }}
-              onMouseEnter={e => {
-                const d = e.currentTarget as HTMLDivElement;
-                d.style.transform = 'scale(1.02)';
-                d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
-              }}
-              onMouseLeave={e => {
-                const d = e.currentTarget as HTMLDivElement;
-                d.style.transform = 'scale(1)';
-                d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
-              }}
-            >
-              {/* Decorative arcs */}
-              <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
-                {[
-                  { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
-                  { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
-                  { size: 38, color: 'rgba(155,123,200,0.6)',  rot:  6 },
-                ].map((arc, i) => (
-                  <div key={i} style={{
-                    position: 'absolute',
-                    width: arc.size, height: arc.size, borderRadius: '50%',
-                    border: '5px solid transparent',
-                    borderTopColor: arc.color, borderRightColor: arc.color,
-                    top: (84 - arc.size) / 2, right: (84 - arc.size) / 2,
-                    transform: `rotate(${arc.rot}deg)`,
-                  }} />
-                ))}
-              </div>
-              {/* Purple sphere */}
-              <div style={{ position: 'relative', width: 52, height: 52, marginBottom: 14, zIndex: 1 }}>
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: '50%',
-                  background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
-                  animation: 'cnSphereRot 12s linear infinite', filter: 'blur(3px)',
-                }} />
-                <div style={{
-                  position: 'absolute', inset: 4, borderRadius: '50%',
-                  background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
-                  animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(4px)',
-                }} />
-                <div style={{
-                  position: 'absolute', width: 34, height: 22, borderRadius: '50%',
-                  background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
-                  top: 6, left: 5, animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(5px)',
-                }} />
-                <div style={{
-                  position: 'absolute', top: 8, left: 10, width: '36%', height: '26%', borderRadius: '50%',
-                  background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
-                }} />
-              </div>
-              <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1 }}>
-                <span style={{ color: '#5ECFCF' }}>Chat</span> to<br />Clara
-              </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1 }}>
-                {primarySessionLabel}
-              </div>
-              <div style={{
-                position: 'absolute', bottom: 18, right: 18,
-                width: 42, height: 42, background: 'linear-gradient(135deg,#9B7BC8,#3D1F8A)',
-                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 13, fontWeight: 700, zIndex: 2,
-                boxShadow: '0 0 16px rgba(155,123,200,0.7)',
-              }}>GO</div>
             </div>
 
           </div>

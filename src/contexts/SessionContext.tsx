@@ -12,6 +12,9 @@ import {
   updateReadinessHistory,
   deleteExtractedFact,
   getExtractedItems,
+  upsertFamilyProfile,
+  getFamilyProfile,
+  upsertActionItems,
 } from '@/lib/userAssetsService';
 
 export interface CapturedItem {
@@ -63,10 +66,18 @@ export interface ReadinessSnapshot {
   score: number; // 0–100
 }
 
+export interface ProfileUpdate {
+  elderlyName: string;
+  age: string;
+  gender: 'male' | 'female' | 'prefer-not-to-say';
+  trustedContactName: string;
+}
+
 interface SessionContextType {
   parentName: string;
   childName: string;
   familyId: string;
+  updateProfile: (update: ProfileUpdate) => Promise<void>;
   capturedItems: CapturedItem[];
   actionItems: ActionItem[];
   sessions: SessionEntry[];
@@ -183,8 +194,8 @@ function loadProfileNames(): { parentName: string; childName: string; familyId: 
 const supabase = sharedSupabase;
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [parentName] = useState(() => loadProfileNames().parentName);
-  const [childName] = useState(() => loadProfileNames().childName);
+  const [parentName, setParentName] = useState(() => loadProfileNames().parentName);
+  const [childName, setChildName] = useState(() => loadProfileNames().childName);
   const [familyId] = useState(() => loadProfileNames().familyId);
 
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>(() =>
@@ -207,7 +218,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => { saveLS('cn-captured-items', capturedItems); }, [capturedItems]);
-  useEffect(() => { saveLS('cn-action-items', actionItems); }, [actionItems]);
+  useEffect(() => {
+    saveLS('cn-action-items', actionItems);
+    if (familyId && familyId !== 'unknown') {
+      upsertActionItems(familyId, actionItems).catch(() => {});
+    }
+  }, [actionItems, familyId]);
   useEffect(() => {
     saveLS('cn-readiness-history', readinessHistory);
     // Persist to Supabase so the chart survives across devices/sessions
@@ -233,6 +249,61 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const syncedIds = useRef<Set<string>>(
     new Set(loadLS<string[]>('cn-synced-ids-v2', []))
   );
+
+  // ─── Hydrate from Supabase on mount ────────────────────────────────────────
+  useEffect(() => {
+    if (!familyId || familyId === 'unknown') return;
+    getFamilyProfile(familyId).then(profile => {
+      if (!profile) return;
+      // Update context names from DB (authoritative source)
+      if (profile.elderly_name) setParentName(profile.elderly_name);
+      if (profile.trusted_contact_name) setChildName(profile.trusted_contact_name);
+      // Keep localStorage in sync
+      try {
+        const raw = localStorage.getItem('cn-user-profile');
+        const existing = raw ? JSON.parse(raw) : {};
+        localStorage.setItem('cn-user-profile', JSON.stringify({
+          ...existing,
+          elderlyName: profile.elderly_name,
+          age: profile.age,
+          gender: profile.gender,
+          trustedContactName: profile.trusted_contact_name,
+        }));
+      } catch { /* ignore */ }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId]);
+
+  // ─── updateProfile ──────────────────────────────────────────────────────────
+  const updateProfile = useCallback(async (update: ProfileUpdate) => {
+    // 1. Update context state immediately
+    setParentName(update.elderlyName);
+    setChildName(update.trustedContactName);
+
+    // 2. Persist to localStorage
+    try {
+      const raw = localStorage.getItem('cn-user-profile');
+      const existing = raw ? JSON.parse(raw) : {};
+      localStorage.setItem('cn-user-profile', JSON.stringify({
+        ...existing,
+        elderlyName: update.elderlyName,
+        age: update.age,
+        gender: update.gender,
+        trustedContactName: update.trustedContactName,
+      }));
+    } catch { /* ignore */ }
+
+    // 3. Persist to Supabase
+    if (familyId && familyId !== 'unknown') {
+      await upsertFamilyProfile({
+        family_id: familyId,
+        elderly_name: update.elderlyName,
+        age: update.age,
+        gender: update.gender,
+        trusted_contact_name: update.trustedContactName,
+      });
+    }
+  }, [familyId]);
 
   const setUserNote = useCallback((itemId: string, note: string) => {
     setUserNotes(prev => ({ ...prev, [itemId]: note }));
@@ -817,6 +888,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         parentName,
         childName,
         familyId,
+        updateProfile,
         capturedItems,
         actionItems,
         sessions,

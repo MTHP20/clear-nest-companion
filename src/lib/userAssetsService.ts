@@ -560,3 +560,95 @@ export function buildExtractedFacts(
     verified_at: item.verifiedAt ? new Date(item.verifiedAt).toISOString() : undefined,
   }));
 }
+
+// ─── family_profiles ─────────────────────────────────────────────────────────
+
+export interface FamilyProfile {
+  family_id: string;
+  elderly_name: string;
+  age: string;
+  gender: 'male' | 'female' | 'prefer-not-to-say';
+  trusted_contact_name: string;
+}
+
+export async function upsertFamilyProfile(profile: FamilyProfile): Promise<void> {
+  const { error } = await supabase
+    .from('family_profiles')
+    .upsert(
+      { ...profile, updated_at: new Date().toISOString() },
+      { onConflict: 'family_id' }
+    );
+  if (error) console.warn('upsertFamilyProfile error:', error.message);
+}
+
+export async function getFamilyProfile(familyId: string): Promise<FamilyProfile | null> {
+  const { data, error } = await supabase
+    .from('family_profiles')
+    .select('family_id, elderly_name, age, gender, trusted_contact_name')
+    .eq('family_id', familyId)
+    .maybeSingle();
+  if (error) {
+    console.warn('getFamilyProfile error:', error.message);
+    return null;
+  }
+  return data as FamilyProfile | null;
+}
+
+// ─── user_assets: action_items, doc_checklist, action_notes ──────────────────
+
+export async function upsertActionItems(
+  familyId: string,
+  actionItems: unknown[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_assets')
+    .upsert(
+      { family_id: familyId, action_items: actionItems, last_updated_at: new Date().toISOString() },
+      { onConflict: 'family_id' }
+    );
+  if (error) console.warn('upsertActionItems error:', error.message);
+}
+
+export async function upsertDocChecklist(
+  familyId: string,
+  docChecklist: string[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_assets')
+    .upsert(
+      { family_id: familyId, doc_checklist: docChecklist, last_updated_at: new Date().toISOString() },
+      { onConflict: 'family_id' }
+    );
+  if (error) console.warn('upsertDocChecklist error:', error.message);
+}
+
+export async function upsertActionNotes(
+  familyId: string,
+  actionNotes: Record<string, string>
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_assets')
+    .upsert(
+      { family_id: familyId, action_notes: actionNotes, last_updated_at: new Date().toISOString() },
+      { onConflict: 'family_id' }
+    );
+  if (error) console.warn('upsertActionNotes error:', error.message);
+}
+
+export async function getExtrasFromUserAssets(familyId: string): Promise<{
+  action_items: unknown[];
+  doc_checklist: string[];
+  action_notes: Record<string, string>;
+} | null> {
+  const { data, error } = await supabase
+    .from('user_assets')
+    .select('action_items, doc_checklist, action_notes')
+    .eq('family_id', familyId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    action_items: (data.action_items as unknown[]) ?? [],
+    doc_checklist: (data.doc_checklist as string[]) ?? [],
+    action_notes: (data.action_notes as Record<string, string>) ?? {},
+  };
+}
