@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { Mic, LayoutDashboard, Loader2, X, ArrowRight } from 'lucide-react';
+import { upsertFamilyProfile } from '@/lib/userAssetsService';
 
 const CONSENT_KEY = 'cn-consent-v1';
 const PROFILE_KEY = 'cn-user-profile';
@@ -75,8 +76,9 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
   const canProceed = terms && privacy;
 
   const handleProfileNext = () => {
+    const token = existingProfile?.sessionToken ?? generateToken();
     const profile: UserProfile = {
-      sessionToken: existingProfile?.sessionToken ?? generateToken(),
+      sessionToken: token,
       elderlyName: elderlyName.trim(),
       age: age.trim(),
       gender,
@@ -84,6 +86,14 @@ function OnboardingModal({ onComplete, onClose }: { onComplete: () => void; onCl
       createdAt: existingProfile?.createdAt ?? new Date().toISOString(),
     };
     saveProfile(profile);
+    // Persist to Supabase (non-blocking)
+    upsertFamilyProfile({
+      family_id: token,
+      elderly_name: profile.elderlyName,
+      age: profile.age,
+      gender: profile.gender,
+      trusted_contact_name: profile.trustedContactName,
+    }).catch(() => {});
     setPage(2);
   };
 

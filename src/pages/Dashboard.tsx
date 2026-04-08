@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -21,8 +21,10 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { generateFamilyReportPDF } from '@/utils/generateReport';
+import { upsertDocChecklist, upsertActionNotes } from '@/lib/userAssetsService';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
 import DashboardActions from '@/components/dashboard/DashboardActions';
+import ProfileModal from '@/components/dashboard/ProfileModal';
 import DashboardFinancial from '@/components/dashboard/DashboardFinancial';
 import DashboardDocuments from '@/components/dashboard/DashboardDocuments';
 import DashboardProperty from '@/components/dashboard/DashboardProperty';
@@ -284,6 +286,7 @@ const Dashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [confidenceFilter, setConfidenceFilter] = useState('all');
   const [activeModal, setActiveModal] = useState<'actions' | 'documents' | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [docChecked, setDocChecked] = useState<Set<string>>(() => {
     try { const r = localStorage.getItem('cn-doc-checklist'); return r ? new Set(JSON.parse(r) as string[]) : new Set(); }
     catch { return new Set(); }
@@ -298,6 +301,23 @@ const Dashboard = () => {
     { id: 'nhs', label: 'NHS number — recorded' },
   ];
 
+  const {
+    actionItems, capturedItems, sessions: sessionList,
+    parentName, childName, familyId, userNotes, updateActionStatus,
+  } = useSession();
+
+  // Sync doc checklist to Supabase whenever it changes
+  useEffect(() => {
+    if (!familyId || familyId === 'unknown') return;
+    upsertDocChecklist(familyId, [...docChecked]).catch(() => {});
+  }, [docChecked, familyId]);
+
+  // Sync action notes to Supabase whenever they change
+  useEffect(() => {
+    if (!familyId || familyId === 'unknown' || Object.keys(userNotes).length === 0) return;
+    upsertActionNotes(familyId, userNotes).catch(() => {});
+  }, [userNotes, familyId]);
+
   const toggleDoc = (id: string) => {
     setDocChecked(prev => {
       const next = new Set(prev);
@@ -306,11 +326,6 @@ const Dashboard = () => {
       return next;
     });
   };
-
-  const {
-    actionItems, capturedItems, sessions: sessionList,
-    parentName, childName, userNotes, updateActionStatus,
-  } = useSession();
 
   const activeActions = actionItems.filter(a => a.status !== 'done').length;
   const needsFollowUpCount = capturedItems.filter(i => i.confidence === 'needs-follow-up').length;
@@ -510,15 +525,21 @@ const Dashboard = () => {
               {/* Bubble scene — fixed height container so nothing spills */}
               <div style={{ position: 'relative', width: 180, height: 152 }}>
                 {/* Main orange bubble — elderly person */}
-                <div style={{
-                  position: 'absolute',
-                  top: 0, left: '50%', transform: 'translateX(-50%)',
-                  width: 110, height: 110, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #F5A623 0%, #FF8A60 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 0 0 7px rgba(245,166,35,0.15), 0 0 28px rgba(255,138,96,0.45), 0 10px 32px rgba(255,138,96,0.3)',
-                  zIndex: 2,
-                }}>
+                <div
+                  onClick={() => setProfileOpen(true)}
+                  style={{
+                    position: 'absolute',
+                    top: 0, left: '50%', transform: 'translateX(-50%)',
+                    width: 110, height: 110, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #F5A623 0%, #FF8A60 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 0 0 7px rgba(245,166,35,0.15), 0 0 28px rgba(255,138,96,0.45), 0 10px 32px rgba(255,138,96,0.3)',
+                    zIndex: 2, cursor: 'pointer',
+                    transition: 'transform 0.18s, box-shadow 0.18s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateX(-50%) scale(1.06)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateX(-50%) scale(1)'; }}
+                >
                   <span style={{
                     color: 'white', fontWeight: 700, fontSize: 15,
                     textAlign: 'center', padding: '0 10px', lineHeight: 1.25,
@@ -529,14 +550,16 @@ const Dashboard = () => {
                 </div>
 
                 {/* Logged-in user bubble — bottom left */}
-                <div style={{
-                  position: 'absolute', bottom: 0, left: 16,
-                  width: 46, height: 46, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #F0C050, #E8955A)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(240,192,80,0.5)',
-                  zIndex: 3,
-                }}>
+                <div
+                  onClick={() => setProfileOpen(true)}
+                  style={{
+                    position: 'absolute', bottom: 0, left: 16,
+                    width: 46, height: 46, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #F0C050, #E8955A)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(240,192,80,0.5)',
+                    zIndex: 3, cursor: 'pointer',
+                  }}>
                   <svg viewBox="0 0 24 24" width="21" height="21" fill="white" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="8" r="4" />
                     <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" />
@@ -942,6 +965,14 @@ const Dashboard = () => {
           <span>More</span>
         </button>
       </nav>
+
+      {/* Profile modal */}
+      {profileOpen && (
+        <ProfileModal
+          onClose={() => setProfileOpen(false)}
+          colors={C}
+        />
+      )}
     </div>
   );
 };
