@@ -49,7 +49,7 @@ export function LegalDocument({ doc }: LegalDocumentProps) {
   }, [parsed.heroTitle]);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 antialiased">
+    <div className="h-screen overflow-y-auto no-scrollbar bg-slate-100 text-slate-900 antialiased">
       <header className="sticky top-0 z-10 border-b border-slate-200/90 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-4">
           <ClearNestLogo
