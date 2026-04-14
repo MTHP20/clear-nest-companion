@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import type { CapturedItem, ReadinessSnapshot } from '@/contexts/SessionContext';
-import { FileText, Heart, Home, Landmark, MessageSquareQuote, Users, Search, Clock } from 'lucide-react';
+import { BookOpenCheck, CreditCard, HandCoins, HeartHandshake, House, Users, Search, Clock, MessageSquareQuote } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -688,12 +688,12 @@ export default function DashboardOverview({
   const primarySessionLabel = hasFollowUps ? `Continue with ${parentName}` : 'Start New Session';
 
   const NAV_PANELS = [
-    { Icon: Landmark,           label: 'Financial & Pension', category: 'financial_accounts', page: 'financial' },
-    { Icon: FileText,           label: 'Documents & Will',    category: 'documents',          page: 'documents' },
-    { Icon: Home,               label: 'Property',            category: 'property',           page: 'property'  },
-    { Icon: Heart,              label: 'Care Wishes',         category: 'care_wishes',        page: 'care'      },
-    { Icon: Users,              label: 'Key Contacts',        category: 'key_contacts',       page: 'contacts'  },
-    { Icon: MessageSquareQuote, label: 'Conversations',       category: 'conversations',      page: 'sessions'  },
+    { Icon: CreditCard,     label: 'Bank Accounts',        category: 'bank_accounts',      page: 'financial' },
+    { Icon: HandCoins,      label: 'Pensions & Investments', category: 'financial_accounts', page: 'financial' },
+    { Icon: House,          label: 'Property',             category: 'property',           page: 'property'  },
+    { Icon: BookOpenCheck,  label: 'Will & Documents',     category: 'documents',          page: 'documents' },
+    { Icon: Users,          label: 'Key Contacts',         category: 'key_contacts',       page: 'contacts'  },
+    { Icon: HeartHandshake, label: 'Care Wishes',          category: 'care_wishes',        page: 'care'      },
   ];
 
   // ── Simple mode (advanced mode OFF) ─────────────────────────────────────────

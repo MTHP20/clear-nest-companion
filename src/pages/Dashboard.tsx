@@ -7,10 +7,10 @@ import { useSession } from '@/contexts/SessionContext';
 import {
   LayoutDashboard,
   AlertTriangle,
-  Landmark,
-  FileText,
-  Home,
-  Heart,
+  HandCoins,
+  BookOpenCheck,
+  House,
+  HeartHandshake,
   Users,
   Clock,
   Download,
@@ -120,10 +120,10 @@ const NAV_ITEMS: Array<{
 }> = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'actions', label: 'Tasks', icon: AlertTriangle, badge: true },
-    { id: 'financial', label: 'Financial & Pension', icon: Landmark },
-    { id: 'documents', label: 'Documents & Will', icon: FileText },
-    { id: 'property', label: 'Property', icon: Home },
-    { id: 'care', label: 'Care Wishes', icon: Heart },
+    { id: 'financial', label: 'Financial & Pension', icon: HandCoins },
+    { id: 'documents', label: 'Documents & Will', icon: BookOpenCheck },
+    { id: 'property', label: 'Property', icon: House },
+    { id: 'care', label: 'Care Wishes', icon: HeartHandshake },
     { id: 'contacts', label: 'Key Contacts', icon: Users },
     { id: 'sessions', label: 'Conversations', icon: Clock },
     { id: 'report', label: 'Family Report', icon: Download, action: true },
@@ -511,7 +511,7 @@ const Dashboard = () => {
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
               >
-                <FileText style={{ width: 22, height: 22, color: C.teal }} />
+                <BookOpenCheck style={{ width: 22, height: 22, color: C.teal }} />
               </button>
             </div>
 
