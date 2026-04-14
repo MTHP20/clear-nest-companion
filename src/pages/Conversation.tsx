@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { useConversation } from '@elevenlabs/react';
 import { useSession } from '@/contexts/SessionContext';
+import { CreditCard, HandCoins, House, BookOpenCheck, Users, HeartHandshake } from 'lucide-react';
 
 // ─── Typewriter hook ──────────────────────────────────────────────────────────
 function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 18) {
   const [displayed, setDisplayed] = useState('');
   const indexRef    = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
     setDisplayed('');
     indexRef.current = 0;
@@ -41,12 +41,12 @@ function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 18)
 
 // ─── Coverage areas ───────────────────────────────────────────────────────────
 const COVERAGE_AREAS = [
-  { category: 'bank_accounts',      label: 'Bank Accounts' },
-  { category: 'financial_accounts', label: 'Pensions & Investments' },
-  { category: 'property',           label: 'Property' },
-  { category: 'documents',          label: 'Will & Documents' },
-  { category: 'key_contacts',       label: 'Key Contacts' },
-  { category: 'care_wishes',        label: 'Care Wishes' },
+  { category: 'bank_accounts',      label: 'Bank Accounts',          Icon: CreditCard     },
+  { category: 'financial_accounts', label: 'Pensions & Investments', Icon: HandCoins      },
+  { category: 'property',           label: 'Property',               Icon: House          },
+  { category: 'documents',          label: 'Will & Documents',       Icon: BookOpenCheck  },
+  { category: 'key_contacts',       label: 'Key Contacts',           Icon: Users          },
+  { category: 'care_wishes',        label: 'Care Wishes',            Icon: HeartHandshake },
 ] as const;
 
 // ─── Topic selection ─────────────────────────────────────────────────────────
@@ -209,6 +209,14 @@ const Conversation = () => {
   const firstHoldDoneRef     = useRef(false);
 
   const [interruptNotice, setInterruptNotice] = useState<string | null>(null);
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => { isHoldingRef.current = isHolding; }, [isHolding]);
 
@@ -655,9 +663,13 @@ const Conversation = () => {
       <div style={{
         position: 'relative', zIndex: 1,
         minHeight: '100dvh',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 'clamp(80px, 8vw, 120px) clamp(32px, 7vw, 140px) clamp(48px, 4vw, 80px)',
-        gap: 'clamp(24px, 3vw, 48px)',
+        display: 'flex',
+        alignItems: isMobile ? 'flex-end' : 'center',
+        justifyContent: 'center',
+        padding: isMobile
+          ? '72px 20px 20px'
+          : 'clamp(80px, 8vw, 120px) clamp(32px, 7vw, 140px) clamp(48px, 4vw, 80px)',
+        gap: isMobile ? 16 : 'clamp(24px, 3vw, 48px)',
         flexWrap: 'wrap',
       }}>
 
@@ -673,6 +685,7 @@ const Conversation = () => {
             justifyContent: 'center',
             gap: 2,
             animation: 'cnLandingSlideLeft 0.6s cubic-bezier(0.22,1,0.36,1) 0.05s both',
+            ...(isMobile ? { alignSelf: 'flex-start' } : {}),
           }}>
             <p style={{
               fontSize: 13,
@@ -707,10 +720,20 @@ const Conversation = () => {
                     textDecoration: covered ? 'line-through' : 'none',
                     transition: 'opacity 0.15s ease',
                     fontFamily: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'clamp(8px, 1vw, 16px)',
                   }}
                   onMouseEnter={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '0.65'; }}
                   onMouseLeave={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
                 >
+                  <area.Icon
+                    size="0.55em"
+                    fill="currentColor"
+                    color="currentColor"
+                    strokeWidth={0}
+                    style={{ flexShrink: 0 }}
+                  />
                   {area.label}
                 </button>
               );
@@ -779,7 +802,7 @@ const Conversation = () => {
 
         {/* Right: same column structure as Landing so sphere stays at identical Y position */}
         <div style={{
-          display: 'flex', flexDirection: 'column', gap: 20,
+          display: 'flex', flexDirection: 'column', gap: 16,
           flex: '1 1 0',
           minWidth: 'min(100%, 360px)',
           maxWidth: 520,
@@ -805,10 +828,10 @@ const Conversation = () => {
               background: 'transparent',
               border: '1px solid transparent',
               borderRadius: 32,
-              padding: '48px 28px 44px',
+              padding: isMobile ? '32px 24px 28px' : '48px 28px 44px',
               overflow: 'visible',
               cursor: isStarting ? 'not-allowed' : 'pointer',
-              minHeight: 580,
+              minHeight: isMobile ? 'auto' : 580,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               textAlign: 'center',
               userSelect: 'none',
@@ -830,7 +853,7 @@ const Conversation = () => {
                 : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
               transformOrigin: 'center',
             }}>
-              <ClaraSphere size={260} />
+              <ClaraSphere size={isMobile ? 200 : 260} />
             </div>
 
             {/* Label — only shown once session has started */}
@@ -851,7 +874,7 @@ const Conversation = () => {
           {/* Phantom dashboard card — invisible, preserves column height so sphere Y matches Landing */}
           <div style={{
             borderRadius: 28, padding: '26px 32px',
-            display: 'flex', alignItems: 'center', gap: 20,
+            display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 20,
             visibility: 'hidden', pointerEvents: 'none', flexShrink: 0,
           }}>
             <div style={{ width: 34, height: 34 }} />
