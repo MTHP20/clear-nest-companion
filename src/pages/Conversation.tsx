@@ -192,7 +192,7 @@ const Conversation = () => {
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
   // ── Session state ─────────────────────────────────────────────────────────
-  const [selectedTopic, setSelectedTopic]       = useState<TopicOption | null>('all');
+  const [selectedTopic, setSelectedTopic]       = useState<TopicOption | null>(null);
   const [isHolding, setIsHolding]               = useState(false);
   const [isMicMuted, setIsMicMuted]             = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
@@ -549,19 +549,22 @@ const Conversation = () => {
   // ── Theme ─────────────────────────────────────────────────────────────────
   const th = CONV_THEMES[loadConvTheme()];
 
-  // ── Display text for left column ─────────────────────────────────────────
-  const getDisplayText = (): string => {
+  // ── Display text for left column (when session is active) ───────────────
+  const getDialogueText = (): string => {
     if (phase === 'connecting') return 'Connecting\nto Clara…';
     if (phase === 'holding')    return 'Listening…';
     if (typedMessage) {
-      // Show up to the first sentence boundary; fall back to full typed text
       const match = typedMessage.match(/^[^.!?]*[.!?]/);
       return match ? match[0] : typedMessage;
     }
-    if (hasStartedSession) return 'Hold to\nspeak.';
-    return 'Hold Clara\nto begin.';
+    return 'Hold to\nspeak.';
   };
-  const displayText = getDisplayText();
+  const dialogueText       = getDialogueText();
+  // show topic picker when no topic chosen yet and no active session
+  const showTopics         = selectedTopic === null && !hasStartedSession;
+  // show "Hold Clara to begin." once a topic is chosen but session hasn't started
+  const showReadyPrompt    = selectedTopic !== null && !hasStartedSession && phase === 'idle';
+  const selectedTopicLabel = COVERAGE_AREAS.find(a => a.category === selectedTopic)?.label ?? null;
 
   // ── Goodbye screen ────────────────────────────────────────────────────────
   if (showGoodbye) {
@@ -658,25 +661,121 @@ const Conversation = () => {
         flexWrap: 'wrap',
       }}>
 
-        {/* Left: Clara's dialogue in big greeting-style text */}
-        <div
-          aria-live="polite"
-          aria-atomic="true"
-          style={{
-            fontSize: 'clamp(56px, 9vw, 128px)',
-            fontWeight: 900,
-            lineHeight: 1.0,
-            color: th.textColor,
+        {/* Left column — 3 states: topic picker → ready prompt → live dialogue */}
+        {showTopics ? (
+
+          /* ── State 1: pick a topic ── */
+          <div style={{
             flex: '1 1 0',
             minWidth: 0,
-            letterSpacing: '-3px',
-            whiteSpace: 'pre-line',
-            wordBreak: 'break-word',
-            transition: 'color 0.3s ease',
-          }}
-        >
-          {displayText}
-        </div>
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: 2,
+            animation: 'cnLandingSlideLeft 0.6s cubic-bezier(0.22,1,0.36,1) 0.05s both',
+          }}>
+            <p style={{
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase' as const,
+              color: th.textColor,
+              opacity: 0.4,
+              margin: '0 0 14px 0',
+            }}>
+              Topics to cover
+            </p>
+            {COVERAGE_AREAS.map(area => {
+              const covered = coveredCategories.has(area.category);
+              return (
+                <button
+                  key={area.category}
+                  onClick={() => !covered && setSelectedTopic(area.category as TopicOption)}
+                  disabled={covered}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    textAlign: 'left' as const,
+                    cursor: covered ? 'default' : 'pointer',
+                    fontSize: 'clamp(32px, 4.5vw, 68px)',
+                    fontWeight: 900,
+                    lineHeight: 1.05,
+                    letterSpacing: '-2px',
+                    color: th.textColor,
+                    opacity: covered ? 0.25 : 1,
+                    textDecoration: covered ? 'line-through' : 'none',
+                    transition: 'opacity 0.15s ease',
+                    fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '0.65'; }}
+                  onMouseLeave={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                >
+                  {area.label}
+                </button>
+              );
+            })}
+          </div>
+
+        ) : showReadyPrompt ? (
+
+          /* ── State 2: topic chosen, waiting to hold ── */
+          <div style={{
+            flex: '1 1 0',
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            animation: 'cnLandingSlideLeft 0.5s cubic-bezier(0.22,1,0.36,1) both',
+          }}>
+            {selectedTopicLabel && (
+              <p style={{
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase' as const,
+                color: th.textColor,
+                opacity: 0.4,
+                margin: '0 0 14px 0',
+              }}>
+                {selectedTopicLabel}
+              </p>
+            )}
+            <div style={{
+              fontSize: 'clamp(56px, 9vw, 128px)',
+              fontWeight: 900,
+              lineHeight: 1.0,
+              color: th.textColor,
+              letterSpacing: '-3px',
+              whiteSpace: 'pre-line',
+            }}>
+              {'Hold Clara\nto begin.'}
+            </div>
+          </div>
+
+        ) : (
+
+          /* ── State 3: session active — live dialogue ── */
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            style={{
+              fontSize: 'clamp(56px, 9vw, 128px)',
+              fontWeight: 900,
+              lineHeight: 1.0,
+              color: th.textColor,
+              flex: '1 1 0',
+              minWidth: 0,
+              letterSpacing: '-3px',
+              whiteSpace: 'pre-line',
+              wordBreak: 'break-word',
+              transition: 'color 0.3s ease',
+            }}
+          >
+            {dialogueText}
+          </div>
+
+        )}
 
         {/* Right: same column structure as Landing so sphere stays at identical Y position */}
         <div style={{
@@ -731,21 +830,22 @@ const Conversation = () => {
                 : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
               transformOrigin: 'center',
             }}>
-              <ClaraSphere size={160} />
+              <ClaraSphere size={260} />
             </div>
 
-            {/* Label — sits at same offset as the Landing card title */}
-            <div style={{
-              fontSize: 15, fontWeight: 500,
-              color: th.textColor, opacity: 0.45,
-              marginTop: 20, position: 'relative', zIndex: 1,
-            }}>
-              {!hasStartedSession                               && 'Hold to start'}
-              {hasStartedSession && phase === 'connecting'     && 'Connecting…'}
-              {hasStartedSession && phase === 'clara_speaking' && 'Hold to interrupt'}
-              {hasStartedSession && phase === 'waiting'        && 'Hold to speak'}
-              {hasStartedSession && phase === 'holding'        && 'Release when done'}
-            </div>
+            {/* Label — only shown once session has started */}
+            {hasStartedSession && (
+              <div style={{
+                fontSize: 15, fontWeight: 500,
+                color: th.textColor, opacity: 0.45,
+                marginTop: 20, position: 'relative', zIndex: 1,
+              }}>
+                {phase === 'connecting'     && 'Connecting…'}
+                {phase === 'clara_speaking' && 'Hold to interrupt'}
+                {phase === 'waiting'        && 'Hold to speak'}
+                {phase === 'holding'        && 'Release when done'}
+              </div>
+            )}
           </div>
 
           {/* Phantom dashboard card — invisible, preserves column height so sphere Y matches Landing */}

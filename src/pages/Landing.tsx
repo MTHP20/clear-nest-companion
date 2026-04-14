@@ -592,7 +592,7 @@ const Landing = () => {
         flexWrap: 'wrap',
       }}>
 
-        {/* Greeting */}
+        {/* Greeting — fades + slides left when leaving */}
         <div style={{
           fontSize: 'clamp(72px, 10vw, 148px)',
           fontWeight: 900,
@@ -603,7 +603,9 @@ const Landing = () => {
           letterSpacing: '-3px',
           whiteSpace: 'pre-line',
           animation: 'cnLandingSlideLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both',
-          transition: 'color 0.4s ease',
+          opacity: leaving ? 0 : 1,
+          transform: leaving ? 'translateX(-24px)' : 'translateX(0)',
+          transition: 'color 0.4s ease, opacity 0.35s ease, transform 0.45s cubic-bezier(0.4,0,1,1)',
         }}>
           {greeting}
         </div>
@@ -672,7 +674,7 @@ const Landing = () => {
               ))}
             </div>
 
-            <ClaraSphere size={160} />
+            <ClaraSphere size={260} />
 
             {/* Title + subtitle — fade out on leaving */}
             <div style={{
