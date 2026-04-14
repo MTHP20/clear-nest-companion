@@ -561,7 +561,7 @@ const Landing = () => {
         pointerEvents: 'none',
       }}>
         <div style={{ transform: 'scale(0.8)', transformOrigin: 'center' }}>
-          <ClearNestLogo />
+          <ClearNestLogo textColor={theme === 'dark' ? '#ffffff' : t.greetingColor} />
         </div>
       </div>
 
@@ -748,11 +748,7 @@ const Landing = () => {
               d.style.boxShadow = t.cardShadow;
             }}
           >
-            <div style={{ width: 34, height: 34, flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-              {[0,1,2,3].map(i => (
-                <span key={i} style={{ background: t.dashIconColor, borderRadius: 5, display: 'block', transition: 'background 0.4s ease' }} />
-              ))}
-            </div>
+            <LayoutDashboard size={28} fill={t.dashIconColor} color={t.dashIconColor} style={{ flexShrink: 0, transition: 'color 0.4s ease' }} />
             <span style={{ fontSize: 22, fontWeight: 900, color: t.dashTextColor, letterSpacing: 1.5, transition: 'color 0.4s ease' }}>DASHBOARD</span>
           </div>
 

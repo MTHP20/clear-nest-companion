@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
 import { useConversation } from '@elevenlabs/react';
 import { useSession } from '@/contexts/SessionContext';
-import { CreditCard, HandCoins, House, BookOpenCheck, Users, HeartHandshake } from 'lucide-react';
+import { CreditCard, HandCoins, House, BookOpenCheck, Users, HeartHandshake, LayoutDashboard } from 'lucide-react';
 
 // ─── Typewriter hook ──────────────────────────────────────────────────────────
 function useTypewriter(fullText: string, isActive: boolean, charsPerSecond = 18) {
@@ -555,7 +555,8 @@ const Conversation = () => {
                                1.0;
 
   // ── Theme ─────────────────────────────────────────────────────────────────
-  const th = CONV_THEMES[loadConvTheme()];
+  const convTheme = loadConvTheme();
+  const th = CONV_THEMES[convTheme];
 
   // ── Display text for left column (when session is active) ───────────────
   const getDialogueText = (): string => {
@@ -647,17 +648,38 @@ const Conversation = () => {
       <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 500, height: 500, background: th.blobs[1], bottom: -100, right: '48%' }} />
       <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 380, height: 380, background: th.blobs[2], top: '30%', left: 20 }} />
 
-      {/* Logo — top centre */}
+      {/* Logo — top centre → navigates to Landing */}
       <div style={{
         position: 'absolute', top: 28, left: 0, right: 0, zIndex: 2,
         display: 'flex', justifyContent: 'center', alignItems: 'center',
         animation: 'cnLandingFadeDown 0.5s cubic-bezier(0.22,1,0.36,1) both',
-        pointerEvents: 'none',
       }}>
-        <div style={{ transform: 'scale(0.8)', transformOrigin: 'center' }}>
-          <ClearNestLogo />
-        </div>
+        <button
+          onClick={() => navigate('/')}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transform: 'scale(0.8)', transformOrigin: 'center' }}
+          aria-label="Back to home"
+        >
+          <ClearNestLogo textColor={convTheme === 'dark' ? '#ffffff' : th.textColor} />
+        </button>
       </div>
+
+      {/* Dashboard back button — top left */}
+      <button
+        onClick={() => navigate('/dashboard')}
+        style={{
+          position: 'absolute', top: 24, left: 24, zIndex: 3,
+          background: 'none', border: 'none', padding: 8, cursor: 'pointer',
+          color: th.textColor, opacity: 0.6,
+          animation: 'cnLandingFadeDown 0.5s cubic-bezier(0.22,1,0.36,1) both',
+          borderRadius: 8,
+          transition: 'opacity 0.15s ease',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+        aria-label="Back to dashboard"
+      >
+        <LayoutDashboard size={22} fill="currentColor" />
+      </button>
 
       {/* Main scene — mirrors Landing.tsx layout */}
       <div style={{
@@ -679,7 +701,7 @@ const Conversation = () => {
           /* ── State 1: pick a topic ── */
           <div style={{
             flex: '1 1 0',
-            minWidth: 0,
+            minWidth: isMobile ? '100%' : 0,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -694,7 +716,7 @@ const Conversation = () => {
               textTransform: 'uppercase' as const,
               color: th.textColor,
               opacity: 0.4,
-              margin: '0 0 14px 0',
+              margin: '28px 0 14px 0',
             }}>
               Topics to cover
             </p>
@@ -711,10 +733,10 @@ const Conversation = () => {
                     padding: 0,
                     textAlign: 'left' as const,
                     cursor: covered ? 'default' : 'pointer',
-                    fontSize: 'clamp(32px, 4.5vw, 68px)',
+                    fontSize: isMobile ? 'clamp(28px, 7vw, 42px)' : 'clamp(32px, 4.5vw, 68px)',
                     fontWeight: 900,
                     lineHeight: 1.05,
-                    letterSpacing: '-2px',
+                    letterSpacing: isMobile ? '-0.5px' : '-2px',
                     color: th.textColor,
                     opacity: covered ? 0.25 : 1,
                     textDecoration: covered ? 'line-through' : 'none',
@@ -745,7 +767,7 @@ const Conversation = () => {
           /* ── State 2: topic chosen, waiting to hold ── */
           <div style={{
             flex: '1 1 0',
-            minWidth: 0,
+            minWidth: isMobile ? '100%' : 0,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -765,11 +787,11 @@ const Conversation = () => {
               </p>
             )}
             <div style={{
-              fontSize: 'clamp(56px, 9vw, 128px)',
+              fontSize: isMobile ? 'clamp(52px, 13vw, 80px)' : 'clamp(56px, 9vw, 128px)',
               fontWeight: 900,
               lineHeight: 1.0,
               color: th.textColor,
-              letterSpacing: '-3px',
+              letterSpacing: '-2px',
               whiteSpace: 'pre-line',
             }}>
               {'Hold Clara\nto begin.'}
@@ -783,13 +805,13 @@ const Conversation = () => {
             aria-live="polite"
             aria-atomic="true"
             style={{
-              fontSize: 'clamp(56px, 9vw, 128px)',
+              fontSize: isMobile ? 'clamp(52px, 13vw, 80px)' : 'clamp(56px, 9vw, 128px)',
               fontWeight: 900,
-              lineHeight: 1.0,
+              lineHeight: 1.1,
               color: th.textColor,
               flex: '1 1 0',
-              minWidth: 0,
-              letterSpacing: '-3px',
+              minWidth: isMobile ? '100%' : 0,
+              letterSpacing: isMobile ? '-1px' : '-3px',
               whiteSpace: 'pre-line',
               wordBreak: 'break-word',
               transition: 'color 0.3s ease',

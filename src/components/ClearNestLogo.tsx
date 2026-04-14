@@ -5,16 +5,20 @@ interface ClearNestLogoProps {
   variant?: 'default' | 'white' | 'small';
   className?: string;
   href?: string;
+  textColor?: string;
 }
 
-export function ClearNestLogo({ variant = 'default', className = '', href }: ClearNestLogoProps) {
-  const textColor = variant === 'white' ? 'text-white' : 'text-foreground';
+export function ClearNestLogo({ variant = 'default', className = '', href, textColor }: ClearNestLogoProps) {
+  const tailwindColor = variant === 'white' ? 'text-white' : 'text-foreground';
   const size = variant === 'small' ? 'h-8 w-8' : 'h-10 w-10';
 
   const inner = (
     <>
       <img src={logoImage} alt="ClearNest bird logo" className={`${size} rounded-full object-cover`} />
-      <span className={`text-xl font-semibold tracking-tight ${textColor}`} style={{ fontFamily: 'Figtree, system-ui, sans-serif' }}>
+      <span
+        className={`text-xl font-semibold tracking-tight ${textColor ? '' : tailwindColor}`}
+        style={{ fontFamily: 'Figtree, system-ui, sans-serif', ...(textColor ? { color: textColor } : {}) }}
+      >
         ClearNest
       </span>
     </>
