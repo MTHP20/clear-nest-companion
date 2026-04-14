@@ -524,6 +524,18 @@ const Landing = () => {
           from { opacity: 0; transform: translateY(-12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @media (max-width: 639px) {
+          .cn-landing-scene {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 72px 20px 80px !important;
+            gap: 16px !important;
+          }
+          .cn-clara-card {
+            min-height: 320px !important;
+            padding: 28px 20px 24px !important;
+          }
+        }
       `}</style>
 
       {/* Background blobs */}
@@ -583,7 +595,7 @@ const Landing = () => {
       </div>
 
       {/* Scene */}
-      <div style={{
+      <div className="cn-landing-scene" style={{
         position: 'relative', zIndex: 1,
         minHeight: '100dvh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -621,6 +633,7 @@ const Landing = () => {
 
           {/* Clara card — crystal glass, chrome fades on leaving */}
           <div
+            className="cn-clara-card"
             onClick={handleClaraCard}
             style={{
               position: 'relative',
