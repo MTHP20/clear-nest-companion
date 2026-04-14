@@ -449,8 +449,8 @@ function ActivityChart({ sessions }: { sessions: { date: Date; itemsCaptured: nu
 }
 
 // ─── Readiness ring ────────────────────────────────────────────────────────────
-function ReadinessCard({ score, capturedItems }: { score: number; capturedItems: { category: string }[] }) {
-  const r = 50, circ = 2 * Math.PI * r;
+function ReadinessCard({ score, capturedItems, horizontal = false }: { score: number; capturedItems: { category: string }[]; horizontal?: boolean }) {
+  const r = horizontal ? 75 : 50, circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
 
   const total = capturedItems.length || 1;
@@ -472,45 +472,82 @@ function ReadinessCard({ score, capturedItems }: { score: number; capturedItems:
       backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
       border: '1px solid var(--ov-card-border)', borderRadius: 22,
       boxShadow: 'var(--ov-shadow)',
-      padding: '24px 20px', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 18,
+      padding: horizontal ? '24px 28px' : '24px 20px',
+      display: 'flex',
+      flexDirection: horizontal ? 'row' : 'column',
+      alignItems: 'center',
+      justifyContent: horizontal ? undefined : 'center',
+      gap: horizontal ? 28 : 18,
     }}>
-      <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-text)', textAlign: 'center', lineHeight: 1.2 }}>
-        Readiness<br />Score
-      </div>
+      {/* Title — top in vertical, hidden here in horizontal (shown on right) */}
+      {!horizontal && (
+        <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-text)', textAlign: 'center', lineHeight: 1.2 }}>
+          Readiness<br />Score
+        </div>
+      )}
 
-      <div style={{ position: 'relative', width: 130, height: 130, flexShrink: 0 }}>
-        <svg width="130" height="130" viewBox="0 0 130 130" style={{ transform: 'rotate(-90deg)' }}>
-          <defs>
-            <linearGradient id="ringGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#5ECFCF" />
-              <stop offset="100%" stopColor="#F0C050" />
-            </linearGradient>
-          </defs>
-          <circle cx="65" cy="65" r={r} fill="none" stroke="var(--ov-card-border)" strokeWidth="12" />
-          <circle cx="65" cy="65" r={r} fill="none" stroke="url(#ringGradDark)" strokeWidth="12"
-            strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 8px rgba(94,207,207,0.7))' }} />
-        </svg>
+      {/* Ring */}
+      <div style={{ position: 'relative', width: horizontal ? 180 : 130, height: horizontal ? 180 : 130, flexShrink: 0 }}>
+        {horizontal ? (
+          <svg width="180" height="180" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
+            <defs>
+              <linearGradient id="ringGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#5ECFCF" />
+                <stop offset="100%" stopColor="#F0C050" />
+              </linearGradient>
+            </defs>
+            <circle cx="90" cy="90" r={r} fill="none" stroke="var(--ov-card-border)" strokeWidth="14" />
+            <circle cx="90" cy="90" r={r} fill="none" stroke="url(#ringGradDark)" strokeWidth="14"
+              strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+              style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 10px rgba(94,207,207,0.7))' }} />
+          </svg>
+        ) : (
+          <svg width="130" height="130" viewBox="0 0 130 130" style={{ transform: 'rotate(-90deg)' }}>
+            <defs>
+              <linearGradient id="ringGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#5ECFCF" />
+                <stop offset="100%" stopColor="#F0C050" />
+              </linearGradient>
+            </defs>
+            <circle cx="65" cy="65" r={r} fill="none" stroke="var(--ov-card-border)" strokeWidth="12" />
+            <circle cx="65" cy="65" r={r} fill="none" stroke="url(#ringGradDark)" strokeWidth="12"
+              strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+              style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 8px rgba(94,207,207,0.7))' }} />
+          </svg>
+        )}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 28, fontWeight: 900, color: 'var(--ov-text)', lineHeight: 1 }}>{score}%</span>
-          <span style={{ fontSize: 10, color: 'var(--ov-muted)', marginTop: 2 }}>prepared</span>
+          <span style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: horizontal ? 38 : 28, fontWeight: 900, color: 'var(--ov-text)', lineHeight: 1 }}>{score}%</span>
+          <span style={{ fontSize: horizontal ? 11 : 10, color: 'var(--ov-muted)', marginTop: horizontal ? 4 : 2 }}>prepared</span>
         </div>
       </div>
 
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {legend.map(item => (
-          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: 'var(--ov-muted)' }}>
-            <div style={{
-              width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-              background: item.color,
-              boxShadow: item.glow ? `0 0 6px ${item.glow}` : undefined,
-            }} />
-            <span style={{ flex: 1 }}>{item.label}</span>
-            <span style={{ fontWeight: 600, color: 'var(--ov-text)', fontSize: 12 }}>{item.pct}%</span>
+      {/* Legend — below ring in vertical, right column in horizontal */}
+      {horizontal ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--ov-text)', lineHeight: 1.2 }}>
+            Readiness<br />Score
           </div>
-        ))}
-      </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {legend.map(item => (
+              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: 'var(--ov-muted)' }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: item.color, boxShadow: item.glow ? `0 0 6px ${item.glow}` : undefined }} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+                <span style={{ fontWeight: 600, color: 'var(--ov-text)', fontSize: 12 }}>{item.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          {legend.map(item => (
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: 'var(--ov-muted)' }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: item.color, boxShadow: item.glow ? `0 0 6px ${item.glow}` : undefined }} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              <span style={{ fontWeight: 600, color: 'var(--ov-text)', fontSize: 12 }}>{item.pct}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -673,56 +710,10 @@ export default function DashboardOverview({
 
     return (
       <>
-      <div className="cn-stagger" style={{ display: 'grid', gap: 18 }}>
+      <div key="simple" className="cn-stagger" style={{ display: 'grid', gap: 18, flex: 1, gridTemplateRows: isMobile ? undefined : 'auto 1fr' }}>
 
-        {/* Row 1: 6 nav panels 3×2 — full width */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10, minHeight: isMobile ? 'auto' : 'clamp(260px, 30vh, 340px)' }}>
-          {NAV_PANELS.map((panel, i) => {
-            const isActive = panel.category === categoryFilter;
-            const isHov = hoveredPanel === i;
-            return (
-              <div
-                key={panel.category}
-                onClick={() => onNavigatePage(panel.page)}
-                onMouseEnter={() => setHoveredPanel(i)}
-                onMouseLeave={() => setHoveredPanel(null)}
-                style={{
-                  background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
-                  backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-                  border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
-                  borderRadius: 16,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
-                  transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
-                  transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
-                  boxShadow: isActive
-                    ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
-                    : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
-                }}
-              >
-                <panel.Icon style={{
-                  width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
-                  color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
-                  filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
-                  transition: 'transform 0.2s, filter 0.2s, color 0.2s',
-                  transform: isHov ? 'scale(1.12)' : 'scale(1)',
-                  display: 'block', margin: '0 auto',
-                }} />
-                <span style={{
-                  fontSize: isMobile ? 11 : 10, fontWeight: 600,
-                  color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
-                  textAlign: 'center', lineHeight: 1.35,
-                  opacity: isMobile || isHov || isActive ? 1 : 0,
-                  transition: 'opacity 0.2s, color 0.2s',
-                  fontFamily: 'Figtree, system-ui, sans-serif',
-                }}>{panel.label}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Row 2: Recently Captured | Chat to Clara | Readiness Score */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px 1fr', gap: 18 }}>
+        {/* Row 1: Recently Captured | Readiness Score */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18 }}>
 
           {/* Recently Captured */}
           <div style={{
@@ -831,7 +822,60 @@ export default function DashboardOverview({
             </div>
           </div>
 
-          {/* Chat to Clara — center */}
+          {/* Readiness Score */}
+          <ReadinessCard score={readinessPct} capturedItems={capturedItems} horizontal />
+        </div>
+
+        {/* Row 2: Nav Panels | Chat to Clara */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: 18 }}>
+
+          {/* Nav Panels 3×2 */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
+            {NAV_PANELS.map((panel, i) => {
+              const isActive = panel.category === categoryFilter;
+              const isHov = hoveredPanel === i;
+              return (
+                <div
+                  key={panel.category}
+                  onClick={() => onNavigatePage(panel.page)}
+                  onMouseEnter={() => setHoveredPanel(i)}
+                  onMouseLeave={() => setHoveredPanel(null)}
+                  style={{
+                    background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
+                    backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                    border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
+                    borderRadius: 16,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
+                    transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+                    transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
+                    boxShadow: isActive
+                      ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
+                      : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
+                  }}
+                >
+                  <panel.Icon style={{
+                    width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
+                    color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
+                    filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                    transition: 'transform 0.2s, filter 0.2s, color 0.2s',
+                    transform: isHov ? 'scale(1.12)' : 'scale(1)',
+                    display: 'block', margin: '0 auto',
+                  }} />
+                  <span style={{
+                    fontSize: isMobile ? 11 : 10, fontWeight: 600,
+                    color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
+                    textAlign: 'center', lineHeight: 1.35,
+                    opacity: isMobile || isHov || isActive ? 1 : 0,
+                    transition: 'opacity 0.2s, color 0.2s',
+                    fontFamily: 'Figtree, system-ui, sans-serif',
+                  }}>{panel.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Chat to Clara */}
           <div
             onClick={() => navigate('/conversation')}
             style={{
@@ -902,9 +946,6 @@ export default function DashboardOverview({
               {primarySessionLabel}
             </div>
           </div>
-
-          {/* Readiness Score */}
-          <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
         </div>
 
       </div>
@@ -953,7 +994,7 @@ export default function DashboardOverview({
 
   return (
     <>
-    <div className="cn-stagger">
+    <div key="advanced" className="cn-stagger">
 
       {/* Activity + Momentum + Readiness row */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: 16, marginBottom: 16 }}>
@@ -1021,7 +1062,53 @@ export default function DashboardOverview({
         };
 
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px 1fr', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 18 }}>
+
+            {/* Nav Panels 3×2 — column 1 */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
+              {NAV_PANELS.map((panel, i) => {
+                const isActive = panel.category === categoryFilter;
+                const isHov = hoveredPanel === i;
+                return (
+                  <div
+                    key={panel.category}
+                    onClick={() => onNavigatePage(panel.page)}
+                    onMouseEnter={() => setHoveredPanel(i)}
+                    onMouseLeave={() => setHoveredPanel(null)}
+                    style={{
+                      background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
+                      backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                      border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
+                      borderRadius: 16,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
+                      transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+                      transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
+                      boxShadow: isActive
+                        ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
+                        : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
+                    }}
+                  >
+                    <panel.Icon style={{
+                      width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
+                      color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
+                      filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                      transition: 'transform 0.2s, filter 0.2s, color 0.2s',
+                      transform: isHov ? 'scale(1.12)' : 'scale(1)',
+                      display: 'block', margin: '0 auto',
+                    }} />
+                    <span style={{
+                      fontSize: isMobile ? 11 : 10, fontWeight: 600,
+                      color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
+                      textAlign: 'center', lineHeight: 1.35,
+                      opacity: isMobile || isHov || isActive ? 1 : 0,
+                      transition: 'opacity 0.2s, color 0.2s',
+                      fontFamily: 'Figtree, system-ui, sans-serif',
+                    }}>{panel.label}</span>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Recently Captured sliding card */}
             <div style={{
@@ -1224,52 +1311,6 @@ export default function DashboardOverview({
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center' }}>
                 {primarySessionLabel}
               </div>
-            </div>
-
-            {/* Nav Panels 3×2 — column 3 */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
-              {NAV_PANELS.map((panel, i) => {
-                const isActive = panel.category === categoryFilter;
-                const isHov = hoveredPanel === i;
-                return (
-                  <div
-                    key={panel.category}
-                    onClick={() => onNavigatePage(panel.page)}
-                    onMouseEnter={() => setHoveredPanel(i)}
-                    onMouseLeave={() => setHoveredPanel(null)}
-                    style={{
-                      background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
-                      backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-                      border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
-                      borderRadius: 16,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
-                      transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
-                      transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
-                      boxShadow: isActive
-                        ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
-                        : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
-                    }}
-                  >
-                    <panel.Icon style={{
-                      width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
-                      color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
-                      filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
-                      transition: 'transform 0.2s, filter 0.2s, color 0.2s',
-                      transform: isHov ? 'scale(1.12)' : 'scale(1)',
-                      display: 'block', margin: '0 auto',
-                    }} />
-                    <span style={{
-                      fontSize: isMobile ? 11 : 10, fontWeight: 600,
-                      color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
-                      textAlign: 'center', lineHeight: 1.35,
-                      opacity: isMobile || isHov || isActive ? 1 : 0,
-                      transition: 'opacity 0.2s, color 0.2s',
-                      fontFamily: 'Figtree, system-ui, sans-serif',
-                    }}>{panel.label}</span>
-                  </div>
-                );
-              })}
             </div>
 
           </div>

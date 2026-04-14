@@ -632,7 +632,7 @@ const Dashboard = () => {
         )}
 
         {/* Page content */}
-        <main style={{ padding: isMobile ? `14px 14px ${advancedMode ? '14px' : '76px'}` : `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined }}>
+        <main style={{ padding: isMobile ? `14px 14px ${advancedMode ? '14px' : '76px'}` : `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined, display: 'flex', flexDirection: 'column' }}>
           {renderPage()}
         </main>
       </div>

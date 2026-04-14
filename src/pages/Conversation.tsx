@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ClearNestLogo } from '@/components/ClearNestLogo';
-import { Mic, Volume2, Radio, Loader2 } from 'lucide-react';
 import { useConversation } from '@elevenlabs/react';
 import { useSession } from '@/contexts/SessionContext';
 
@@ -78,6 +77,94 @@ const BRAND = {
   blueMuted: '#C9B8E0',
 };
 
+// ─── Theme (mirrors Landing.tsx — reads same localStorage key) ────────────────
+const CONV_THEME_KEY = 'cn-theme-v1';
+const CONV_THEMES = {
+  default: {
+    pageBg:          '#e1f1fd',
+    textColor:       '#1e2d4f',
+    blobs:           ['rgba(70,99,172,0.14)', 'rgba(70,99,172,0.08)', 'rgba(70,99,172,0.07)'] as [string, string, string],
+    cardBg:          'rgba(255,255,255,0.28)',
+    cardBorder:      'rgba(255,255,255,0.58)',
+    cardShadow:      '0 14px 44px rgba(70,99,172,0.12),0 2px 8px rgba(70,99,172,0.06),inset 0 1.5px 0 rgba(255,255,255,0.72)',
+    cardHoverShadow: '0 24px 64px rgba(70,99,172,0.20),inset 0 1.5px 0 rgba(255,255,255,0.78)',
+    cardTextPrimary: 'rgba(30,45,79,0.92)',
+    cardTextSecondary:'rgba(46,62,107,0.52)',
+    endChatBg:       'rgba(255,255,255,0.82)',
+    endChatBorder:   'rgba(255,255,255,0.60)',
+    endChatShadow:   '0 4px 16px rgba(70,99,172,0.15)',
+  },
+  orange: {
+    pageBg:          '#fdf0e8',
+    textColor:       '#5c2229',
+    blobs:           ['rgba(199,98,91,0.15)', 'rgba(240,143,92,0.10)', 'rgba(199,98,91,0.08)'] as [string, string, string],
+    cardBg:          'rgba(255,255,255,0.30)',
+    cardBorder:      'rgba(255,255,255,0.62)',
+    cardShadow:      '0 14px 44px rgba(156,55,66,0.12),0 2px 8px rgba(156,55,66,0.06),inset 0 1.5px 0 rgba(255,255,255,0.74)',
+    cardHoverShadow: '0 24px 64px rgba(156,55,66,0.20),inset 0 1.5px 0 rgba(255,255,255,0.80)',
+    cardTextPrimary: 'rgba(92,34,41,0.90)',
+    cardTextSecondary:'rgba(92,34,41,0.50)',
+    endChatBg:       'rgba(255,255,255,0.82)',
+    endChatBorder:   'rgba(255,255,255,0.60)',
+    endChatShadow:   '0 4px 16px rgba(156,55,66,0.15)',
+  },
+  dark: {
+    pageBg:          '#0d0f1a',
+    textColor:       '#a78bfa',
+    blobs:           ['rgba(167,139,250,0.18)', 'rgba(94,207,207,0.09)', 'rgba(167,139,250,0.10)'] as [string, string, string],
+    cardBg:          'rgba(255,255,255,0.055)',
+    cardBorder:      'rgba(255,255,255,0.11)',
+    cardShadow:      '0 14px 44px rgba(0,0,0,0.42),0 2px 8px rgba(0,0,0,0.22),inset 0 1.5px 0 rgba(255,255,255,0.07)',
+    cardHoverShadow: '0 24px 64px rgba(0,0,0,0.58),inset 0 1.5px 0 rgba(255,255,255,0.10)',
+    cardTextPrimary: 'rgba(240,234,255,0.95)',
+    cardTextSecondary:'rgba(200,185,240,0.50)',
+    endChatBg:       'rgba(255,255,255,0.08)',
+    endChatBorder:   'rgba(255,255,255,0.12)',
+    endChatShadow:   '0 4px 16px rgba(0,0,0,0.40)',
+  },
+} as const;
+type ConvTheme = keyof typeof CONV_THEMES;
+function loadConvTheme(): ConvTheme {
+  try {
+    const t = localStorage.getItem(CONV_THEME_KEY);
+    if (t === 'default' || t === 'orange' || t === 'dark') return t;
+  } catch { /* ignore */ }
+  return 'default';
+}
+
+// ─── Clara Sphere — exact copy of Landing.tsx ClaraSphere ────────────────────
+function ClaraSphere({ size = 160 }: { size?: number }) {
+  const inset = Math.round(size * 0.09);
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.7) 25%,rgba(200,170,255,0.5) 50%,rgba(100,60,180,0.6) 75%,rgba(155,123,200,0) 100%)',
+        animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+      }} />
+      <div style={{
+        position: 'absolute', inset, borderRadius: '50%',
+        background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.6) 30%,rgba(80,40,160,0.5) 60%,rgba(180,150,230,0) 100%)',
+        animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(7px)',
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: Math.round(size * 0.6), height: Math.round(size * 0.38),
+        borderRadius: '50%',
+        background: 'radial-gradient(ellipse,rgba(196,168,232,0.88) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+        top: Math.round(size * 0.12), left: Math.round(size * 0.09),
+        animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: Math.round(size * 0.13), left: Math.round(size * 0.18),
+        width: '38%', height: '28%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse,rgba(255,255,255,0.65) 0%,transparent 70%)', zIndex: 9,
+      }} />
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 const Conversation = () => {
   const navigate = useNavigate();
@@ -105,7 +192,7 @@ const Conversation = () => {
   const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
 
   // ── Session state ─────────────────────────────────────────────────────────
-  const [selectedTopic, setSelectedTopic]       = useState<TopicOption | null>(null);
+  const [selectedTopic, setSelectedTopic]       = useState<TopicOption | null>('all');
   const [isHolding, setIsHolding]               = useState(false);
   const [isMicMuted, setIsMicMuted]             = useState(false);
   const [hasStartedSession, setHasStartedSession] = useState(false);
@@ -459,23 +546,36 @@ const Conversation = () => {
     isHolding                ? 1.08 :
                                1.0;
 
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  const th = CONV_THEMES[loadConvTheme()];
+
+  // ── Display text for left column ─────────────────────────────────────────
+  const getDisplayText = (): string => {
+    if (phase === 'connecting') return 'Connecting\nto Clara…';
+    if (phase === 'holding')    return 'Listening…';
+    if (typedMessage) {
+      // Show up to the first sentence boundary; fall back to full typed text
+      const match = typedMessage.match(/^[^.!?]*[.!?]/);
+      return match ? match[0] : typedMessage;
+    }
+    if (hasStartedSession) return 'Hold to\nspeak.';
+    return 'Hold Clara\nto begin.';
+  };
+  const displayText = getDisplayText();
+
   // ── Goodbye screen ────────────────────────────────────────────────────────
   if (showGoodbye) {
     return (
-      <div style={{ ...styles.page, justifyContent: 'center', alignItems: 'center' }}>
-        <div style={styles.goodbyeCard}>
-          <div style={styles.goodbyeAvatar}>
-            <span style={styles.claraInitial}>C</span>
-          </div>
-          <p style={styles.goodbyeText}>Thank you. That was really helpful.</p>
+      <div style={{ minHeight: '100dvh', background: th.pageBg, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Figtree', system-ui, sans-serif" }}>
+        <div style={{ textAlign: 'center', animation: 'goodbyeFade 0.5s ease both' }}>
+          <p style={{ fontSize: 'clamp(48px, 8vw, 96px)', fontWeight: 900, color: th.textColor, lineHeight: 1.1, letterSpacing: '-2px', margin: 0 }}>
+            Thank you.{'\n'}See you soon.
+          </p>
         </div>
         <style>{`
           @keyframes goodbyeFade {
             from { opacity: 0; transform: translateY(10px); }
             to   { opacity: 1; transform: translateY(0); }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
           }
         `}</style>
       </div>
@@ -483,287 +583,44 @@ const Conversation = () => {
   }
 
   return (
-    <div style={styles.page}>
-
-      {/* ── Topic selection modal — shown before any session starts ── */}
-      {selectedTopic === null && (
-        <div style={styles.topicOverlay} role="dialog" aria-modal="true" aria-labelledby="topic-modal-title">
-          <div style={styles.topicCard}>
-            <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
-            <h2 id="topic-modal-title" style={styles.topicTitle}>What would you like to talk about?</h2>
-            <p style={styles.topicSubtitle}>Choose a topic and Clara will focus the conversation on it.</p>
-            <div style={styles.topicGrid}>
-              {TOPIC_CARDS.map((t) => {
-                const isDone = t.category !== undefined && coveredCategories.has(t.category);
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => !isDone && setSelectedTopic(t.id)}
-                    disabled={isDone}
-                    aria-disabled={isDone}
-                    style={{
-                      ...styles.topicBtn,
-                      ...(isDone ? styles.topicBtnDone : {}),
-                      ...(t.id === 'all' ? styles.topicBtnAll : {}),
-                      ...(t.id === 'chat' ? styles.topicBtnChat : {}),
-                    }}
-                  >
-                    <span style={styles.topicIcon}>{isDone ? '✓' : t.icon}</span>
-                    <span style={styles.topicLabel}>{t.label}</span>
-                    <span style={styles.topicDesc}>{isDone ? 'Already covered' : t.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Minimal header — logo as trust mark only ── */}
-      <header style={styles.header}>
-        <ClearNestLogo variant="small" />
-      </header>
-
-      <main style={styles.main}>
-
-        {/* Disclaimer — shown once on connect, auto-hides after 6s */}
-        {showDisclaimer && (
-          <div style={styles.disclaimerBanner}>
-            <span style={styles.disclaimerIcon} aria-hidden="true">💡</span>
-            <span style={styles.disclaimerText}>
-              <strong>Hold the button</strong> to speak. Release when you're done.
-            </span>
-          </div>
-        )}
-
-        {/* Progress pills — visible from session start, update live as topics are captured */}
-        {hasStartedSession && (
-          <div style={styles.progressPillsWrapper}>
-            <div style={styles.progressPills} role="group" aria-label="Topic coverage">
-              {COVERAGE_AREAS.map((area) => (
-                <div
-                  key={area.category}
-                  style={{ ...styles.progressPill, background: coveredCategories.has(area.category) ? BRAND.blue : '#E5E7EB' }}
-                  title={area.label}
-                />
-              ))}
-            </div>
-            <p style={styles.progressPillsLabel}>
-              {coveredCategories.size} of {COVERAGE_AREAS.length} topics covered
-            </p>
-          </div>
-        )}
-
-        {showGreeting && selectedTopic !== null && (
-          <div style={styles.greetingCard}>
-            <div style={styles.claraAvatar}><span style={styles.claraInitial}>C</span></div>
-            <h1 style={styles.greetingTitle}>Hello. I'm Clara.</h1>
-            <p style={styles.greetingBody}>
-              {selectedTopic === 'chat'
-                ? "I'm here for a friendly chat — no agenda, just a good conversation."
-                : selectedTopic === 'all'
-                ? "I'm here for a gentle chat to help your family get organised. There are no wrong answers — we go at your pace."
-                : `I'm here to talk about ${TOPIC_CARDS.find(t => t.id === selectedTopic)?.label.toLowerCase() ?? 'this topic'} today.`}
-            </p>
-          </div>
-        )}
-
-        {errorMessage && (
-          <div style={styles.errorCard}>
-            <p style={styles.errorText}>⚠️ {errorMessage}</p>
-            <button
-              onClick={() => { setErrorMessage(null); startSession(); }}
-              style={styles.retryBtn}
-            >
-              Try again
-            </button>
-          </div>
-        )}
-
-        {/* Clara avatar — blooms while she speaks, above the message card */}
-        {hasStartedSession && !showGreeting && (
-          <div style={{
-            ...styles.claraAvatarActive,
-            animation: isAgentSpeaking ? 'claraSpeaking 2s ease-in-out infinite' : 'none',
-          }}>
-            <span style={styles.claraInitialSmall}>C</span>
-          </div>
-        )}
-
-        {lastClaraMessage && (
-          <div style={styles.claraMessageCard}>
-            <p style={styles.cardLabel}>Clara said</p>
-            <p style={styles.claraMessageText}>
-              {typedMessage}
-              {isTyping && <span style={styles.cursor}>|</span>}
-            </p>
-          </div>
-        )}
-
-        {interruptNotice && (
-          <div style={styles.interruptCard}>
-            <p style={styles.interruptText}>🎙 {interruptNotice}</p>
-          </div>
-        )}
-
-        {lastUserMessage && !interruptNotice && (
-          <div style={styles.userMessageCard}>
-            <p style={styles.cardLabel}>You said</p>
-            <p style={styles.userMessageText}>"{lastUserMessage}"</p>
-          </div>
-        )}
-
-        {(isSessionActive || isStarting) && (
-          <div style={styles.statusRow}>
-            <span style={{
-              ...styles.bigDot,
-              background: dotColor,
-              // Only animate for active states — waiting is calm/static
-              animation:
-                phase === 'holding'        ? 'dotPop 0.9s ease-in-out infinite' :
-                phase === 'clara_speaking' ? 'dotFade 1.4s ease-in-out infinite' : 'none',
-            }} />
-            <div style={styles.statusTextBlock} aria-live="polite" aria-atomic="true">
-              <p style={{ ...styles.statusMain, color: dotColor }}>
-                {phase === 'connecting'     && 'Connecting to Clara…'}
-                {phase === 'clara_speaking' && 'Clara is speaking'}
-                {phase === 'waiting'        && 'Hold the button to speak'}
-                {phase === 'holding'        && 'Recording — release when done'}
-              </p>
-              <p style={styles.statusSub}>
-                {phase === 'connecting'     && 'Please wait a moment'}
-                {phase === 'clara_speaking' && 'Hold the button to interrupt'}
-                {phase === 'waiting'        && 'Take your time — no rush'}
-                {phase === 'holding'        && 'Clara will hear everything you say'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Mic button — 192px, tactile press feedback ── */}
-        <div style={styles.micWrapper}>
-          {phase === 'holding' && (
-            <>
-              <span style={{ ...styles.pulseRing, background: 'rgba(229,57,53,0.18)', animationDelay: '0s' }} />
-              <span style={{ ...styles.pulseRing, background: 'rgba(229,57,53,0.12)', animationDelay: '0.5s' }} />
-            </>
-          )}
-          <button
-            onMouseDown={handlePressStart}
-            onMouseUp={handlePressEnd}
-            onMouseLeave={handlePressEnd}
-            onTouchStart={handlePressStart}
-            onTouchEnd={handlePressEnd}
-            onTouchCancel={handlePressEnd}
-            onContextMenu={handleContextMenu}
-            disabled={isStarting}
-            aria-label={
-              !hasStartedSession   ? 'Start chat with Clara' :
-              phase === 'holding'  ? 'Release to stop talking' : 'Hold to speak'
-            }
-            style={{
-              ...styles.micBtn,
-              background:
-                phase === 'holding'        ? BRAND.red :
-                phase === 'clara_speaking' ? BRAND.blue :
-                phase === 'waiting'        ? BRAND.amber :
-                phase === 'connecting'     ? BRAND.blueMuted :
-                                              BRAND.blue,
-              cursor:    isStarting ? 'not-allowed' : 'pointer',
-              transform: `scale(${micScale})`,
-              boxShadow:
-                phase === 'holding' ? `0 10px 36px rgba(229,57,53,0.40)` :
-                phase === 'waiting' ? `0 8px 28px rgba(244,162,97,0.35)` :
-                                       '0 6px 20px rgba(0,0,0,0.16)',
-              // Fast compress on press, slower expand on release
-              transition: micPressed
-                ? 'transform 80ms ease, background 0.25s ease, box-shadow 0.25s ease'
-                : 'transform 150ms ease, background 0.25s ease, box-shadow 0.25s ease',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-            } as React.CSSProperties}
-          >
-            {phase === 'connecting'     ? <Loader2 size={56} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> :
-             phase === 'clara_speaking' ? <Volume2 size={56} color="#fff" /> :
-             phase === 'holding'        ? <Radio   size={56} color="#fff" /> :
-                                          <Mic     size={56} color="#fff" />
-            }
-          </button>
-        </div>
-
-        <p style={{ ...styles.micLabel, color: dotColor }}>
-          {!hasStartedSession                               && 'Tap to start'}
-          {hasStartedSession && phase === 'connecting'     && 'Connecting…'}
-          {hasStartedSession && phase === 'clara_speaking' && 'Hold to interrupt'}
-          {hasStartedSession && phase === 'waiting'        && 'Hold to speak'}
-          {hasStartedSession && phase === 'holding'        && 'Release when done'}
-        </p>
-
-      </main>
-
-      {!isSessionActive && (capturedItems.length > 0 || !!lastClaraMessage) && uncoveredAreas.length > 0 && (
-        <div style={styles.stillToCoverBanner}>
-          <div style={styles.stillToCoverDot} />
-          <p style={styles.stillToCoverText}>
-            <strong>Still to cover:</strong>{' '}
-            {uncoveredAreas.map(a => a.label).join(', ')}.{' '}
-            <span style={{ color: BRAND.blue }}>Start a new session to cover these topics.</span>
-          </p>
-        </div>
-      )}
-
-      {/* Floating End Chat pill — only visible after session starts */}
-      {hasStartedSession && (
-        <button onClick={handleEndChat} style={styles.endChatFloating} aria-label="End chat">
-          End Chat
-        </button>
-      )}
-
-      {/* Ghost back button on idle screen */}
-      {!hasStartedSession && !isStarting && (
-        <div style={styles.idleFooter}>
-          <button onClick={handleEndChat} style={styles.backBtn} aria-label="Go back">
-            Go back
-          </button>
-          <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.6 }}>
-            <a href="/admin" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Admin</a>
-            {' · '}
-            <Link to="/privacy" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Privacy</Link>
-            {' · '}
-            <Link to="/terms" style={{ color: '#9CA3AF', textDecoration: 'underline' }}>Terms</Link>
-          </div>
-        </div>
-      )}
+    <div style={{
+      minHeight: '100dvh',
+      background: th.pageBg,
+      position: 'relative',
+      overflow: 'hidden',
+      fontFamily: "'Figtree', system-ui, sans-serif",
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+    } as React.CSSProperties}>
 
       <style>{`
+        @keyframes cnSphereRot {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes cnSphereRot2 {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(-360deg); }
+        }
+        @keyframes cnSphereSmoke1 {
+          0%, 100% { opacity: 0.7; transform: scale(1) rotate(-5deg); }
+          50%      { opacity: 1;   transform: scale(1.08) rotate(5deg); }
+        }
+        @keyframes cnSphereGlow {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50%      { opacity: 1;   transform: scale(1.08); }
+        }
+        @keyframes cnLandingFadeDown {
+          from { opacity: 0; transform: translateY(-12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        @keyframes elderPulse {
-          0%   { transform: scale(1);   opacity: 0.5; }
-          70%  { transform: scale(2.2); opacity: 0; }
-          100% { transform: scale(2.2); opacity: 0; }
-        }
-        @keyframes dotPop {
-          0%, 100% { transform: scale(1);    opacity: 1; }
-          50%      { transform: scale(1.3);  opacity: 0.85; }
-        }
-        @keyframes dotFade {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0.3; }
-        }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0; }
-        }
-        @keyframes claraSpeaking {
-          0%, 100% { box-shadow: 0 0 0 0px rgba(91,141,184,0), 0 4px 16px rgba(91,141,184,0.30); }
-          50%      { box-shadow: 0 0 0 18px rgba(91,141,184,0.12), 0 4px 16px rgba(91,141,184,0.30); }
         }
         @keyframes goodbyeFade {
           from { opacity: 0; transform: translateY(10px); }
@@ -773,6 +630,174 @@ const Conversation = () => {
           * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
       `}</style>
+
+      {/* Background blobs */}
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 700, height: 700, background: th.blobs[0], top: -200, right: '15%' }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 500, height: 500, background: th.blobs[1], bottom: -100, right: '48%' }} />
+      <div style={{ position: 'fixed', borderRadius: '50%', filter: 'blur(130px)', pointerEvents: 'none', zIndex: 0, width: 380, height: 380, background: th.blobs[2], top: '30%', left: 20 }} />
+
+      {/* Logo — top centre */}
+      <div style={{
+        position: 'absolute', top: 28, left: 0, right: 0, zIndex: 2,
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        animation: 'cnLandingFadeDown 0.5s cubic-bezier(0.22,1,0.36,1) both',
+        pointerEvents: 'none',
+      }}>
+        <div style={{ transform: 'scale(0.8)', transformOrigin: 'center' }}>
+          <ClearNestLogo />
+        </div>
+      </div>
+
+      {/* Main scene — mirrors Landing.tsx layout */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        minHeight: '100dvh',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 'clamp(80px, 8vw, 120px) clamp(32px, 7vw, 140px) clamp(48px, 4vw, 80px)',
+        gap: 'clamp(24px, 3vw, 48px)',
+        flexWrap: 'wrap',
+      }}>
+
+        {/* Left: Clara's dialogue in big greeting-style text */}
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            fontSize: 'clamp(56px, 9vw, 128px)',
+            fontWeight: 900,
+            lineHeight: 1.0,
+            color: th.textColor,
+            flex: '1 1 0',
+            minWidth: 0,
+            letterSpacing: '-3px',
+            whiteSpace: 'pre-line',
+            wordBreak: 'break-word',
+            transition: 'color 0.3s ease',
+          }}
+        >
+          {displayText}
+        </div>
+
+        {/* Right: same column structure as Landing so sphere stays at identical Y position */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 20,
+          flex: '1 1 0',
+          minWidth: 'min(100%, 360px)',
+          maxWidth: 520,
+        }}>
+
+          {/* Clara "card" — same dimensions as Landing card, chrome transparent */}
+          <div
+            onMouseDown={handlePressStart}
+            onMouseUp={handlePressEnd}
+            onMouseLeave={handlePressEnd}
+            onTouchStart={handlePressStart}
+            onTouchEnd={handlePressEnd}
+            onTouchCancel={handlePressEnd}
+            onContextMenu={handleContextMenu}
+            role="button"
+            tabIndex={0}
+            aria-label={
+              !hasStartedSession  ? 'Start chat with Clara' :
+              phase === 'holding' ? 'Release to stop talking' : 'Hold to speak'
+            }
+            style={{
+              position: 'relative',
+              background: 'transparent',
+              border: '1px solid transparent',
+              borderRadius: 32,
+              padding: '48px 28px 44px',
+              overflow: 'visible',
+              cursor: isStarting ? 'not-allowed' : 'pointer',
+              minHeight: 580,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textAlign: 'center',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            } as React.CSSProperties}
+          >
+            {/* Sphere — scales up smoothly when Clara is active */}
+            <div style={{
+              transform: `scale(${
+                micPressed && !isHolding      ? 0.94 :
+                phase === 'clara_speaking'    ? 1.38 :
+                phase === 'holding'           ? 1.25 :
+                phase === 'connecting'        ? 1.10 :
+                isSessionActive               ? 1.10 :
+                                                1.0
+              })`,
+              transition: micPressed
+                ? 'transform 80ms ease'
+                : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+              transformOrigin: 'center',
+            }}>
+              <ClaraSphere size={160} />
+            </div>
+
+            {/* Label — sits at same offset as the Landing card title */}
+            <div style={{
+              fontSize: 15, fontWeight: 500,
+              color: th.textColor, opacity: 0.45,
+              marginTop: 20, position: 'relative', zIndex: 1,
+            }}>
+              {!hasStartedSession                               && 'Hold to start'}
+              {hasStartedSession && phase === 'connecting'     && 'Connecting…'}
+              {hasStartedSession && phase === 'clara_speaking' && 'Hold to interrupt'}
+              {hasStartedSession && phase === 'waiting'        && 'Hold to speak'}
+              {hasStartedSession && phase === 'holding'        && 'Release when done'}
+            </div>
+          </div>
+
+          {/* Phantom dashboard card — invisible, preserves column height so sphere Y matches Landing */}
+          <div style={{
+            borderRadius: 28, padding: '26px 32px',
+            display: 'flex', alignItems: 'center', gap: 20,
+            visibility: 'hidden', pointerEvents: 'none', flexShrink: 0,
+          }}>
+            <div style={{ width: 34, height: 34 }} />
+            <span style={{ fontSize: 22, fontWeight: 900 }}>DASHBOARD</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Error toast */}
+      {errorMessage && (
+        <div style={{
+          position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+          background: '#fff', borderRadius: 14, padding: '12px 20px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.12)', zIndex: 10,
+          animation: 'fadeUp 0.3s ease', display: 'flex', gap: 12, alignItems: 'center',
+          whiteSpace: 'nowrap',
+        }}>
+          <p style={{ color: '#dc2626', margin: 0, fontSize: 15 }}>⚠️ {errorMessage}</p>
+          <button
+            onClick={() => { setErrorMessage(null); startSession(); }}
+            style={{ background: BRAND.blue, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Floating End Chat pill */}
+      {hasStartedSession && (
+        <button
+          onClick={handleEndChat}
+          style={{
+            position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+            background: th.endChatBg, backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `1px solid ${th.endChatBorder}`,
+            color: th.textColor, borderRadius: 100, padding: '10px 28px',
+            fontSize: 15, fontWeight: 600, cursor: 'pointer', zIndex: 10,
+            boxShadow: th.endChatShadow,
+            letterSpacing: '-0.2px',
+          } as React.CSSProperties}
+          aria-label="End chat"
+        >
+          End Chat
+        </button>
+      )}
     </div>
   );
 };
@@ -814,7 +839,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0 auto',
     width: '100%',
     gap: 16,
-    overflow: 'hidden',
+    overflowY: 'auto' as const,
   },
 
   // Disclaimer — shown once, fades up, auto-hides
@@ -1121,6 +1146,11 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
     textAlign: 'center' as const,
     animation: 'fadeUp 0.35s ease',
+  },
+  topicInlineCard: {
+    width: '100%',
+    animation: 'fadeUp 0.4s ease',
+    flexShrink: 0,
   },
   topicTitle: {
     fontFamily: PLAYFAIR,
