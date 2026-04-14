@@ -8,6 +8,8 @@ interface DashboardDocumentsProps {
   confidenceFilter?: string;
 }
 
+const FF = 'Figtree, system-ui, sans-serif';
+
 export default function DashboardDocuments({ query = '', confidenceFilter = 'all' }: DashboardDocumentsProps) {
   const { capturedItems, parentName } = useSession();
   const docs = useMemo(() => {
@@ -21,20 +23,46 @@ export default function DashboardDocuments({ query = '', confidenceFilter = 'all
   }, [capturedItems, query, confidenceFilter]);
 
   return (
-    <div className="cn-stagger">
-      <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Documents & Will</h2>
-      <p className="font-body text-muted-foreground mb-6">Important documents mentioned by {parentName}</p>
+    <div className="cn-stagger" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Title */}
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontFamily: FF, fontSize: 22, fontWeight: 700, color: 'var(--ov-text)', margin: 0 }}>
+          Documents & Will
+        </h2>
+        <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)', margin: '4px 0 0' }}>
+          Important documents mentioned by {parentName}
+        </p>
+      </div>
 
+      {/* Content */}
       {docs.length === 0 ? (
         <EmptyState section="Documents" />
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {docs.map(item => (
-            <div key={item.id} className="cn-card cn-card-hover">
-              <p className="font-body text-foreground mb-3">{item.content}</p>
-              <span className={`inline-block text-xs font-body font-medium px-3 py-1 rounded-full ${
-                item.confidence === 'clear' ? 'bg-primary/10 text-primary' : 'bg-alert/10 text-alert'
-              }`}>
+            <div key={item.id} style={{
+              background: 'var(--ov-card-bg)',
+              backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid var(--ov-card-border)',
+              borderRadius: 18, padding: '20px 22px',
+              boxShadow: 'var(--ov-shadow)',
+              transition: 'transform 0.18s',
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
+            >
+              <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-text)', marginBottom: 12 }}>
+                {item.content}
+              </p>
+              <span style={{
+                display: 'inline-block', fontSize: 11, fontWeight: 600,
+                padding: '3px 10px', borderRadius: 20,
+                background: item.confidence === 'clear'
+                  ? 'rgba(94,207,207,0.15)' : 'rgba(240,192,80,0.15)',
+                color: item.confidence === 'clear' ? '#5ECFCF' : '#F0C050',
+                border: item.confidence === 'clear'
+                  ? '1px solid rgba(94,207,207,0.3)' : '1px solid rgba(240,192,80,0.3)',
+              }}>
                 {item.confidence === 'clear' ? 'Confirmed' : 'Needs follow-up'}
               </span>
               <FamilyNoteField itemId={item.id} />

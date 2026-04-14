@@ -2,30 +2,38 @@ import { useMemo, useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import type { ActionItem } from '@/contexts/SessionContext';
 
+const FF = 'Figtree, system-ui, sans-serif';
+
 const BANDS = [
   {
     key: 'red' as const,
     label: 'Do within 2 weeks',
-    dot: 'bg-red-500',
-    border: 'border-red-300',
-    bg: 'bg-red-50',
-    pill: 'bg-red-100 text-red-700',
+    dotColor: '#FF5F52',
+    cardBg: 'rgba(255,95,82,0.07)',
+    cardBorder: 'rgba(255,95,82,0.18)',
+    pillBg: 'rgba(255,95,82,0.12)',
+    pillBorder: 'rgba(255,95,82,0.35)',
+    pillColor: '#FF5F52',
   },
   {
     key: 'amber' as const,
     label: 'Do within 3 months',
-    dot: 'bg-amber-500',
-    border: 'border-amber-300',
-    bg: 'bg-amber-50',
-    pill: 'bg-amber-100 text-amber-700',
+    dotColor: '#F0C050',
+    cardBg: 'rgba(240,192,80,0.07)',
+    cardBorder: 'rgba(240,192,80,0.18)',
+    pillBg: 'rgba(240,192,80,0.12)',
+    pillBorder: 'rgba(240,192,80,0.35)',
+    pillColor: '#F0C050',
   },
   {
     key: 'done' as const,
     label: 'Completed',
-    dot: 'bg-green-500',
-    border: 'border-green-300',
-    bg: 'bg-green-50',
-    pill: 'bg-green-100 text-green-700',
+    dotColor: '#5CB85C',
+    cardBg: 'rgba(92,184,92,0.07)',
+    cardBorder: 'rgba(92,184,92,0.18)',
+    pillBg: 'rgba(92,184,92,0.12)',
+    pillBorder: 'rgba(92,184,92,0.35)',
+    pillColor: '#5CB85C',
   },
 ];
 
@@ -70,78 +78,140 @@ function ActionCard({
     : 'TBD';
 
   return (
-    <div className={`rounded-xl border ${band.border} ${band.bg} p-4`}>
-      <div className="flex items-start gap-2 mb-2">
-        <span className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${band.dot}`} />
-        <p className={`font-body font-semibold text-foreground ${action.status === 'done' ? 'line-through opacity-60' : ''}`}>
+    <div style={{
+      background: band.cardBg,
+      border: `1px solid ${band.cardBorder}`,
+      borderRadius: 16, padding: '16px 18px',
+    }}>
+      {/* Title row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+        <span style={{
+          width: 10, height: 10, borderRadius: '50%', flexShrink: 0, marginTop: 5,
+          background: band.dotColor,
+          boxShadow: `0 0 6px ${band.dotColor}99`,
+        }} />
+        <p style={{
+          fontFamily: FF, fontWeight: 600, fontSize: 14, color: 'var(--ov-text)',
+          textDecoration: action.status === 'done' ? 'line-through' : 'none',
+          opacity: action.status === 'done' ? 0.55 : 1, margin: 0, flex: 1,
+        }}>
           {action.title}
         </p>
       </div>
-      <p className="font-body text-sm text-muted-foreground mb-3 ml-4">{action.description}</p>
 
-      <div className="ml-4 flex items-center gap-2 mb-3 flex-wrap">
-        <span className="text-xs font-body px-2 py-1 rounded-full bg-sky-100 text-sky-700">
+      {/* Description */}
+      <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-muted)', marginBottom: 12, paddingLeft: 18 }}>
+        {action.description}
+      </p>
+
+      {/* Meta pills */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 18, marginBottom: 12, flexWrap: 'wrap' }}>
+        <span style={{
+          fontSize: 11, fontFamily: FF, padding: '3px 10px', borderRadius: 20,
+          background: 'rgba(94,207,207,0.12)', color: '#5ECFCF',
+          border: '1px solid rgba(94,207,207,0.25)',
+        }}>
           {childName} (Dad)
         </span>
-        <span className="text-xs font-body px-2 py-1 rounded-full bg-amber-100 text-amber-700">
+        <span style={{
+          fontSize: 11, fontFamily: FF, padding: '3px 10px', borderRadius: 20,
+          background: 'rgba(240,192,80,0.12)', color: '#F0C050',
+          border: '1px solid rgba(240,192,80,0.25)',
+        }}>
           Due {dueLabel}
         </span>
       </div>
 
-      <div className="flex items-center gap-2 ml-4 flex-wrap">
+      {/* Actions row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 18, flexWrap: 'wrap' }}>
         <button
           onClick={() => updateActionStatus(action.id, nextStatus)}
-          className={`font-body text-xs font-medium px-3 py-1.5 rounded-md transition-opacity hover:opacity-80 ${
-            action.status === 'done'
-              ? 'bg-muted text-muted-foreground'
-              : 'bg-primary text-primary-foreground'
-          }`}
+          style={{
+            fontFamily: FF, fontSize: 12, fontWeight: 600,
+            padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+            border: 'none', transition: 'opacity 0.18s',
+            background: action.status === 'done'
+              ? 'var(--ov-inner)' : 'var(--ov-accent)',
+            color: action.status === 'done' ? 'var(--ov-muted)' : 'white',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
         >
           {nextLabel}
         </button>
+
         {action.learnMoreUrl && (
           <a
             href={action.learnMoreUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body text-xs text-primary hover:underline"
+            style={{
+              fontFamily: FF, fontSize: 12, color: 'var(--ov-accent)',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'; }}
           >
             Open guidance
           </a>
         )}
+
         <button
-          onClick={() => setEditingNote((v) => !v)}
-          className="font-body text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setEditingNote(v => !v)}
+          style={{
+            fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            transition: 'color 0.18s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-text)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; }}
         >
           {editingNote ? 'Close note' : 'Add note'}
         </button>
+
         {action.status === 'in-progress' && (
-          <span className="text-xs text-primary font-body font-medium">● In Progress</span>
+          <span style={{ fontSize: 12, color: 'var(--ov-accent)', fontFamily: FF, fontWeight: 600 }}>
+            ● In Progress
+          </span>
         )}
       </div>
 
+      {/* Note editor */}
       {editingNote && (
-        <div className="ml-4 mt-3 pt-3 border-t border-border">
+        <div style={{
+          marginLeft: 18, marginTop: 14, paddingTop: 14,
+          borderTop: '1px solid var(--ov-card-border)',
+        }}>
           <textarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={e => setDraft(e.target.value)}
             rows={2}
             placeholder="Add progress notes for this task"
-            className="w-full font-body text-sm border border-border rounded-lg px-3 py-2 text-foreground bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+            style={{
+              width: '100%', fontFamily: FF, fontSize: 13,
+              border: '1px solid var(--ov-card-border)', borderRadius: 10,
+              padding: '10px 12px', color: 'var(--ov-text)',
+              background: 'var(--ov-inner)',
+              resize: 'none', outline: 'none', boxSizing: 'border-box',
+            }}
           />
-          <div className="mt-2 flex items-center gap-2">
+          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
             <button
-              onClick={() => {
-                onSaveNote(action.id, draft.trim());
-                setEditingNote(false);
+              onClick={() => { onSaveNote(action.id, draft.trim()); setEditingNote(false); }}
+              style={{
+                fontFamily: FF, fontSize: 12, fontWeight: 600,
+                padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+                background: 'var(--ov-accent)', color: 'white', border: 'none',
               }}
-              className="font-body text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:opacity-90"
             >
               Save note
             </button>
             <button
               onClick={() => setEditingNote(false)}
-              className="font-body text-xs text-muted-foreground hover:text-foreground"
+              style={{
+                fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              }}
             >
               Cancel
             </button>
@@ -149,8 +219,12 @@ function ActionCard({
         </div>
       )}
 
+      {/* Saved note */}
       {!editingNote && actionNotes[action.id] && (
-        <p className="ml-4 mt-3 text-xs font-body text-muted-foreground">
+        <p style={{
+          marginLeft: 18, marginTop: 10,
+          fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)',
+        }}>
           Note: {actionNotes[action.id]}
         </p>
       )}
@@ -168,15 +242,15 @@ export default function DashboardActions({ query = '' }: DashboardActionsProps) 
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return actionItems.filter((a) => {
+    return actionItems.filter(a => {
       if (!q) return true;
       return a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q);
     });
   }, [actionItems, query]);
 
-  const redItems = filtered.filter((a) => a.severity === 'red' && a.status !== 'done');
-  const amberItems = filtered.filter((a) => a.severity === 'amber' && a.status !== 'done');
-  const doneItems = filtered.filter((a) => a.status === 'done');
+  const redItems = filtered.filter(a => a.severity === 'red' && a.status !== 'done');
+  const amberItems = filtered.filter(a => a.severity === 'amber' && a.status !== 'done');
+  const doneItems = filtered.filter(a => a.status === 'done');
 
   const bandItems = [
     { band: BANDS[0], items: redItems },
@@ -191,42 +265,82 @@ export default function DashboardActions({ query = '' }: DashboardActionsProps) 
   };
 
   return (
-    <div className="cn-stagger">
-      <h2 className="font-display text-[22px] font-semibold mb-1 text-foreground">Tasks</h2>
-      <p className="font-body text-muted-foreground mb-4">Prioritised by urgency. Red items first, then amber.</p>
-
-      <div className="mb-8 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
-        <span className="text-amber-500 text-base mt-0.5 shrink-0" aria-hidden="true">ℹ</span>
-        <p className="font-body text-xs text-amber-800 leading-relaxed">
-          <strong>Not legal or financial advice.</strong> These tasks are organisational reminders only. Always seek independent legal advice for matters relating to wills, Power of Attorney, and estate planning. Always seek independent financial advice for financial decisions. Pannon Ltd is not a law firm or FCA-authorised adviser.
+    <div className="cn-stagger" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Title */}
+      <div style={{ marginBottom: 4 }}>
+        <h2 style={{ fontFamily: FF, fontSize: 22, fontWeight: 700, color: 'var(--ov-text)', margin: 0 }}>
+          Tasks
+        </h2>
+        <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)', margin: '4px 0 0' }}>
+          Prioritised by urgency. Red items first, then amber.
         </p>
       </div>
 
-      <div className="relative">
-        <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-border" />
+      {/* Notice */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        background: 'var(--ov-inner)',
+        border: '1px solid var(--ov-card-border)',
+        borderRadius: 14, padding: '12px 16px', margin: '16px 0 28px',
+      }}>
+        <span style={{ color: 'var(--ov-accent)', fontSize: 15, marginTop: 1, flexShrink: 0 }}>ℹ</span>
+        <p style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', lineHeight: 1.6, margin: 0 }}>
+          <strong style={{ color: 'var(--ov-text)' }}>Not legal or financial advice.</strong>{' '}
+          These tasks are organisational reminders only. Always seek independent legal advice for matters relating to wills, Power of Attorney, and estate planning. Always seek independent financial advice for financial decisions. Pannon Ltd is not a law firm or FCA-authorised adviser.
+        </p>
+      </div>
 
-        <div className="space-y-10">
+      {/* Timeline */}
+      <div style={{ position: 'relative' }}>
+        {/* Vertical line */}
+        <div style={{
+          position: 'absolute', left: 20, top: 20, bottom: 20, width: 2,
+          background: 'var(--ov-card-border)',
+        }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
           {bandItems.map(({ band, items }) => (
-            <div key={band.key} className="relative pl-14">
-              <div className={`absolute left-[13px] top-1 w-5 h-5 rounded-full ${band.dot} border-2 border-card shadow-sm`} />
+            <div key={band.key} style={{ position: 'relative', paddingLeft: 52 }}>
+              {/* Timeline dot */}
+              <div style={{
+                position: 'absolute', left: 12, top: 4,
+                width: 18, height: 18, borderRadius: '50%',
+                background: band.dotColor,
+                boxShadow: `0 0 10px ${band.dotColor}88`,
+                border: '2px solid var(--ov-card-bg)',
+              }} />
 
-              <div className="flex items-center gap-3 mb-4">
-                <span className={`font-body text-xs font-semibold px-2.5 py-1 rounded-full ${band.pill}`}>
+              {/* Band header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{
+                  fontFamily: FF, fontSize: 12, fontWeight: 700,
+                  padding: '4px 12px', borderRadius: 20,
+                  background: band.pillBg,
+                  border: `1px solid ${band.pillBorder}`,
+                  color: band.pillColor,
+                }}>
                   {band.label}
                 </span>
-                <span className="font-body text-xs text-muted-foreground">
+                <span style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)' }}>
                   {items.length} {items.length === 1 ? 'item' : 'items'}
                 </span>
               </div>
 
+              {/* Items */}
               {items.length > 0 ? (
-                <div className="space-y-3">
-                  {items.map((action) => (
-                    <ActionCard key={action.id} action={action} band={band} actionNotes={actionNotes} onSaveNote={saveNote} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {items.map(action => (
+                    <ActionCard
+                      key={action.id}
+                      action={action}
+                      band={band}
+                      actionNotes={actionNotes}
+                      onSaveNote={saveNote}
+                    />
                   ))}
                 </div>
               ) : (
-                <p className="font-body text-sm text-muted-foreground italic">
+                <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)', fontStyle: 'italic' }}>
                   {band.key === 'done' ? 'No completed tasks yet.' : 'Nothing in this category right now.'}
                 </p>
               )}

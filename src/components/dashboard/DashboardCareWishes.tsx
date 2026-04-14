@@ -7,6 +7,8 @@ interface DashboardCareWishesProps {
   query?: string;
 }
 
+const FF = 'Figtree, system-ui, sans-serif';
+
 export default function DashboardCareWishes({ query = '' }: DashboardCareWishesProps) {
   const { capturedItems, parentName } = useSession();
   const wishes = useMemo(() => {
@@ -19,18 +21,32 @@ export default function DashboardCareWishes({ query = '' }: DashboardCareWishesP
   }, [capturedItems, query]);
 
   return (
-    <div className="cn-stagger">
-      <p className="font-display text-lg italic text-foreground mb-6 max-w-2xl leading-relaxed">
+    <div className="cn-stagger" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Intro */}
+      <p style={{
+        fontFamily: FF, fontSize: 16, fontStyle: 'italic',
+        color: 'var(--ov-text)', marginBottom: 24, maxWidth: 640, lineHeight: 1.6,
+      }}>
         {parentName} shared the following wishes during the conversation. These are shown in {parentName}'s own voice.
       </p>
 
+      {/* Content */}
       {wishes.length === 0 ? (
         <EmptyState section="Care Wishes" />
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {wishes.map(item => (
-            <div key={item.id} className="cn-card bg-background">
-              <p className="font-body text-foreground italic leading-relaxed text-lg">
+            <div key={item.id} style={{
+              background: 'var(--ov-card-bg)',
+              backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid var(--ov-card-border)',
+              borderRadius: 18, padding: '22px 24px',
+              boxShadow: 'var(--ov-shadow)',
+            }}>
+              <p style={{
+                fontFamily: FF, fontSize: 16, fontStyle: 'italic',
+                color: 'var(--ov-text)', lineHeight: 1.65,
+              }}>
                 "{item.content}"
               </p>
               <FamilyNoteField itemId={item.id} />

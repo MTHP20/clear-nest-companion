@@ -30,6 +30,8 @@ import {
   type ExtractedItemRow,
 } from '@/lib/userAssetsService';
 
+const FF = 'Figtree, system-ui, sans-serif';
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatDuration(secs: number): string {
@@ -62,28 +64,29 @@ function Bubble({
   const isUser = role === 'user';
   return (
     <div
-      className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} mb-1 cursor-pointer group`}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', marginBottom: 4, cursor: 'pointer' }}
       onClick={onSelect}
     >
       {isFirstInGroup && (
-        <span className={`text-xs font-body text-muted-foreground mb-1 px-1 ${isUser ? 'text-right' : 'text-left'}`}>
+        <span style={{ fontFamily: FF, fontSize: 11, color: 'var(--ov-muted)', marginBottom: 3, paddingLeft: 4, paddingRight: 4, textAlign: isUser ? 'right' : 'left' }}>
           {isUser ? userName : agentName}
         </span>
       )}
-      <div
-        className={`
-          max-w-[75%] px-4 py-2.5 font-body text-[15px] leading-relaxed transition-all
-          ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}
-          ${isUser
-            ? 'bg-primary text-primary-foreground rounded-[20px] rounded-br-[5px]'
-            : 'bg-muted text-foreground rounded-[20px] rounded-bl-[5px]'
-          }
-        `}
-      >
+      <div style={{
+        maxWidth: '75%', padding: '10px 16px',
+        fontFamily: FF, fontSize: 15, lineHeight: 1.55,
+        transition: 'all 0.15s',
+        outline: isSelected ? '2px solid var(--ov-accent)' : 'none',
+        outlineOffset: isSelected ? 2 : 0,
+        background: isUser ? 'var(--ov-accent)' : 'var(--ov-inner)',
+        color: isUser ? 'white' : 'var(--ov-text)',
+        borderRadius: isUser ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
+        border: isUser ? 'none' : '1px solid var(--ov-card-border)',
+      }}>
         {message}
       </div>
       {isSelected && (
-        <span className="text-[10px] text-primary mt-0.5 px-1 font-body">
+        <span style={{ fontFamily: FF, fontSize: 10, color: 'var(--ov-accent)', marginTop: 2, paddingLeft: 4 }}>
           Selected — click "Save Section" to save
         </span>
       )}
@@ -104,36 +107,47 @@ function PinnedSectionsPanel({
   if (sections.length === 0) return null;
 
   return (
-    <div className="cn-card mb-4 border border-primary/20">
+    <div style={{
+      background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+      border: '1px solid var(--ov-card-border)', borderRadius: 18,
+      boxShadow: 'var(--ov-shadow)', marginBottom: 16, overflow: 'hidden',
+    }}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-body font-semibold text-primary"
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 20px', fontFamily: FF, fontSize: 14, fontWeight: 600,
+          color: 'var(--ov-accent)', background: 'none', border: 'none', cursor: 'pointer',
+        }}
       >
-        <span className="flex items-center gap-1.5">
-          <Bookmark className="w-4 h-4" />
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Bookmark style={{ width: 16, height: 16 }} />
           {sections.length} Saved Section{sections.length !== 1 ? 's' : ''}
         </span>
-        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {open ? <ChevronUp style={{ width: 16, height: 16 }} /> : <ChevronDown style={{ width: 16, height: 16 }} />}
       </button>
       {open && (
-        <div className="border-t border-border divide-y divide-border">
+        <div style={{ borderTop: '1px solid var(--ov-card-border)' }}>
           {sections.map((s, i) => (
-            <div key={i} className="px-4 py-3 flex items-start gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-body text-xs font-semibold text-primary mb-1">{s.label}</p>
-                <p className="font-body text-sm text-foreground leading-relaxed line-clamp-3">
+            <div key={i} style={{
+              padding: '12px 20px', display: 'flex', alignItems: 'flex-start', gap: 12,
+              borderBottom: i < sections.length - 1 ? '1px solid var(--ov-card-border)' : 'none',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: FF, fontSize: 12, fontWeight: 600, color: 'var(--ov-accent)', marginBottom: 4 }}>{s.label}</p>
+                <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-text)', lineHeight: 1.55, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                   &ldquo;{s.excerpt}&rdquo;
                 </p>
-                <p className="font-body text-[10px] text-muted-foreground mt-1">
+                <p style={{ fontFamily: FF, fontSize: 10, color: 'var(--ov-muted)', marginTop: 4 }}>
                   Saved {new Date(s.pinned_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               </div>
               <button
                 onClick={() => onRemove(i)}
-                className="text-muted-foreground hover:text-destructive transition-colors shrink-0 mt-0.5"
+                style={{ color: 'var(--ov-muted)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
                 aria-label="Remove saved section"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 style={{ width: 14, height: 14 }} />
               </button>
             </div>
           ))}
@@ -240,58 +254,76 @@ function TranscriptView({
   }, [familyId, conv.conversation_id, sections]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-body text-primary hover:text-primary/70 transition-colors"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontFamily: FF, fontSize: 14, color: 'var(--ov-accent)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft style={{ width: 16, height: 16 }} />
           Back
         </button>
-        <div className="h-4 w-px bg-border" />
-        <div className="flex-1">
-          <p className="font-body font-semibold text-foreground text-sm">
+        <div style={{ width: 1, height: 16, background: 'var(--ov-card-border)' }} />
+        <div style={{ flex: 1 }}>
+          <p style={{ fontFamily: FF, fontWeight: 600, color: 'var(--ov-text)', fontSize: 14, margin: 0 }}>
             {conv.call_summary_title ?? formatDate(conv.started_at)}
           </p>
-          <p className="font-body text-xs text-muted-foreground">
+          <p style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', margin: '2px 0 0' }}>
             {formatDuration(conv.duration_seconds)} · {conv.message_count} messages
-            {isPinned && <span className="ml-2 text-primary">· Pinned — won't auto-delete</span>}
+            {isPinned && <span style={{ marginLeft: 8, color: 'var(--ov-accent)' }}>· Pinned — won't auto-delete</span>}
           </p>
         </div>
 
-        {/* Save section button */}
         {selectedTurnIndex !== null && (
           <button
             onClick={handleSaveSection}
             disabled={savingSection}
-            className="flex items-center gap-1.5 text-sm font-body font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/80 transition-colors disabled:opacity-60"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: FF, fontSize: 13, fontWeight: 600,
+              background: 'var(--ov-accent)', color: 'white',
+              padding: '7px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              opacity: savingSection ? 0.6 : 1,
+            }}
           >
-            {savingSection ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bookmark className="w-3.5 h-3.5" />}
+            {savingSection ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <Bookmark style={{ width: 14, height: 14 }} />}
             Save Section
           </button>
         )}
 
-        {/* Pin button */}
         <button
           onClick={handlePin}
           disabled={pinning}
           title={isPinned ? 'Unpin — will auto-delete after 30 days' : 'Pin — save forever'}
-          className={`flex items-center gap-1.5 text-sm font-body font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60
-            ${isPinned ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground'}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontFamily: FF, fontSize: 13, fontWeight: 600,
+            background: isPinned ? 'rgba(70,99,172,0.1)' : 'var(--ov-inner)',
+            color: 'var(--ov-accent)',
+            border: '1px solid var(--ov-card-border)',
+            padding: '7px 14px', borderRadius: 10, cursor: 'pointer',
+            opacity: pinning ? 0.6 : 1,
+          }}
         >
-          {pinning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-            isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+          {pinning ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> :
+            isPinned ? <PinOff style={{ width: 14, height: 14 }} /> : <Pin style={{ width: 14, height: 14 }} />}
           {isPinned ? 'Unpin' : 'Pin'}
         </button>
       </div>
 
       {/* Summary */}
       {conv.transcript_summary && (
-        <div className="bg-primary/8 border border-primary/20 rounded-xl px-4 py-3 mb-4">
-          <p className="text-xs font-body uppercase tracking-widest text-primary mb-1">Summary</p>
-          <p className="font-body text-sm text-foreground leading-relaxed">{conv.transcript_summary}</p>
+        <div style={{
+          background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)',
+          borderRadius: 14, padding: '12px 16px', marginBottom: 14,
+        }}>
+          <p style={{ fontFamily: FF, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ov-accent)', marginBottom: 4 }}>Summary</p>
+          <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-text)', lineHeight: 1.6 }}>{conv.transcript_summary}</p>
         </div>
       )}
 
@@ -300,39 +332,47 @@ function TranscriptView({
 
       {/* Select-a-turn hint */}
       {!loading && !error && turns.length > 0 && selectedTurnIndex === null && (
-        <p className="font-body text-xs text-muted-foreground mb-3 text-center">
+        <p style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', marginBottom: 12, textAlign: 'center' }}>
           Tap any message to select it, then click "Save Section" to bookmark it permanently.
         </p>
       )}
 
       {/* Chat area */}
-      <div className="cn-card flex-1 overflow-y-auto">
-        <div className="flex justify-center mb-4">
-          <span className="text-xs font-body bg-muted text-muted-foreground px-3 py-1 rounded-full">
+      <div style={{
+        background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+        border: '1px solid var(--ov-card-border)', borderRadius: 18,
+        boxShadow: 'var(--ov-shadow)', flex: 1, overflowY: 'auto', padding: '20px 22px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <span style={{
+            fontFamily: FF, fontSize: 11, color: 'var(--ov-muted)',
+            background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)',
+            padding: '3px 12px', borderRadius: 20,
+          }}>
             {formatDate(conv.started_at)}
           </span>
         </div>
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            <p className="font-body text-sm text-muted-foreground">Loading transcript…</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: 12 }}>
+            <Loader2 style={{ width: 24, height: 24, color: 'var(--ov-accent)' }} className="animate-spin" />
+            <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)' }}>Loading transcript…</p>
           </div>
         )}
 
         {error && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <AlertCircle className="w-6 h-6 text-alert" />
-            <p className="font-body text-sm text-muted-foreground">{error}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: 12, textAlign: 'center' }}>
+            <AlertCircle style={{ width: 24, height: 24, color: '#FF5F52' }} />
+            <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)' }}>{error}</p>
           </div>
         )}
 
         {!loading && !error && turns.length === 0 && (
-          <div className="text-center py-12">
-            <p className="font-body text-sm text-muted-foreground">
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)' }}>
               Full transcript not available for this session.
             </p>
-            <p className="font-body text-xs text-muted-foreground mt-1 opacity-60">
+            <p style={{ fontFamily: FF, fontSize: 11, color: 'var(--ov-muted)', marginTop: 4, opacity: 0.6 }}>
               Transcripts are stored from new sessions onwards.
             </p>
           </div>
@@ -352,8 +392,12 @@ function TranscriptView({
         ))}
 
         {!loading && !error && turns.length > 0 && (
-          <div className="flex justify-center mt-4">
-            <span className="text-xs font-body bg-muted text-muted-foreground px-3 py-1 rounded-full">
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <span style={{
+              fontFamily: FF, fontSize: 11, color: 'var(--ov-muted)',
+              background: 'var(--ov-inner)', border: '1px solid var(--ov-card-border)',
+              padding: '3px 12px', borderRadius: 20,
+            }}>
               Conversation ended · {formatDuration(conv.duration_seconds)}
             </span>
           </div>
@@ -362,7 +406,7 @@ function TranscriptView({
 
       {/* 30-day notice */}
       {!isPinned && (
-        <p className="font-body text-[10px] text-muted-foreground text-center mt-3 opacity-55">
+        <p style={{ fontFamily: FF, fontSize: 10, color: 'var(--ov-muted)', textAlign: 'center', marginTop: 12, opacity: 0.55 }}>
           This conversation auto-deletes 30 days after it was recorded · Pin to keep it permanently
         </p>
       )}
@@ -401,69 +445,81 @@ function RecentlyCapturedPanel({ familyId }: { familyId: string }) {
   if (!loading && items.length === 0) return null;
 
   return (
-    <div className="cn-card mb-6 border border-primary/20">
+    <div style={{
+      background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+      border: '1px solid var(--ov-card-border)', borderRadius: 18,
+      boxShadow: 'var(--ov-shadow)', marginBottom: 20, overflow: 'hidden',
+    }}>
       {/* Header */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-4"
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 22px', background: 'none', border: 'none', cursor: 'pointer',
+        }}
       >
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-          <span className="font-body font-semibold text-foreground text-sm">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle2 style={{ width: 16, height: 16, color: 'var(--ov-accent)', flexShrink: 0 }} />
+          <span style={{ fontFamily: FF, fontWeight: 600, color: 'var(--ov-text)', fontSize: 14 }}>
             Recently Captured
           </span>
           {!loading && (
-            <span className="ml-1 text-xs font-body text-muted-foreground">
+            <span style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', marginLeft: 2 }}>
               · {items.length} verified item{items.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
         {loading
-          ? <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
-          : open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          ? <Loader2 style={{ width: 16, height: 16, color: 'var(--ov-muted)' }} className="animate-spin" />
+          : open
+            ? <ChevronUp style={{ width: 16, height: 16, color: 'var(--ov-muted)' }} />
+            : <ChevronDown style={{ width: 16, height: 16, color: 'var(--ov-muted)' }} />
         }
       </button>
 
       {open && !loading && (
-        <div className="border-t border-border divide-y divide-border">
-          {items.map(item => {
+        <div style={{ borderTop: '1px solid var(--ov-card-border)' }}>
+          {items.map((item, idx) => {
             const content = (item.value_json as { content?: string })?.content ?? '';
             const catLabel = CATEGORY_LABELS[item.category] ?? item.category.replace(/_/g, ' ');
             return (
-              <div key={item.id} className="px-5 py-3 flex items-start gap-3">
-                {/* Category pill */}
-                <span className="mt-0.5 inline-flex items-center gap-1 shrink-0 bg-primary/10 text-primary text-[10px] font-body font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  <Tag className="w-2.5 h-2.5" />
+              <div key={item.id} style={{
+                padding: '12px 22px', display: 'flex', alignItems: 'flex-start', gap: 12,
+                borderBottom: idx < items.length - 1 ? '1px solid var(--ov-card-border)' : 'none',
+              }}>
+                <span style={{
+                  marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4,
+                  flexShrink: 0, background: 'rgba(70,99,172,0.1)',
+                  color: 'var(--ov-accent)', fontSize: 10, fontFamily: FF, fontWeight: 700,
+                  padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  <Tag style={{ width: 10, height: 10 }} />
                   {catLabel}
                 </span>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-body text-sm text-foreground leading-relaxed line-clamp-2">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-text)', lineHeight: 1.55, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                     {content}
                   </p>
                   {item.source_excerpt && (
-                    <p className="font-body text-xs text-muted-foreground mt-0.5 italic line-clamp-1">
+                    <p style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', marginTop: 2, fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
                       &ldquo;{item.source_excerpt}&rdquo;
                     </p>
                   )}
-                  <p className="font-body text-[10px] text-muted-foreground mt-1">
+                  <p style={{ fontFamily: FF, fontSize: 10, color: 'var(--ov-muted)', marginTop: 3 }}>
                     Verified {item.verified_at
                       ? new Date(item.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                       : new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     {item.verified_by_role && ` by ${item.verified_by_role}`}
                   </p>
                 </div>
-
-                {/* Verified badge */}
-                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                <CheckCircle2 style={{ width: 16, height: 16, color: '#5CB85C', flexShrink: 0, marginTop: 2 }} />
               </div>
             );
           })}
 
           {items.length === 0 && (
-            <div className="px-5 py-6 text-center">
-              <p className="font-body text-sm text-muted-foreground">
+            <div style={{ padding: '24px 22px', textAlign: 'center' }}>
+              <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-muted)' }}>
                 No verified captures yet. Verify items from the dashboard to save them here.
               </p>
             </div>
@@ -550,37 +606,48 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
 
   // ── List view ──────────────────────────────────────────────────────────────
   return (
-    <div className="cn-stagger">
-      <h2 className="font-display text-[22px] font-semibold mb-2 text-foreground">
-        Conversations
-      </h2>
-      <p className="font-body text-sm text-muted-foreground mb-6">
-        All Clara sessions with {parentName || 'you'}. Pinned sessions are kept forever — others auto-delete after 30 days.
-      </p>
+    <div className="cn-stagger" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Title */}
+      <div style={{ marginBottom: 6 }}>
+        <h2 style={{ fontFamily: FF, fontSize: 22, fontWeight: 700, color: 'var(--ov-text)', margin: 0 }}>
+          Conversations
+        </h2>
+        <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)', margin: '4px 0 20px' }}>
+          All Clara sessions with {parentName || 'you'}. Pinned sessions are kept forever — others auto-delete after 30 days.
+        </p>
+      </div>
 
-      {/* Recently Captured — verified items from extracted_data */}
+      {/* Recently Captured */}
       <RecentlyCapturedPanel familyId={familyId} />
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="w-7 h-7 text-primary animate-spin" />
-          <p className="font-body text-sm text-muted-foreground">Loading conversations…</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 12 }}>
+          <Loader2 style={{ width: 28, height: 28, color: 'var(--ov-accent)' }} className="animate-spin" />
+          <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)' }}>Loading conversations…</p>
         </div>
       )}
 
       {error && (
-        <div className="cn-card flex items-start gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-alert shrink-0 mt-0.5" />
+        <div style={{
+          background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+          border: '1px solid var(--ov-card-border)', borderRadius: 18, padding: '18px 22px',
+          boxShadow: 'var(--ov-shadow)', display: 'flex', alignItems: 'flex-start', gap: 12,
+        }}>
+          <AlertCircle style={{ width: 20, height: 20, color: '#FF5F52', flexShrink: 0, marginTop: 2 }} />
           <div>
-            <p className="font-body font-semibold text-foreground mb-1">Could not load conversations</p>
-            <p className="font-body text-muted-foreground">{error}</p>
+            <p style={{ fontFamily: FF, fontWeight: 600, color: 'var(--ov-text)', marginBottom: 4 }}>Could not load conversations</p>
+            <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-muted)' }}>{error}</p>
           </div>
         </div>
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <div className="cn-card text-center py-10">
-          <p className="font-body text-muted-foreground">
+        <div style={{
+          background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+          border: '1px solid var(--ov-card-border)', borderRadius: 18, padding: '40px 22px',
+          boxShadow: 'var(--ov-shadow)', textAlign: 'center',
+        }}>
+          <p style={{ fontFamily: FF, fontSize: 14, color: 'var(--ov-muted)' }}>
             {query ? 'No conversations match your search.' : 'No conversations recorded yet. Start a session with Clara to see them here.'}
           </p>
         </div>
@@ -588,12 +655,17 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
 
       {!loading && !error && filtered.length > 0 && (
         <>
-          <div className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {/* Column headers */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-4 pb-1 text-xs font-body uppercase tracking-widest text-muted-foreground">
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr auto auto auto auto',
+              gap: 16, padding: '0 18px 4px',
+              fontFamily: FF, fontSize: 11, textTransform: 'uppercase',
+              letterSpacing: '0.08em', color: 'var(--ov-muted)',
+            }}>
               <span>Date</span>
-              <span className="text-right">Duration</span>
-              <span className="text-right">Messages</span>
+              <span style={{ textAlign: 'right' }}>Duration</span>
+              <span style={{ textAlign: 'right' }}>Messages</span>
               <span />
               <span />
             </div>
@@ -602,54 +674,62 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
               <button
                 key={conv.conversation_id}
                 onClick={() => setSelected(conv)}
-                className="w-full text-left cn-card cn-card-hover group"
+                style={{
+                  width: '100%', textAlign: 'left',
+                  background: 'var(--ov-card-bg)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                  border: '1px solid var(--ov-card-border)', borderRadius: 18,
+                  padding: '16px 18px', boxShadow: 'var(--ov-shadow)',
+                  cursor: 'pointer', transition: 'transform 0.18s, box-shadow 0.18s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; }}
               >
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: 16, alignItems: 'center' }}>
                   {/* Date + summary */}
                   <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-body font-semibold text-foreground group-hover:text-primary transition-colors">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <p style={{ fontFamily: FF, fontWeight: 600, color: 'var(--ov-text)', fontSize: 14, margin: 0 }}>
                         {conv.call_summary_title ?? formatDate(conv.started_at)}
                       </p>
                       {conv.is_pinned && (
-                        <Pin className="w-3 h-3 text-primary shrink-0" aria-label="Pinned" />
+                        <Pin style={{ width: 12, height: 12, color: 'var(--ov-accent)', flexShrink: 0 }} aria-label="Pinned" />
                       )}
                     </div>
                     {conv.transcript_summary && (
-                      <p className="font-body text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                      <p style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
                         {conv.transcript_summary}
                       </p>
                     )}
                     {!conv.call_summary_title && (
-                      <p className="font-body text-xs text-muted-foreground mt-0.5">
+                      <p style={{ fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)', marginTop: 2 }}>
                         {formatDate(conv.started_at)}
                       </p>
                     )}
                   </div>
 
                   {/* Duration */}
-                  <div className="flex items-center gap-1 text-sm font-body text-muted-foreground whitespace-nowrap">
-                    <Clock className="w-3.5 h-3.5" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: FF, fontSize: 13, color: 'var(--ov-muted)', whiteSpace: 'nowrap' }}>
+                    <Clock style={{ width: 14, height: 14 }} />
                     {formatDuration(conv.duration_seconds)}
                   </div>
 
                   {/* Message count */}
-                  <div className="flex items-center gap-1 text-sm font-body text-muted-foreground whitespace-nowrap">
-                    <MessageSquare className="w-3.5 h-3.5" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: FF, fontSize: 13, color: 'var(--ov-muted)', whiteSpace: 'nowrap' }}>
+                    <MessageSquare style={{ width: 14, height: 14 }} />
                     {conv.message_count}
                   </div>
 
                   {/* TTL badge */}
-                  <div className="text-[10px] font-body whitespace-nowrap">
+                  <div style={{ fontFamily: FF, fontSize: 10, whiteSpace: 'nowrap' }}>
                     {conv.is_pinned ? (
-                      <span className="text-primary font-semibold">Pinned</span>
+                      <span style={{ color: 'var(--ov-accent)', fontWeight: 700 }}>Pinned</span>
                     ) : (
-                      <span className="text-muted-foreground opacity-60">30d</span>
+                      <span style={{ color: 'var(--ov-muted)', opacity: 0.6 }}>30d</span>
                     )}
                   </div>
 
                   {/* Arrow */}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ChevronRight style={{ width: 16, height: 16, color: 'var(--ov-muted)' }} />
                 </div>
               </button>
             ))}
@@ -657,19 +737,24 @@ export default function DashboardSessions({ query = '' }: DashboardSessionsProps
 
           {/* Load more */}
           {hasMore && (
-            <div className="flex justify-center mt-6">
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="flex items-center gap-2 text-sm font-body font-medium text-primary hover:text-primary/70 transition-colors disabled:opacity-50"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  fontFamily: FF, fontSize: 13, fontWeight: 600, color: 'var(--ov-accent)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  opacity: loadingMore ? 0.5 : 1,
+                }}
               >
-                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loadingMore && <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" />}
                 {loadingMore ? 'Loading…' : 'Load older conversations'}
               </button>
             </div>
           )}
 
-          <p className="font-body text-[10px] text-muted-foreground text-center mt-4 opacity-55">
+          <p style={{ fontFamily: FF, fontSize: 10, color: 'var(--ov-muted)', textAlign: 'center', marginTop: 16, opacity: 0.55 }}>
             Conversations auto-delete after 30 days unless pinned · Pinned conversations and saved sections are kept permanently
           </p>
         </>

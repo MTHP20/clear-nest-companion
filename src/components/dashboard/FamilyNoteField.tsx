@@ -5,6 +5,8 @@ interface FamilyNoteFieldProps {
   itemId: string;
 }
 
+const FF = 'Figtree, system-ui, sans-serif';
+
 export default function FamilyNoteField({ itemId }: FamilyNoteFieldProps) {
   const { userNotes, setUserNote } = useSession();
   const existing = userNotes[itemId] ?? '';
@@ -23,12 +25,14 @@ export default function FamilyNoteField({ itemId }: FamilyNoteFieldProps) {
 
   if (!open && existing) {
     return (
-      <div className="mt-3 pt-3 border-t border-border">
-        <p className="font-body text-xs text-muted-foreground mb-1">Your note</p>
-        <p className="font-body text-sm text-foreground">{existing}</p>
+      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--ov-card-border)' }}>
+        <p style={{ fontFamily: FF, fontSize: 11, color: 'var(--ov-muted)', marginBottom: 4 }}>Your note</p>
+        <p style={{ fontFamily: FF, fontSize: 13, color: 'var(--ov-text)' }}>{existing}</p>
         <button
           onClick={handleEdit}
-          className="font-body text-xs text-primary hover:underline mt-1"
+          style={{ fontFamily: FF, fontSize: 11, color: 'var(--ov-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: 2 }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.textDecoration = 'underline'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.textDecoration = 'none'; }}
         >
           Edit note
         </button>
@@ -38,25 +42,38 @@ export default function FamilyNoteField({ itemId }: FamilyNoteFieldProps) {
 
   if (open) {
     return (
-      <div className="mt-3 pt-3 border-t border-border">
-        <p className="font-body text-xs text-muted-foreground mb-1.5">Your note</p>
+      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--ov-card-border)' }}>
+        <p style={{ fontFamily: FF, fontSize: 11, color: 'var(--ov-muted)', marginBottom: 6 }}>Your note</p>
         <textarea
           value={draft}
           onChange={e => setDraft(e.target.value)}
           placeholder="e.g. Called Barclays on 28 Feb — confirmed account number ends 4421"
           rows={2}
-          className="w-full font-body text-sm border border-border rounded-lg px-3 py-2 text-foreground bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+          style={{
+            width: '100%', fontFamily: FF, fontSize: 13,
+            border: '1px solid var(--ov-card-border)', borderRadius: 10,
+            padding: '10px 12px', color: 'var(--ov-text)',
+            background: 'var(--ov-inner)',
+            resize: 'none', outline: 'none', boxSizing: 'border-box',
+          }}
         />
-        <div className="flex gap-2 mt-2">
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button
             onClick={handleSave}
-            className="font-body text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:opacity-90 transition-opacity"
+            style={{
+              fontFamily: FF, fontSize: 12, fontWeight: 600,
+              background: 'var(--ov-accent)', color: 'white',
+              padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            }}
           >
             Save
           </button>
           <button
             onClick={() => setOpen(false)}
-            className="font-body text-xs text-muted-foreground hover:text-foreground transition-colors"
+            style={{
+              fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            }}
           >
             Cancel
           </button>
@@ -66,10 +83,16 @@ export default function FamilyNoteField({ itemId }: FamilyNoteFieldProps) {
   }
 
   return (
-    <div className="mt-3 pt-2">
+    <div style={{ marginTop: 10, paddingTop: 4 }}>
       <button
         onClick={() => { setDraft(''); setOpen(true); }}
-        className="font-body text-xs text-muted-foreground hover:text-primary transition-colors"
+        style={{
+          fontFamily: FF, fontSize: 12, color: 'var(--ov-muted)',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          transition: 'color 0.18s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-accent)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ov-muted)'; }}
       >
         + Add a note
       </button>
