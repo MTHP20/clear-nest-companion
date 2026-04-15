@@ -12,7 +12,7 @@
  * Required Supabase secrets (set via `supabase secrets set`):
  *   ELEVENLABS_API_KEY       — ElevenLabs API key
  *   ELEVENLABS_WEBHOOK_SECRET — Webhook signing secret from ElevenLabs dashboard
- *   ANTHROPIC_API_KEY        — Anthropic API key
+ *   OPENAI_API_KEY           — OpenAI API key
  *   TRANSCRIPT_ENCRYPTION_KEY — 32-byte hex string used for AES-256-GCM
  *   SUPABASE_URL             — Injected automatically by Supabase
  *   SUPABASE_SERVICE_ROLE_KEY — Injected automatically by Supabase
@@ -184,11 +184,11 @@ function buildTranscriptText(turns: ElevenLabsTranscriptTurn[]): string {
 }
 
 /**
- * Call the Claude API using tool_use to extract structured profile data.
- * tool_choice: { type: "tool" } forces Claude to always call the tool,
+ * Call the OpenAI API using function calling to extract structured profile data.
+ * tool_choice forces the model to always call the function,
  * guaranteeing a schema-valid JSON response — no markdown fences, no deviation.
  */
-async function extractProfileWithClaude(
+async function extractProfileWithOpenAI(
   transcriptText: string,
   apiKey: string,
 ): Promise<ClaudeExtractedProfile> {
@@ -204,128 +204,133 @@ async function extractProfileWithClaude(
     topics_covered: [],
   };
 
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      "Authorization": `Bearer ${apiKey}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "gpt-4o",
       max_tokens: 1500,
-      system:
-        "You are extracting structured information from a care-planning conversation between an elderly person and Clara (an AI assistant). Extract only what was clearly stated — never infer or fabricate. Omit fields that were not mentioned.",
       tools: [
         {
-          name: "store_extracted_profile",
-          description:
-            "Store all structured information extracted from the care-planning conversation transcript.",
-          input_schema: {
-            type: "object",
-            properties: {
-              bank_accounts: {
-                type: "array",
-                description: "Bank accounts explicitly mentioned.",
-                items: {
-                  type: "object",
-                  properties: {
-                    bank_name: { type: "string" },
-                    account_type: {
-                      type: "string",
-                      description: "e.g. current, savings, ISA",
+          type: "function",
+          function: {
+            name: "store_extracted_profile",
+            description:
+              "Store all structured information extracted from the care-planning conversation transcript.",
+            parameters: {
+              type: "object",
+              properties: {
+                bank_accounts: {
+                  type: "array",
+                  description: "Bank accounts explicitly mentioned.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      bank_name: { type: "string" },
+                      account_type: {
+                        type: "string",
+                        description: "e.g. current, savings, ISA",
+                      },
+                      notes: { type: "string" },
                     },
-                    notes: { type: "string" },
+                    required: ["bank_name", "account_type", "notes"],
                   },
-                  required: ["bank_name", "account_type", "notes"],
+                },
+                financial_accounts: {
+                  type: "array",
+                  description: "Pensions, ISAs, investments, savings accounts (non-bank).",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: {
+                        type: "string",
+                        description: "e.g. pension, ISA, investment, annuity",
+                      },
+                      provider: { type: "string" },
+                      notes: { type: "string" },
+                    },
+                    required: ["type", "provider", "notes"],
+                  },
+                },
+                property_details: {
+                  type: "array",
+                  description: "Property ownership details explicitly mentioned.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      description: {
+                        type: "string",
+                        description: "e.g. 3-bed house in Manchester",
+                      },
+                      ownership_type: {
+                        type: "string",
+                        description: "e.g. owned outright, mortgaged, rented, leasehold",
+                      },
+                      notes: { type: "string" },
+                    },
+                    required: ["description", "ownership_type", "notes"],
+                  },
+                },
+                pension_status: {
+                  type: ["string", "null"],
+                  description: "Summary of pension arrangements, or null if not discussed.",
+                },
+                lpa_confirmed: {
+                  type: "boolean",
+                  description:
+                    "True ONLY if the person clearly stated they have a signed Lasting Power of Attorney in place.",
+                },
+                will_location: {
+                  type: ["string", "null"],
+                  description: "Where the will is stored, or null if not mentioned.",
+                },
+                key_contacts: {
+                  type: "array",
+                  description: "Named contacts such as GP, solicitor, accountant, financial adviser.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      role: { type: "string", description: "e.g. GP, solicitor, accountant" },
+                      phone: { type: "string" },
+                    },
+                    required: ["name", "role"],
+                  },
+                },
+                care_wishes: {
+                  type: ["string", "null"],
+                  description:
+                    "Care preferences and end-of-life wishes explicitly stated, or null.",
+                },
+                topics_covered: {
+                  type: "array",
+                  items: { type: "string" },
+                  description:
+                    "Short topic labels for what was discussed, e.g. [\"bank_accounts\", \"pension\", \"lpa\"].",
                 },
               },
-              financial_accounts: {
-                type: "array",
-                description: "Pensions, ISAs, investments, savings accounts (non-bank).",
-                items: {
-                  type: "object",
-                  properties: {
-                    type: {
-                      type: "string",
-                      description: "e.g. pension, ISA, investment, annuity",
-                    },
-                    provider: { type: "string" },
-                    notes: { type: "string" },
-                  },
-                  required: ["type", "provider", "notes"],
-                },
-              },
-              property_details: {
-                type: "array",
-                description: "Property ownership details explicitly mentioned.",
-                items: {
-                  type: "object",
-                  properties: {
-                    description: {
-                      type: "string",
-                      description: "e.g. 3-bed house in Manchester",
-                    },
-                    ownership_type: {
-                      type: "string",
-                      description: "e.g. owned outright, mortgaged, rented, leasehold",
-                    },
-                    notes: { type: "string" },
-                  },
-                  required: ["description", "ownership_type", "notes"],
-                },
-              },
-              pension_status: {
-                type: ["string", "null"],
-                description: "Summary of pension arrangements, or null if not discussed.",
-              },
-              lpa_confirmed: {
-                type: "boolean",
-                description:
-                  "True ONLY if the person clearly stated they have a signed Lasting Power of Attorney in place.",
-              },
-              will_location: {
-                type: ["string", "null"],
-                description: "Where the will is stored, or null if not mentioned.",
-              },
-              key_contacts: {
-                type: "array",
-                description: "Named contacts such as GP, solicitor, accountant, financial adviser.",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    role: { type: "string", description: "e.g. GP, solicitor, accountant" },
-                    phone: { type: "string" },
-                  },
-                  required: ["name", "role"],
-                },
-              },
-              care_wishes: {
-                type: ["string", "null"],
-                description:
-                  "Care preferences and end-of-life wishes explicitly stated, or null.",
-              },
-              topics_covered: {
-                type: "array",
-                items: { type: "string" },
-                description:
-                  "Short topic labels for what was discussed, e.g. [\"bank_accounts\", \"pension\", \"lpa\"].",
-              },
+              required: [
+                "bank_accounts",
+                "financial_accounts",
+                "property_details",
+                "lpa_confirmed",
+                "key_contacts",
+                "topics_covered",
+              ],
             },
-            required: [
-              "bank_accounts",
-              "financial_accounts",
-              "property_details",
-              "lpa_confirmed",
-              "key_contacts",
-              "topics_covered",
-            ],
           },
         },
       ],
-      tool_choice: { type: "tool", name: "store_extracted_profile" },
+      tool_choice: { type: "function", function: { name: "store_extracted_profile" } },
       messages: [
+        {
+          role: "system",
+          content:
+            "You are extracting structured information from a care-planning conversation between an elderly person and Clara (an AI assistant). Extract only what was clearly stated — never infer or fabricate. Omit fields that were not mentioned.",
+        },
         {
           role: "user",
           content: `Extract structured profile data from this care-planning conversation:\n\n${transcriptText}`,
@@ -336,20 +341,21 @@ async function extractProfileWithClaude(
 
   if (!resp.ok) {
     const err = await resp.text();
-    throw new Error(`Claude API error ${resp.status}: ${err}`);
+    throw new Error(`OpenAI API error ${resp.status}: ${err}`);
   }
 
   const result = await resp.json();
-  const toolUse = (result.content ?? []).find(
-    (b: { type: string }) => b.type === "tool_use",
-  ) as { input?: ClaudeExtractedProfile } | undefined;
+  const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+  const parsed = toolCall?.function?.arguments
+    ? JSON.parse(toolCall.function.arguments)
+    : undefined;
 
-  if (!toolUse?.input) {
-    console.error("Claude did not return a tool_use block:", JSON.stringify(result));
+  if (!parsed) {
+    console.error("OpenAI did not return a function call:", JSON.stringify(result));
     return empty;
   }
 
-  return { ...empty, ...toolUse.input };
+  return { ...empty, ...parsed };
 }
 
 /**
@@ -378,7 +384,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
   const ELEVENLABS_WEBHOOK_SECRET = Deno.env.get("ELEVENLABS_WEBHOOK_SECRET");
-  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
   const TRANSCRIPT_ENCRYPTION_KEY = Deno.env.get("TRANSCRIPT_ENCRYPTION_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -386,7 +392,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (
     !ELEVENLABS_API_KEY ||
     !ELEVENLABS_WEBHOOK_SECRET ||
-    !ANTHROPIC_API_KEY ||
+    !OPENAI_API_KEY ||
     !TRANSCRIPT_ENCRYPTION_KEY ||
     !SUPABASE_URL ||
     !SUPABASE_SERVICE_ROLE_KEY
@@ -439,12 +445,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response("Internal Server Error", { status: 500 });
   }
 
-  // ── Extract profile via Claude (strict tool_use) ────────────────────────────
+  // ── Extract profile via OpenAI (function calling) ──────────────────────────
   let extracted: ClaudeExtractedProfile;
   try {
-    extracted = await extractProfileWithClaude(transcriptText, ANTHROPIC_API_KEY);
+    extracted = await extractProfileWithOpenAI(transcriptText, OPENAI_API_KEY);
   } catch (err) {
-    console.error("Claude extraction failed:", err);
+    console.error("OpenAI extraction failed:", err);
     extracted = {
       bank_accounts: [],
       financial_accounts: [],

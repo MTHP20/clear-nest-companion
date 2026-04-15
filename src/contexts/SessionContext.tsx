@@ -566,69 +566,73 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // ── Step 2: Claude AI extraction (strict tool_use) ──────────────────────
-    const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+    // ── Step 2: OpenAI extraction (function calling) ──────────────────────
+    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
     const transcriptText = ((data.transcript ?? []) as RawTurn[])
       .filter(t => t.message && t.message.trim())
       .map(t => `${t.role === 'agent' ? 'Clara' : parentName}: ${t.message}`)
       .join('\n');
 
-    if (anthropicKey && transcriptText.length > 50) {
+    if (openaiKey && transcriptText.length > 50) {
       try {
-        const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+        const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'x-api-key': anthropicKey,
-            'anthropic-version': '2023-06-01',
+            'Authorization': `Bearer ${openaiKey}`,
             'content-type': 'application/json',
-            'anthropic-dangerous-direct-browser-access': 'true',
           },
           body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'gpt-4o-mini',
             max_tokens: 1200,
-            system: 'Extract factual information from a care-planning conversation. Only include what was clearly stated.',
             tools: [
               {
-                name: 'store_notes',
-                description: 'Store all extracted notes and flagged actions from the conversation.',
-                input_schema: {
-                  type: 'object',
-                  properties: {
-                    notes: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          category: {
-                            type: 'string',
-                            enum: ['documents', 'bank_accounts', 'financial_accounts', 'property', 'care_wishes', 'key_contacts', 'general'],
+                type: 'function',
+                function: {
+                  name: 'store_notes',
+                  description: 'Store all extracted notes and flagged actions from the conversation.',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      notes: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            category: {
+                              type: 'string',
+                              enum: ['documents', 'bank_accounts', 'financial_accounts', 'property', 'care_wishes', 'key_contacts', 'general'],
+                            },
+                            content: { type: 'string', description: '1-sentence factual statement' },
+                            confidence: { type: 'string', enum: ['clear', 'needs-follow-up'] },
                           },
-                          content: { type: 'string', description: '1-sentence factual statement' },
-                          confidence: { type: 'string', enum: ['clear', 'needs-follow-up'] },
+                          required: ['category', 'content', 'confidence'],
                         },
-                        required: ['category', 'content', 'confidence'],
+                      },
+                      actions: {
+                        type: 'array',
+                        description: 'Urgent gaps only — e.g. no will, no LPA set up.',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            title: { type: 'string' },
+                            description: { type: 'string' },
+                            severity: { type: 'string', enum: ['red', 'amber'] },
+                          },
+                          required: ['title', 'description', 'severity'],
+                        },
                       },
                     },
-                    actions: {
-                      type: 'array',
-                      description: 'Urgent gaps only — e.g. no will, no LPA set up.',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          title: { type: 'string' },
-                          description: { type: 'string' },
-                          severity: { type: 'string', enum: ['red', 'amber'] },
-                        },
-                        required: ['title', 'description', 'severity'],
-                      },
-                    },
+                    required: ['notes', 'actions'],
                   },
-                  required: ['notes', 'actions'],
                 },
               },
             ],
-            tool_choice: { type: 'tool', name: 'store_notes' },
+            tool_choice: { type: 'function', function: { name: 'store_notes' } },
             messages: [
+              {
+                role: 'system',
+                content: 'Extract factual information from a care-planning conversation. Only include what was clearly stated.',
+              },
               {
                 role: 'user',
                 content: `Extract all factual information from this care-planning conversation:\n\n${transcriptText.slice(0, 4000)}`,
@@ -637,14 +641,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }),
         });
 
-        if (claudeResp.ok) {
-          const claudeData = await claudeResp.json();
-          const toolUse = (claudeData.content ?? []).find(
-            (b: { type: string }) => b.type === 'tool_use'
-          ) as { input?: { notes?: unknown[]; actions?: unknown[] } } | undefined;
+        if (openaiResp.ok) {
+          const openaiData = await openaiResp.json();
+          const toolCall = openaiData.choices?.[0]?.message?.tool_calls?.[0];
+          const parsed = toolCall?.function?.arguments
+            ? JSON.parse(toolCall.function.arguments)
+            : undefined;
 
-          if (toolUse?.input) {
-            const { notes = [], actions: actionItems = [] } = toolUse.input;
+          if (parsed) {
+            const { notes = [], actions: actionItems = [] } = parsed as { notes?: unknown[]; actions?: unknown[] };
 
             for (const note of notes as Array<{ category: string; content: string; confidence: string }>) {
               if (note.content?.trim()) {
@@ -672,11 +677,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 actionCount++;
               }
             }
-            console.log(`🤖 Claude extracted ${items} notes, ${actionCount} actions from transcript`);
+            console.log(`🤖 OpenAI extracted ${items} notes, ${actionCount} actions from transcript`);
           }
         }
       } catch (err) {
-        console.warn('Claude AI extraction failed, using tool_calls only:', err);
+        console.warn('OpenAI extraction failed, using tool_calls only:', err);
       }
     } else if (transcriptText.length > 50 && items === 0) {
       // Last resort: keyword matching on the elderly person's lines
