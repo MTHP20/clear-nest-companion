@@ -875,7 +875,8 @@ export default function DashboardOverview({
             })}
           </div>
 
-          {/* Chat to Clara */}
+          {/* Chat to Clara — desktop only */}
+          {!isMobile && (
           <div
             onClick={() => navigate('/conversation')}
             style={{
@@ -946,6 +947,7 @@ export default function DashboardOverview({
               {primarySessionLabel}
             </div>
           </div>
+          )}
         </div>
 
       </div>
@@ -1241,7 +1243,8 @@ export default function DashboardOverview({
               </div>
             </div>
 
-            {/* Chat to Clara — column 2, center */}
+            {/* Chat to Clara — column 2, center — desktop only */}
+            {!isMobile && (
             <div
               onClick={() => navigate('/conversation')}
               style={{
@@ -1312,6 +1315,7 @@ export default function DashboardOverview({
                 {primarySessionLabel}
               </div>
             </div>
+            )}
 
           </div>
         );

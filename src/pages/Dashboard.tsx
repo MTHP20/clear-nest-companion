@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 import { ClearNestLogo } from '@/components/ClearNestLogo';
@@ -265,6 +265,7 @@ function SidebarInner({ parentName, activePage, activeActions, lastSession, onNa
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [theme, setTheme] = useState<'default' | 'dark' | 'orange'>(() => {
     try {
       const t = localStorage.getItem('cn-theme-v1');
@@ -632,7 +633,7 @@ const Dashboard = () => {
         )}
 
         {/* Page content */}
-        <main style={{ padding: isMobile ? `14px 14px ${advancedMode ? '14px' : '76px'}` : `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined, display: 'flex', flexDirection: 'column' }}>
+        <main style={{ padding: isMobile ? `14px 14px ${advancedMode ? '14px' : '180px'}` : `20px 48px ${advancedMode ? '20px' : '80px'}`, flex: 1, overflow: advancedMode ? 'hidden' : undefined, display: 'flex', flexDirection: 'column' }}>
           {renderPage()}
         </main>
       </div>
@@ -903,6 +904,55 @@ const Dashboard = () => {
           </div>
         </>
       )}
+
+      {/* ── Mobile floating Clara sphere ─────────────────────────────────────── */}
+      {isMobile && (() => {
+        const size = 96;
+        const inset = Math.round(size * 0.09);
+        return (
+          <div
+            onClick={() => navigate('/conversation')}
+            style={{
+              position: 'fixed',
+              bottom: 70,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 29,
+              width: size,
+              height: size,
+              borderRadius: '50%',
+              cursor: 'pointer',
+              flexShrink: 0,
+              animation: 'cnFloat 4s ease-in-out infinite',
+            }}
+          >
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.7) 25%,rgba(200,170,255,0.5) 50%,rgba(100,60,180,0.6) 75%,rgba(155,123,200,0) 100%)',
+              animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+            }} />
+            <div style={{
+              position: 'absolute', inset, borderRadius: '50%',
+              background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.6) 30%,rgba(80,40,160,0.5) 60%,rgba(180,150,230,0) 100%)',
+              animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(7px)',
+            }} />
+            <div style={{
+              position: 'absolute',
+              width: Math.round(size * 0.6), height: Math.round(size * 0.38),
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse,rgba(196,168,232,0.88) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+              top: Math.round(size * 0.12), left: Math.round(size * 0.09),
+              animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+            }} />
+            <div style={{
+              position: 'absolute',
+              top: Math.round(size * 0.13), left: Math.round(size * 0.18),
+              width: '38%', height: '28%', borderRadius: '50%',
+              background: 'radial-gradient(ellipse,rgba(255,255,255,0.65) 0%,transparent 70%)', zIndex: 9,
+            }} />
+          </div>
+        );
+      })()}
 
       {/* ── Mobile bottom tab bar ─────────────────────────────────────────────── */}
       <nav
