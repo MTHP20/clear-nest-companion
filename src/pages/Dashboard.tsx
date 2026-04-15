@@ -19,6 +19,7 @@ import {
   Palette,
   X,
   SlidersHorizontal,
+  FileText,
 } from 'lucide-react';
 import { generateFamilyReportPDF } from '@/utils/generateReport';
 import { upsertDocChecklist, upsertActionNotes } from '@/lib/userAssetsService';
