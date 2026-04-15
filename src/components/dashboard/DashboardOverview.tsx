@@ -1368,7 +1368,7 @@ export default function DashboardOverview({
       }}>
         <ActivityChart sessions={sessions} />
         <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
-        <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
+        {!isMobile && <ReadinessCard score={readinessPct} capturedItems={capturedItems} />}
       </div>
 
       {/* Search section */}
@@ -1438,7 +1438,7 @@ export default function DashboardOverview({
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 18 }}>
 
             {/* Nav Panels 3×2 — column 1, with topics overlay */}
-            <div style={{ position: 'relative', height: '100%' }}>
+            <div style={{ position: 'relative', height: '100%', order: isMobile ? 3 : 0 }}>
               <div style={{
                 display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10,
                 height: '100%',
@@ -1577,6 +1577,7 @@ export default function DashboardOverview({
               opacity: claraActive ? 0 : 1,
               pointerEvents: claraActive ? 'none' : 'auto',
               transition: 'opacity 0.4s ease',
+              order: isMobile ? 1 : 0,
             }}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 22px 16px', flexShrink: 0 }}>
@@ -1701,6 +1702,13 @@ export default function DashboardOverview({
               </div>
             </div>
 
+            {/* Readiness Card — mobile only, order 2 (between Recently Captured and Nav Panels) */}
+            {isMobile && (
+              <div style={{ order: 2 }}>
+                <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
+              </div>
+            )}
+
             {/* Chat to Clara — column 3, desktop only */}
             {!isMobile && (
             <div
@@ -1822,6 +1830,120 @@ export default function DashboardOverview({
                 </div>
               )}
             </div>
+            )}
+
+            {/* Clara sphere — mobile only, order 4, sticky above bottom nav */}
+            {isMobile && (
+              <div style={{ order: 4 }}>
+                <div
+                  onClick={!claraActive ? handleClaraCardClick : undefined}
+                  onTouchStart={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
+                  onTouchEnd={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+                  onTouchCancel={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+                  style={{
+                    position: 'sticky',
+                    bottom: 72,
+                    zIndex: 20,
+                    cursor: claraActive ? (claraSelectedTopic ? 'pointer' : 'default') : 'pointer',
+                    background: claraActive ? 'transparent' : 'rgba(155,123,200,0.18)',
+                    backdropFilter: claraActive ? 'none' : 'blur(12px)',
+                    WebkitBackdropFilter: claraActive ? 'none' : 'blur(12px)',
+                    border: `1px solid ${claraActive ? 'transparent' : 'rgba(155,123,200,0.35)'}`,
+                    borderRadius: 22, padding: '16px 20px',
+                    overflow: 'hidden',
+                    boxShadow: claraActive ? 'none' : '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                    transition: 'background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease',
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    userSelect: 'none', WebkitUserSelect: 'none',
+                    marginTop: 4,
+                  } as React.CSSProperties}
+                >
+                  {/* Decorative arcs */}
+                  <div style={{
+                    position: 'absolute', top: -8, right: -8, width: 72, height: 72, zIndex: 0,
+                    opacity: claraActive ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none',
+                  }}>
+                    {[
+                      { size: 64, color: 'rgba(94,207,207,0.45)', rot: -20 },
+                      { size: 46, color: 'rgba(255,255,255,0.18)', rot: -8 },
+                      { size: 28, color: 'rgba(155,123,200,0.6)', rot: 6 },
+                    ].map((arc, i) => (
+                      <div key={i} style={{
+                        position: 'absolute', width: arc.size, height: arc.size, borderRadius: '50%',
+                        border: '4px solid transparent',
+                        borderTopColor: arc.color, borderRightColor: arc.color,
+                        top: (64 - arc.size) / 2, right: (64 - arc.size) / 2,
+                        transform: `rotate(${arc.rot}deg)`,
+                      }} />
+                    ))}
+                  </div>
+
+                  {/* Sphere */}
+                  <div style={{
+                    transform: `scale(${
+                      claraMicPressed && !claraIsHolding ? 0.92 :
+                      claraIsSpeaking ? 1.18 :
+                      claraIsHolding ? 1.1 :
+                      claraIsStarting ? 1.05 :
+                      claraIsSessionActive ? 1.05 : 1.0
+                    })`,
+                    transition: claraMicPressed ? 'transform 80ms ease' : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+                    transformOrigin: 'center', flexShrink: 0,
+                  }}>
+                    <div style={{ position: 'relative', width: 72, height: 72 }}>
+                      <div style={{
+                        position: 'absolute', inset: 0, borderRadius: '50%',
+                        background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+                        animation: 'cnSphereRot 12s linear infinite', filter: 'blur(4px)',
+                      }} />
+                      <div style={{
+                        position: 'absolute', inset: '8%', borderRadius: '50%',
+                        background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+                        animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(5px)',
+                      }} />
+                      <div style={{
+                        position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
+                        background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+                        top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(5px)',
+                      }} />
+                      <div style={{
+                        position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
+                        background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Title + status */}
+                  <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+                    <div style={{
+                      fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 18, fontWeight: 900,
+                      color: 'white', lineHeight: 1.2,
+                      opacity: claraActive ? 0 : 1, transition: 'opacity 0.25s ease',
+                    }}>
+                      <span style={{ color: '#5ECFCF' }}>Chat</span> to Clara
+                    </div>
+                    <div style={{
+                      fontSize: 12, color: 'rgba(255,255,255,0.48)', marginTop: 2,
+                      opacity: claraActive ? 0 : 1, transition: 'opacity 0.25s ease',
+                    }}>
+                      {primarySessionLabel}
+                    </div>
+                    {claraHasStarted && (
+                      <div style={{
+                        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                        fontSize: 14, fontWeight: 700, color: 'var(--ov-text)',
+                        fontFamily: 'Figtree, system-ui, sans-serif',
+                        opacity: claraActive ? 1 : 0, transition: 'opacity 0.25s ease',
+                      }}>
+                        {claraIsStarting && 'Connecting…'}
+                        {claraIsSpeaking && !claraIsHolding && 'Hold to interrupt'}
+                        {!claraIsSpeaking && !claraIsHolding && claraIsSessionActive && 'Hold to speak'}
+                        {claraIsHolding && 'Release when done'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
           </div>
