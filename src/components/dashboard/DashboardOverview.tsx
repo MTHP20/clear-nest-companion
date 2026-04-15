@@ -1345,7 +1345,7 @@ export default function DashboardOverview({
       </div>
 
       {/* Mobile Clara sphere — bare floating sphere, no card chrome */}
-      {isMobile && (
+      {/* {isMobile && (
         <div
           onClick={!claraActive ? handleClaraCardClick : undefined}
           onTouchStart={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
@@ -1370,10 +1370,10 @@ export default function DashboardOverview({
             transition: claraMicPressed ? 'transform 80ms ease' : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
             transformOrigin: 'center',
           }}>
-            {/* <ClaraSphere size={130} /> */}
+            <ClaraSphere size={130} />
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Dismiss confirmation modal — shared across both render paths */}
       <AlertDialog open={dismissTarget !== null} onOpenChange={open => { if (!open) setDismissTarget(null); }}>
