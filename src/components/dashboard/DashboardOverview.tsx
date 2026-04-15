@@ -1,10 +1,11 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import type { CapturedItem, ReadinessSnapshot } from '@/contexts/SessionContext';
 import { BookOpenCheck, CreditCard, HandCoins, HeartHandshake, House, Users, Search, Clock, MessageSquareQuote } from 'lucide-react';
+import { useConversation } from '@elevenlabs/react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -600,16 +601,194 @@ export default function DashboardOverview({
     readinessHistory,
     parentName,
     childName,
+    familyId,
     userNotes,
     updateCapturedVerification,
     removeCapturedItem,
     updateActionStatus,
+    setLastClaraMessage,
+    setLastUserMessage,
+    handleAgentToolCall,
   } = useSession();
 
   const activeActions = actionItems.filter((a) => a.status !== 'done').length;
   const [rcIdx, setRcIdx] = useState(0);
   const [hoveredPanel, setHoveredPanel] = useState<number | null>(null);
   const [dismissTarget, setDismissTarget] = useState<CapturedItem | null>(null);
+
+  // ── Clara-in-dashboard mode ───────────────────────────────────────────────────
+  const [claraActive, setClaraActive] = useState(false);
+  const [claraTopicsVisible, setClaraTopicsVisible] = useState(false);
+  const [claraSelectedTopic, setClaraSelectedTopic] = useState<string | null>(null);
+  const [claraHasStarted, setClaraHasStarted] = useState(false);
+  const [claraIsHolding, setClaraIsHolding] = useState(false);
+  const [claraMicPressed, setClaraMicPressed] = useState(false);
+  const [claraError, setClaraError] = useState<string | null>(null);
+  const claraIsHoldingRef = useRef(false);
+  const claraAudioUnlockedRef = useRef(false);
+  const claraConnectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const claraConvMethodsRef = useRef<{
+    start: (config: object) => Promise<void>;
+    end: () => Promise<void>;
+    setVolume: (v: { volume: number }) => void;
+  } | null>(null);
+  const claraInterruptBufferRef = useRef<string[]>([]);
+
+  const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID as string;
+
+  const cleanClaraMsg = (raw: string) =>
+    raw.replace(/\[NOTE:[^\]]*\]/gi, '').replace(/^\[Patient\]\s*/i, '').replace(/\s{2,}/g, ' ').trim();
+
+  const { status: claraStatus, isSpeaking: claraIsSpeaking } = useConversation({
+    onConnect: (props) => {
+      claraConvMethodsRef.current = props as typeof claraConvMethodsRef.current;
+      if (claraConnectionTimeoutRef.current) {
+        clearTimeout(claraConnectionTimeoutRef.current);
+        claraConnectionTimeoutRef.current = null;
+      }
+      setClaraHasStarted(true);
+      setClaraError(null);
+    },
+    onMessage: useCallback((message: { source: string; message: string }) => {
+      if (message.source === 'ai') {
+        const cleaned = cleanClaraMsg(message.message);
+        if (cleaned) {
+          setLastClaraMessage(cleaned);
+          const noteMatch = message.message.match(/\[NOTE:\s*([^\]]+)\]/i);
+          if (noteMatch) {
+            const noteStr = noteMatch[1];
+            const get = (key: string) => { const m = noteStr.match(new RegExp(`${key}=([^,\\]]+)`, 'i')); return m ? m[1].trim() : undefined; };
+            handleAgentToolCall('capture_note', { category: get('category') ?? 'general', content: get('content') ?? noteStr, confidence: get('confidence') ?? 'clear', flag: get('flag') === 'true' });
+          }
+        }
+        if (claraInterruptBufferRef.current.length > 0) {
+          setLastUserMessage(claraInterruptBufferRef.current.join(' … '));
+          claraInterruptBufferRef.current = [];
+        }
+      } else if (message.source === 'user') {
+        if (claraIsHoldingRef.current) {
+          claraInterruptBufferRef.current.push(message.message);
+        } else {
+          setLastUserMessage(message.message);
+        }
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setLastClaraMessage, setLastUserMessage, handleAgentToolCall]),
+    onDisconnect: useCallback(() => {
+      claraConvMethodsRef.current = null;
+      claraIsHoldingRef.current = false;
+      setClaraIsHolding(false);
+      if (claraConnectionTimeoutRef.current) {
+        clearTimeout(claraConnectionTimeoutRef.current);
+        claraConnectionTimeoutRef.current = null;
+      }
+    }, []),
+    onError: useCallback((error: Error) => {
+      console.error('Clara error:', error);
+      setClaraError("Clara couldn't connect. Please try again.");
+      claraConvMethodsRef.current = null;
+      if (claraConnectionTimeoutRef.current) {
+        clearTimeout(claraConnectionTimeoutRef.current);
+        claraConnectionTimeoutRef.current = null;
+      }
+    }, []),
+  });
+
+  const claraIsSessionActive = claraStatus === 'connected';
+  const claraIsStarting = claraStatus === 'connecting';
+
+  const buildClaraContext = useCallback((topic: string | null) => {
+    const coveredCats = new Set(capturedItems.map(i => i.category));
+    const ALL_CATS = ['bank_accounts','financial_accounts','documents','property','care_wishes','key_contacts'];
+    const CATEGORY_LABELS: Record<string,string> = { bank_accounts:'Bank Accounts', financial_accounts:'Financial', documents:'Documents', property:'Property', care_wishes:'Care Wishes', key_contacts:'Key Contacts' };
+    let baseContext = '';
+    if (capturedItems.length > 0) {
+      const linesByCat: Record<string, string[]> = {};
+      for (const item of capturedItems.slice(0, 30)) {
+        if (!linesByCat[item.category]) linesByCat[item.category] = [];
+        if (linesByCat[item.category].length < 3) linesByCat[item.category].push(item.content.trim());
+      }
+      baseContext = `From previous sessions with ${parentName} (reviewed by ${childName}):\n${Object.entries(linesByCat).map(([cat, lines]) => `- [${CATEGORY_LABELS[cat] ?? cat}]: ${lines.join('; ')}`).join('\n')}\n\n`;
+    }
+    if (!topic || topic === 'all') {
+      const notCovered = ALL_CATS.filter(c => !coveredCats.has(c));
+      return `${baseContext}${notCovered.length > 0 ? `Topics NOT yet covered: ${notCovered.map(c => CATEGORY_LABELS[c]).join(', ')}.` : `All main topics have been covered — do a gentle check.`}\nFocus this session on what's missing.`;
+    }
+    const TOPIC_DEEP: Record<string,string> = { bank_accounts:`bank accounts`, financial_accounts:`financial accounts (pensions, ISAs, investments)`, documents:`documents (will, LPA, insurance)`, property:`property (home, deeds, mortgage)`, care_wishes:`care wishes (care preferences, end-of-life)`, key_contacts:`key contacts (GP, solicitor, accountant)` };
+    return `${baseContext}⚠️ TOPIC FOCUS OVERRIDE: For this session, talk ONLY about ${TOPIC_DEEP[topic] ?? topic}. Explore this topic in depth. Once thorough, end the session warmly.`;
+  }, [capturedItems, parentName, childName]);
+
+  const startClaraSession = useCallback(async () => {
+    if (claraStatus !== 'disconnected') return;
+    setClaraError(null);
+    const context = buildClaraContext(claraSelectedTopic);
+    try {
+      await claraConvMethodsRef.current!.start({
+        agentId,
+        connectionType: 'websocket',
+        dynamicVariables: { context, elderly_name: parentName, trusted_contact_name: childName, family_id: familyId },
+      });
+    } catch (err) {
+      if (claraConnectionTimeoutRef.current) { clearTimeout(claraConnectionTimeoutRef.current); claraConnectionTimeoutRef.current = null; }
+      setClaraError("Clara couldn't connect. Please try again.");
+      console.error(err);
+    }
+  }, [agentId, claraStatus, buildClaraContext, claraSelectedTopic, parentName, childName, familyId]);
+
+  const endClaraSession = useCallback(async () => {
+    setClaraIsHolding(false);
+    claraIsHoldingRef.current = false;
+    if (claraConnectionTimeoutRef.current) { clearTimeout(claraConnectionTimeoutRef.current); claraConnectionTimeoutRef.current = null; }
+    try { await claraConvMethodsRef.current?.end(); } catch (_) { /* ignore */ }
+  }, []);
+
+  const exitClaraMode = useCallback(async () => {
+    await endClaraSession();
+    setClaraActive(false);
+    setClaraTopicsVisible(false);
+    setClaraSelectedTopic(null);
+    setClaraHasStarted(false);
+    setClaraIsHolding(false);
+    setClaraMicPressed(false);
+    setClaraError(null);
+  }, [endClaraSession]);
+
+  useEffect(() => {
+    return () => {
+      if (claraConnectionTimeoutRef.current) clearTimeout(claraConnectionTimeoutRef.current);
+      claraConvMethodsRef.current?.end().catch(() => {});
+    };
+  }, []);
+
+  const handleClaraPressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!claraAudioUnlockedRef.current) {
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        ctx.resume().then(() => ctx.close());
+        claraAudioUnlockedRef.current = true;
+      } catch (_) { /* non-critical */ }
+    }
+    setClaraMicPressed(true);
+    if (!claraIsSessionActive) { startClaraSession(); return; }
+    claraIsHoldingRef.current = true;
+    setClaraIsHolding(true);
+  }, [claraIsSessionActive, startClaraSession]);
+
+  const handleClaraPressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    setClaraMicPressed(false);
+    if (!claraIsSessionActive) return;
+    claraIsHoldingRef.current = false;
+    setClaraIsHolding(false);
+  }, [claraIsSessionActive]);
+
+  const handleClaraCardClick = () => {
+    if (claraActive) return;
+    setClaraActive(true);
+    setTimeout(() => setClaraTopicsVisible(true), 420);
+  };
 
   const filteredCaptured = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -713,7 +892,13 @@ export default function DashboardOverview({
       <div key="simple" className="cn-stagger" style={{ display: 'grid', gap: 18, flex: 1, gridTemplateRows: isMobile ? undefined : 'auto 1fr' }}>
 
         {/* Row 1: Recently Captured | Readiness Score */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18 }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18,
+          opacity: claraActive ? 0 : 1,
+          transform: claraActive ? 'translateY(-12px)' : 'translateY(0)',
+          pointerEvents: claraActive ? 'none' : 'auto',
+          transition: 'opacity 0.4s ease, transform 0.4s ease',
+        }}>
 
           {/* Recently Captured */}
           <div style={{
@@ -829,80 +1014,182 @@ export default function DashboardOverview({
         {/* Row 2: Nav Panels | Chat to Clara */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: 18 }}>
 
-          {/* Nav Panels 3×2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
-            {NAV_PANELS.map((panel, i) => {
-              const isActive = panel.category === categoryFilter;
-              const isHov = hoveredPanel === i;
-              return (
-                <div
-                  key={panel.category}
-                  onClick={() => onNavigatePage(panel.page)}
-                  onMouseEnter={() => setHoveredPanel(i)}
-                  onMouseLeave={() => setHoveredPanel(null)}
-                  style={{
-                    background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
-                    backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-                    border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
-                    borderRadius: 16,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
-                    transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
-                    transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
-                    boxShadow: isActive
-                      ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
-                      : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
-                  }}
-                >
-                  <panel.Icon style={{
-                    width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
-                    color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
-                    filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
-                    transition: 'transform 0.2s, filter 0.2s, color 0.2s',
-                    transform: isHov ? 'scale(1.12)' : 'scale(1)',
-                    display: 'block', margin: '0 auto',
-                  }} />
-                  <span style={{
-                    fontSize: isMobile ? 11 : 10, fontWeight: 600,
-                    color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
-                    textAlign: 'center', lineHeight: 1.35,
-                    opacity: isMobile || isHov || isActive ? 1 : 0,
-                    transition: 'opacity 0.2s, color 0.2s',
-                    fontFamily: 'Figtree, system-ui, sans-serif',
-                  }}>{panel.label}</span>
+          {/* Left column — nav panels (fades out) + topics/dialogue overlay (fades in) */}
+          <div style={{ position: 'relative', height: '100%' }}>
+
+            {/* Nav Panels 3×2 — fades out when Clara active */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10,
+              height: '100%',
+              opacity: claraActive ? 0 : 1,
+              transition: 'opacity 0.35s ease',
+              pointerEvents: claraActive ? 'none' : 'auto',
+            }}>
+              {NAV_PANELS.map((panel, i) => {
+                const isActive = panel.category === categoryFilter;
+                const isHov = hoveredPanel === i;
+                return (
+                  <div
+                    key={panel.category}
+                    onClick={() => onNavigatePage(panel.page)}
+                    onMouseEnter={() => setHoveredPanel(i)}
+                    onMouseLeave={() => setHoveredPanel(null)}
+                    style={{
+                      background: isActive ? 'var(--ov-inner)' : isHov ? 'var(--ov-nav-hover-bg)' : 'var(--ov-card-bg)',
+                      backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                      border: `1px solid ${isActive ? 'var(--ov-accent)' : 'var(--ov-card-border)'}`,
+                      borderRadius: 16,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 8, padding: isMobile ? '14px 8px' : '20px 10px', cursor: 'pointer',
+                      transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+                      transform: isHov ? 'translateY(-3px)' : 'translateY(0)',
+                      boxShadow: isActive
+                        ? '0 6px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(70,99,172,0.16), inset 0 1px 0 rgba(255,255,255,0.10)'
+                        : isHov ? '0 12px 28px rgba(0,0,0,0.38)' : '0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.72)',
+                    }}
+                  >
+                    <panel.Icon style={{
+                      width: isMobile ? 28 : 42, height: isMobile ? 28 : 42,
+                      color: isActive ? 'var(--ov-accent)' : isHov ? 'var(--ov-text)' : 'var(--ov-muted)',
+                      filter: isActive ? 'drop-shadow(0 0 14px rgba(70,99,172,0.8))' : isHov ? 'drop-shadow(0 0 12px rgba(255,255,255,0.35))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                      transition: 'transform 0.2s, filter 0.2s, color 0.2s',
+                      transform: isHov ? 'scale(1.12)' : 'scale(1)',
+                      display: 'block', margin: '0 auto',
+                    }} />
+                    <span style={{
+                      fontSize: isMobile ? 11 : 10, fontWeight: 600,
+                      color: isActive ? 'var(--ov-accent)' : 'var(--ov-text)',
+                      textAlign: 'center', lineHeight: 1.35,
+                      opacity: isMobile || isHov || isActive ? 1 : 0,
+                      transition: 'opacity 0.2s, color 0.2s',
+                      fontFamily: 'Figtree, system-ui, sans-serif',
+                    }}>{panel.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Clara mode overlay — topics / ready prompt / live dialogue */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              opacity: claraTopicsVisible ? 1 : 0,
+              transition: 'opacity 0.45s ease 0.1s',
+              pointerEvents: claraTopicsVisible ? 'auto' : 'none',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              paddingLeft: 4,
+            }}>
+              {!claraSelectedTopic ? (
+                /* State 1: Topic picker */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <p style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                    textTransform: 'uppercase', color: 'var(--ov-text)', opacity: 0.4,
+                    margin: '0 0 10px 0', fontFamily: 'Figtree, system-ui, sans-serif',
+                  }}>Topics to cover</p>
+                  {NAV_PANELS.map(panel => {
+                    const covered = capturedItems.some(i => i.category === panel.category);
+                    return (
+                      <button
+                        key={panel.category}
+                        onClick={() => !covered && setClaraSelectedTopic(panel.category)}
+                        disabled={covered}
+                        style={{
+                          background: 'none', border: 'none', padding: 0,
+                          textAlign: 'left', cursor: covered ? 'default' : 'pointer',
+                          fontSize: 'clamp(20px, 2.8vw, 38px)', fontWeight: 900,
+                          lineHeight: 1.08, letterSpacing: '-1px',
+                          color: 'var(--ov-text)',
+                          opacity: covered ? 0.22 : 1,
+                          textDecoration: covered ? 'line-through' : 'none',
+                          transition: 'opacity 0.15s ease',
+                          fontFamily: 'Figtree, system-ui, sans-serif',
+                          display: 'flex', alignItems: 'center', gap: 10,
+                        }}
+                        onMouseEnter={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '0.6'; }}
+                        onMouseLeave={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                      >
+                        <panel.Icon size="0.55em" fill="currentColor" color="currentColor" strokeWidth={0} style={{ flexShrink: 0 }} />
+                        {panel.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              ) : claraHasStarted ? (
+                /* State 3: Live dialogue */
+                <div style={{
+                  fontSize: 'clamp(28px, 3.5vw, 52px)', fontWeight: 900,
+                  lineHeight: 1.1, color: 'var(--ov-text)',
+                  letterSpacing: '-1.5px', whiteSpace: 'pre-line', wordBreak: 'break-word',
+                  fontFamily: 'Figtree, system-ui, sans-serif',
+                }}>
+                  {claraIsHolding ? 'Listening…' : claraIsSpeaking ? 'Hold to\ninterrupt' : claraIsStarting ? 'Connecting\nto Clara…' : 'Hold to\nspeak.'}
+                </div>
+              ) : (
+                /* State 2: Topic selected, waiting to hold */
+                <div>
+                  <p style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                    textTransform: 'uppercase', color: 'var(--ov-text)', opacity: 0.4,
+                    margin: '0 0 10px 0', fontFamily: 'Figtree, system-ui, sans-serif',
+                  }}>{NAV_PANELS.find(p => p.category === claraSelectedTopic)?.label}</p>
+                  <div style={{
+                    fontSize: 'clamp(32px, 4vw, 56px)', fontWeight: 900,
+                    lineHeight: 1.0, color: 'var(--ov-text)',
+                    letterSpacing: '-2px', whiteSpace: 'pre-line',
+                    fontFamily: 'Figtree, system-ui, sans-serif',
+                  }}>Hold Clara{'\n'}to begin.</div>
+                </div>
+              )}
+
+              {claraError && (
+                <p style={{ fontSize: 12, color: '#FF5F52', margin: '10px 0 0', fontFamily: 'Figtree, system-ui, sans-serif' }}>
+                  {claraError}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Chat to Clara — desktop only */}
           {!isMobile && (
           <div
-            onClick={() => navigate('/conversation')}
+            onClick={!claraActive ? handleClaraCardClick : undefined}
+            onMouseDown={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
+            onMouseUp={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+            onMouseLeave={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+            onTouchStart={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
+            onTouchEnd={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+            onTouchCancel={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
             style={{
-              cursor: 'pointer',
-              background: 'rgba(155,123,200,0.18)',
-              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid rgba(155,123,200,0.35)',
+              cursor: claraActive ? (claraSelectedTopic ? 'pointer' : 'default') : 'pointer',
+              background: claraActive ? 'transparent' : 'rgba(155,123,200,0.18)',
+              backdropFilter: claraActive ? 'none' : 'blur(12px)',
+              WebkitBackdropFilter: claraActive ? 'none' : 'blur(12px)',
+              border: `1px solid ${claraActive ? 'transparent' : 'rgba(155,123,200,0.35)'}`,
               borderRadius: 22, padding: '24px 20px',
               position: 'relative', overflow: 'hidden',
-              boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
+              boxShadow: claraActive ? 'none' : '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+              transition: 'background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, transform 0.2s',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            }}
+              userSelect: 'none', WebkitUserSelect: 'none',
+            } as React.CSSProperties}
             onMouseEnter={e => {
+              if (claraActive) return;
               const d = e.currentTarget as HTMLDivElement;
               d.style.transform = 'scale(1.02)';
               d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
             }}
             onMouseLeave={e => {
+              if (claraActive) return;
               const d = e.currentTarget as HTMLDivElement;
               d.style.transform = 'scale(1)';
               d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
             }}
           >
-            {/* Decorative arcs */}
-            <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
+            {/* Decorative arcs — fade out when leaving */}
+            <div style={{
+              position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0,
+              opacity: claraActive ? 0 : 1, transition: 'opacity 0.3s ease',
+            }}>
               {[
                 { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
                 { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
@@ -918,34 +1205,71 @@ export default function DashboardOverview({
                 }} />
               ))}
             </div>
-            {/* Purple sphere — large, fills container */}
-            <div style={{ position: 'absolute', width: '85%', aspectRatio: '1', top: '50%', left: '50%', transform: 'translate(-50%, -58%)', zIndex: 0 }}>
-              <div style={{
-                position: 'absolute', inset: 0, borderRadius: '50%',
-                background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
-                animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
-              }} />
-              <div style={{
-                position: 'absolute', inset: '8%', borderRadius: '50%',
-                background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
-                animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(8px)',
-              }} />
-              <div style={{
-                position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
-                background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
-                top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
-              }} />
-              <div style={{
-                position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
-                background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
-              }} />
+
+            {/* Purple sphere — always visible, scales with session state */}
+            <div style={{
+              transform: `scale(${
+                claraMicPressed && !claraIsHolding ? 0.94 :
+                claraIsSpeaking                   ? 1.35 :
+                claraIsHolding                    ? 1.22 :
+                claraIsStarting                   ? 1.08 :
+                claraIsSessionActive              ? 1.08 :
+                                                    1.0
+              })`,
+              transition: claraMicPressed ? 'transform 80ms ease' : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+              transformOrigin: 'center',
+            }}>
+              <div style={{ position: 'relative', width: 180, height: 180 }}>
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: '50%',
+                  background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+                  animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+                }} />
+                <div style={{
+                  position: 'absolute', inset: '8%', borderRadius: '50%',
+                  background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+                  animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(8px)',
+                }} />
+                <div style={{
+                  position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
+                  background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+                  top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+                }} />
+                <div style={{
+                  position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
+                  background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+                }} />
+              </div>
             </div>
-            <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1, textAlign: 'center' }}>
+
+            {/* Title + subtitle — fade out when Clara activates */}
+            <div style={{
+              fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2,
+              color: 'white', marginBottom: 6, position: 'relative', zIndex: 1, textAlign: 'center',
+              opacity: claraActive ? 0 : 1, transition: 'opacity 0.25s ease',
+            }}>
               <span style={{ color: '#5ECFCF' }}>Chat</span> to Clara
             </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+            <div style={{
+              fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center',
+              opacity: claraActive ? 0 : 1, transition: 'opacity 0.25s ease',
+            }}>
               {primarySessionLabel}
             </div>
+
+            {/* Session phase label — shows when session active */}
+            {claraHasStarted && (
+              <div style={{
+                fontSize: 13, fontWeight: 500, color: 'var(--ov-muted)',
+                marginTop: 14, position: 'relative', zIndex: 1, textAlign: 'center',
+                opacity: 0.7,
+              }}>
+                {claraIsStarting     && 'Connecting…'}
+                {claraIsSpeaking && !claraIsHolding && 'Hold to interrupt'}
+                {!claraIsSpeaking && !claraIsHolding && claraIsSessionActive && 'Hold to speak'}
+                {claraIsHolding      && 'Release when done'}
+              </div>
+            )}
           </div>
           )}
         </div>
@@ -990,6 +1314,42 @@ export default function DashboardOverview({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* End Chat button — fixed bottom-right, visible only in Clara mode */}
+      {claraActive && (
+        <button
+          onClick={exitClaraMode}
+          style={{
+            position: 'fixed', bottom: 28, right: 28, zIndex: 50,
+            background: 'rgba(255,255,255,0.18)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.35)',
+            borderRadius: 14, padding: '12px 22px',
+            fontFamily: 'Figtree, system-ui, sans-serif',
+            fontSize: 14, fontWeight: 700, color: 'var(--ov-text)',
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.55)',
+            transition: 'background 0.2s, box-shadow 0.2s, transform 0.15s',
+            animation: 'fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both',
+          }}
+          onMouseEnter={e => {
+            const b = e.currentTarget as HTMLButtonElement;
+            b.style.background = 'rgba(255,95,82,0.18)';
+            b.style.color = '#FF5F52';
+            b.style.borderColor = 'rgba(255,95,82,0.35)';
+            b.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={e => {
+            const b = e.currentTarget as HTMLButtonElement;
+            b.style.background = 'rgba(255,255,255,0.18)';
+            b.style.color = 'var(--ov-text)';
+            b.style.borderColor = 'rgba(255,255,255,0.35)';
+            b.style.transform = 'translateY(0)';
+          }}
+        >
+          End Chat
+        </button>
+      )}
       </>
     );
   }
@@ -999,14 +1359,25 @@ export default function DashboardOverview({
     <div key="advanced" className="cn-stagger">
 
       {/* Activity + Momentum + Readiness row */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: 16, marginBottom: 16 }}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: 16, marginBottom: 16,
+        opacity: claraActive ? 0 : 1,
+        transform: claraActive ? 'translateY(-12px)' : 'translateY(0)',
+        pointerEvents: claraActive ? 'none' : 'auto',
+        transition: 'opacity 0.4s ease, transform 0.4s ease',
+      }}>
         <ActivityChart sessions={sessions} />
         <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
         <ReadinessCard score={readinessPct} capturedItems={capturedItems} />
       </div>
 
       {/* Search section */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{
+        marginBottom: 24,
+        opacity: claraActive ? 0 : 1,
+        pointerEvents: claraActive ? 'none' : 'auto',
+        transition: 'opacity 0.35s ease',
+      }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 200,
@@ -1066,8 +1437,15 @@ export default function DashboardOverview({
         return (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 18 }}>
 
-            {/* Nav Panels 3×2 — column 1 */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10 }}>
+            {/* Nav Panels 3×2 — column 1, with topics overlay */}
+            <div style={{ position: 'relative', height: '100%' }}>
+              <div style={{
+                display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 10,
+                height: '100%',
+                opacity: claraActive ? 0 : 1,
+                transition: 'opacity 0.35s ease',
+                pointerEvents: claraActive ? 'none' : 'auto',
+              }}>
               {NAV_PANELS.map((panel, i) => {
                 const isActive = panel.category === categoryFilter;
                 const isHov = hoveredPanel === i;
@@ -1110,6 +1488,83 @@ export default function DashboardOverview({
                   </div>
                 );
               })}
+              </div>
+
+              {/* Topics / dialogue overlay */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                opacity: claraTopicsVisible ? 1 : 0,
+                transition: 'opacity 0.45s ease 0.1s',
+                pointerEvents: claraTopicsVisible ? 'auto' : 'none',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                paddingLeft: 4,
+              }}>
+                {!claraSelectedTopic ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <p style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', color: 'var(--ov-text)', opacity: 0.4,
+                      margin: '0 0 10px 0', fontFamily: 'Figtree, system-ui, sans-serif',
+                    }}>Topics to cover</p>
+                    {NAV_PANELS.map(panel => {
+                      const covered = capturedItems.some(i => i.category === panel.category);
+                      return (
+                        <button
+                          key={panel.category}
+                          onClick={() => !covered && setClaraSelectedTopic(panel.category)}
+                          disabled={covered}
+                          style={{
+                            background: 'none', border: 'none', padding: 0,
+                            textAlign: 'left', cursor: covered ? 'default' : 'pointer',
+                            fontSize: 'clamp(18px, 2.2vw, 32px)', fontWeight: 900,
+                            lineHeight: 1.08, letterSpacing: '-1px',
+                            color: 'var(--ov-text)',
+                            opacity: covered ? 0.22 : 1,
+                            textDecoration: covered ? 'line-through' : 'none',
+                            transition: 'opacity 0.15s ease',
+                            fontFamily: 'Figtree, system-ui, sans-serif',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                          }}
+                          onMouseEnter={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '0.6'; }}
+                          onMouseLeave={e => { if (!covered) (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                        >
+                          <panel.Icon size="0.55em" fill="currentColor" color="currentColor" strokeWidth={0} style={{ flexShrink: 0 }} />
+                          {panel.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : claraHasStarted ? (
+                  <div style={{
+                    fontSize: 'clamp(24px, 3vw, 44px)', fontWeight: 900,
+                    lineHeight: 1.1, color: 'var(--ov-text)',
+                    letterSpacing: '-1.5px', whiteSpace: 'pre-line',
+                    fontFamily: 'Figtree, system-ui, sans-serif',
+                  }}>
+                    {claraIsHolding ? 'Listening…' : claraIsSpeaking ? 'Hold to\ninterrupt' : claraIsStarting ? 'Connecting\nto Clara…' : 'Hold to\nspeak.'}
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', color: 'var(--ov-text)', opacity: 0.4,
+                      margin: '0 0 10px 0', fontFamily: 'Figtree, system-ui, sans-serif',
+                    }}>{NAV_PANELS.find(p => p.category === claraSelectedTopic)?.label}</p>
+                    <div style={{
+                      fontSize: 'clamp(28px, 3.5vw, 50px)', fontWeight: 900,
+                      lineHeight: 1.0, color: 'var(--ov-text)',
+                      letterSpacing: '-2px', whiteSpace: 'pre-line',
+                      fontFamily: 'Figtree, system-ui, sans-serif',
+                    }}>Hold Clara{'\n'}to begin.</div>
+                  </div>
+                )}
+
+                {claraError && (
+                  <p style={{ fontSize: 12, color: '#FF5F52', margin: '10px 0 0', fontFamily: 'Figtree, system-ui, sans-serif' }}>
+                    {claraError}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Recently Captured sliding card */}
@@ -1119,6 +1574,9 @@ export default function DashboardOverview({
               border: '1px solid var(--ov-card-border)', borderRadius: 22,
               boxShadow: 'var(--ov-shadow)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 280,
+              opacity: claraActive ? 0 : 1,
+              pointerEvents: claraActive ? 'none' : 'auto',
+              transition: 'opacity 0.4s ease',
             }}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 22px 16px', flexShrink: 0 }}>
@@ -1243,34 +1701,47 @@ export default function DashboardOverview({
               </div>
             </div>
 
-            {/* Chat to Clara — column 2, center — desktop only */}
+            {/* Chat to Clara — column 3, desktop only */}
             {!isMobile && (
             <div
-              onClick={() => navigate('/conversation')}
+              onClick={!claraActive ? handleClaraCardClick : undefined}
+              onMouseDown={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
+              onMouseUp={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+              onMouseLeave={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+              onTouchStart={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
+              onTouchEnd={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
+              onTouchCancel={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
               style={{
-                cursor: 'pointer',
-                background: 'rgba(155,123,200,0.18)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(155,123,200,0.35)',
+                cursor: claraActive ? (claraSelectedTopic ? 'pointer' : 'default') : 'pointer',
+                background: claraActive ? 'transparent' : 'rgba(155,123,200,0.18)',
+                backdropFilter: claraActive ? 'none' : 'blur(12px)',
+                WebkitBackdropFilter: claraActive ? 'none' : 'blur(12px)',
+                border: `1px solid ${claraActive ? 'transparent' : 'rgba(155,123,200,0.35)'}`,
                 borderRadius: 22, padding: '24px 20px',
                 position: 'relative', overflow: 'hidden',
-                boxShadow: '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
+                boxShadow: claraActive ? 'none' : '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                transition: 'background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, transform 0.2s',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              }}
+                userSelect: 'none', WebkitUserSelect: 'none',
+              } as React.CSSProperties}
               onMouseEnter={e => {
+                if (claraActive) return;
                 const d = e.currentTarget as HTMLDivElement;
                 d.style.transform = 'scale(1.02)';
                 d.style.boxShadow = '0 12px 40px rgba(61,31,138,0.5), inset 0 1px 0 rgba(255,255,255,0.12)';
               }}
               onMouseLeave={e => {
+                if (claraActive) return;
                 const d = e.currentTarget as HTMLDivElement;
                 d.style.transform = 'scale(1)';
                 d.style.boxShadow = '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)';
               }}
             >
-              {/* Decorative arcs */}
-              <div style={{ position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0 }}>
+              {/* Decorative arcs — fade out when Clara activates */}
+              <div style={{
+                position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0,
+                opacity: claraActive ? 0 : 1, transition: 'opacity 0.3s ease',
+              }}>
                 {[
                   { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
                   { size: 60, color: 'rgba(255,255,255,0.18)', rot: -8 },
@@ -1286,34 +1757,70 @@ export default function DashboardOverview({
                   }} />
                 ))}
               </div>
-              {/* Purple sphere — large, fills container */}
-              <div style={{ position: 'absolute', width: '65%', aspectRatio: '1', top: '50%', left: '50%', transform: 'translate(-50%, -58%)', zIndex: 0 }}>
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: '50%',
-                  background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
-                  animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
-                }} />
-                <div style={{
-                  position: 'absolute', inset: '8%', borderRadius: '50%',
-                  background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
-                  animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(8px)',
-                }} />
-                <div style={{
-                  position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
-                  background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
-                  top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
-                }} />
-                <div style={{
-                  position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
-                  background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
-                }} />
+
+              {/* Purple sphere — scales with session state */}
+              <div style={{
+                transform: `scale(${
+                  claraMicPressed && !claraIsHolding ? 0.94 :
+                  claraIsSpeaking                   ? 1.35 :
+                  claraIsHolding                    ? 1.22 :
+                  claraIsStarting                   ? 1.08 :
+                  claraIsSessionActive              ? 1.08 :
+                                                      1.0
+                })`,
+                transition: claraMicPressed ? 'transform 80ms ease' : 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+                transformOrigin: 'center',
+              }}>
+                <div style={{ position: 'relative', width: 160, height: 160 }}>
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: 'conic-gradient(from 0deg,rgba(155,123,200,0) 0%,rgba(155,123,200,0.6) 25%,rgba(200,170,255,0.4) 50%,rgba(100,60,180,0.5) 75%,rgba(155,123,200,0) 100%)',
+                    animation: 'cnSphereRot 12s linear infinite', filter: 'blur(6px)',
+                  }} />
+                  <div style={{
+                    position: 'absolute', inset: '8%', borderRadius: '50%',
+                    background: 'conic-gradient(from 120deg,rgba(180,150,230,0) 0%,rgba(220,200,255,0.5) 30%,rgba(80,40,160,0.4) 60%,rgba(180,150,230,0) 100%)',
+                    animation: 'cnSphereRot2 8s linear infinite', filter: 'blur(8px)',
+                  }} />
+                  <div style={{
+                    position: 'absolute', width: '65%', height: '42%', borderRadius: '50%',
+                    background: 'radial-gradient(ellipse,rgba(196,168,232,0.8) 0%,rgba(155,123,200,0.4) 50%,transparent 70%)',
+                    top: '12%', left: '10%', animation: 'cnSphereSmoke1 6.5s ease-in-out infinite', filter: 'blur(8px)',
+                  }} />
+                  <div style={{
+                    position: 'absolute', top: '14%', left: '20%', width: '36%', height: '26%', borderRadius: '50%',
+                    background: 'radial-gradient(ellipse,rgba(255,255,255,0.55) 0%,transparent 70%)', zIndex: 9,
+                  }} />
+                </div>
               </div>
-              <div style={{ fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2, color: 'white', marginBottom: 6, position: 'relative', zIndex: 1, textAlign: 'center' }}>
+
+              {/* Title + subtitle — fade out when Clara activates */}
+              <div style={{
+                fontFamily: 'Figtree, system-ui, sans-serif', fontSize: 22, fontWeight: 900, lineHeight: 1.2,
+                color: 'white', marginBottom: 6, position: 'relative', zIndex: 1, textAlign: 'center',
+                opacity: claraActive ? 0 : 1, transition: 'opacity 0.25s ease',
+              }}>
                 <span style={{ color: '#5ECFCF' }}>Chat</span> to Clara
               </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+              <div style={{
+                fontSize: 12, color: 'rgba(255,255,255,0.48)', position: 'relative', zIndex: 1, textAlign: 'center',
+                opacity: claraActive ? 0 : 1, transition: 'opacity 0.25s ease',
+              }}>
                 {primarySessionLabel}
               </div>
+
+              {/* Session phase label */}
+              {claraHasStarted && (
+                <div style={{
+                  fontSize: 13, fontWeight: 500, color: 'var(--ov-muted)',
+                  marginTop: 14, position: 'relative', zIndex: 1, textAlign: 'center', opacity: 0.7,
+                }}>
+                  {claraIsStarting     && 'Connecting…'}
+                  {claraIsSpeaking && !claraIsHolding && 'Hold to interrupt'}
+                  {!claraIsSpeaking && !claraIsHolding && claraIsSessionActive && 'Hold to speak'}
+                  {claraIsHolding      && 'Release when done'}
+                </div>
+              )}
             </div>
             )}
 
@@ -1400,6 +1907,42 @@ export default function DashboardOverview({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    {/* End Chat button — fixed bottom-right, visible only in Clara mode */}
+    {claraActive && (
+      <button
+        onClick={exitClaraMode}
+        style={{
+          position: 'fixed', bottom: 28, right: 28, zIndex: 50,
+          background: 'rgba(255,255,255,0.18)',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.35)',
+          borderRadius: 14, padding: '12px 22px',
+          fontFamily: 'Figtree, system-ui, sans-serif',
+          fontSize: 14, fontWeight: 700, color: 'var(--ov-text)',
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.55)',
+          transition: 'background 0.2s, box-shadow 0.2s, transform 0.15s',
+          animation: 'fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both',
+        }}
+        onMouseEnter={e => {
+          const b = e.currentTarget as HTMLButtonElement;
+          b.style.background = 'rgba(255,95,82,0.18)';
+          b.style.color = '#FF5F52';
+          b.style.borderColor = 'rgba(255,95,82,0.35)';
+          b.style.transform = 'translateY(-2px)';
+        }}
+        onMouseLeave={e => {
+          const b = e.currentTarget as HTMLButtonElement;
+          b.style.background = 'rgba(255,255,255,0.18)';
+          b.style.color = 'var(--ov-text)';
+          b.style.borderColor = 'rgba(255,255,255,0.35)';
+          b.style.transform = 'translateY(0)';
+        }}
+      >
+        End Chat
+      </button>
+    )}
     </>
   );
 }
