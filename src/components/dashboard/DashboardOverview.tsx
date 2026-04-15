@@ -615,6 +615,7 @@ export default function DashboardOverview({
   const [rcIdx, setRcIdx] = useState(0);
   const [hoveredPanel, setHoveredPanel] = useState<number | null>(null);
   const [dismissTarget, setDismissTarget] = useState<CapturedItem | null>(null);
+  const [realTimeExpanded, setRealTimeExpanded] = useState(true);
 
   // ── Clara-in-dashboard mode ───────────────────────────────────────────────────
   const [claraActive, setClaraActive] = useState(false);
@@ -891,14 +892,47 @@ export default function DashboardOverview({
       <>
       <div key="simple" className="cn-stagger" style={{ display: 'grid', gap: 18, flex: 1, gridTemplateRows: isMobile ? undefined : 'auto 1fr' }}>
 
-        {/* Row 1: Recently Captured | Readiness Score */}
+        {/* Real Time Updates accordion */}
         <div style={{
-          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18,
-          opacity: claraActive ? 0 : 1,
-          transform: claraActive ? 'translateY(-12px)' : 'translateY(0)',
-          pointerEvents: claraActive ? 'none' : 'auto',
+          opacity: (!isMobile && claraActive) ? 0 : 1,
+          transform: (!isMobile && claraActive) ? 'translateY(-12px)' : 'translateY(0)',
+          pointerEvents: (!isMobile && claraActive) ? 'none' : 'auto',
           transition: 'opacity 0.4s ease, transform 0.4s ease',
         }}>
+          {/* Accordion header */}
+          <button
+            onClick={() => setRealTimeExpanded(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', background: 'var(--ov-card-bg)',
+              backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid var(--ov-card-border)', borderRadius: realTimeExpanded ? '14px 14px 0 0' : 14,
+              padding: '11px 18px', cursor: 'pointer',
+              fontFamily: 'Figtree, system-ui, sans-serif',
+              fontSize: realTimeExpanded ? 13 : 11,
+              fontWeight: 700, color: 'var(--ov-text)',
+              letterSpacing: '0.04em', transition: 'font-size 0.3s ease, border-radius 0.3s ease',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.55)',
+              marginBottom: 0,
+            }}
+          >
+            <span>Real Time Updates</span>
+            <span style={{
+              fontSize: 10, color: 'var(--ov-muted)',
+              transform: realTimeExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s ease', display: 'inline-block',
+            }}>▾</span>
+          </button>
+
+          {/* Accordion content */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18,
+            overflow: 'hidden',
+            maxHeight: realTimeExpanded ? '600px' : '0',
+            opacity: realTimeExpanded ? 1 : 0,
+            transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
+            paddingTop: realTimeExpanded ? 18 : 0,
+          }}>
 
           {/* Recently Captured */}
           <div style={{
@@ -1009,7 +1043,8 @@ export default function DashboardOverview({
 
           {/* Readiness Score */}
           <ReadinessCard score={readinessPct} capturedItems={capturedItems} horizontal />
-        </div>
+          </div>{/* end accordion content */}
+        </div>{/* end accordion wrapper */}
 
         {/* Row 2: Nav Panels | Chat to Clara */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: 18 }}>
@@ -1149,8 +1184,7 @@ export default function DashboardOverview({
             </div>
           </div>
 
-          {/* Chat to Clara — desktop only */}
-          {!isMobile && (
+          {/* Chat to Clara — desktop only; mobile uses the sticky sphere below */}
           <div
             onClick={!claraActive ? handleClaraCardClick : undefined}
             onMouseDown={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
@@ -1160,6 +1194,7 @@ export default function DashboardOverview({
             onTouchEnd={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
             onTouchCancel={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
             style={{
+              display: isMobile ? 'none' : 'flex',
               cursor: claraActive ? (claraSelectedTopic ? 'pointer' : 'default') : 'pointer',
               background: claraActive ? 'transparent' : 'rgba(155,123,200,0.18)',
               backdropFilter: claraActive ? 'none' : 'blur(12px)',
@@ -1169,7 +1204,7 @@ export default function DashboardOverview({
               position: 'relative', overflow: 'hidden',
               boxShadow: claraActive ? 'none' : '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
               transition: 'background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, transform 0.2s',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               userSelect: 'none', WebkitUserSelect: 'none',
             } as React.CSSProperties}
             onMouseEnter={e => {
@@ -1188,7 +1223,7 @@ export default function DashboardOverview({
             {/* Decorative arcs — fade out when leaving */}
             <div style={{
               position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0,
-              opacity: claraActive ? 0 : 1, transition: 'opacity 0.3s ease',
+              opacity: (isMobile || claraActive) ? 0 : 1, transition: 'opacity 0.3s ease',
             }}>
               {[
                 { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
@@ -1256,7 +1291,7 @@ export default function DashboardOverview({
             }}>
               {primarySessionLabel}
             </div>
-
+11
             {/* Session phase label — shows when session active */}
             {claraHasStarted && (
               <div style={{
@@ -1271,7 +1306,6 @@ export default function DashboardOverview({
               </div>
             )}
           </div>
-          )}
         </div>
 
       </div>
@@ -1358,17 +1392,48 @@ export default function DashboardOverview({
     <>
     <div key="advanced" className="cn-stagger">
 
-      {/* Activity + Momentum + Readiness row */}
+      {/* Real Time Updates accordion */}
       <div style={{
-        display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: 16, marginBottom: 16,
-        opacity: claraActive ? 0 : 1,
-        transform: claraActive ? 'translateY(-12px)' : 'translateY(0)',
-        pointerEvents: claraActive ? 'none' : 'auto',
+        opacity: (!isMobile && claraActive) ? 0 : 1,
+        transform: (!isMobile && claraActive) ? 'translateY(-12px)' : 'translateY(0)',
+        pointerEvents: (!isMobile && claraActive) ? 'none' : 'auto',
         transition: 'opacity 0.4s ease, transform 0.4s ease',
+        marginBottom: 16,
       }}>
-        <ActivityChart sessions={sessions} />
-        <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
-        {!isMobile && <ReadinessCard score={readinessPct} capturedItems={capturedItems} />}
+        <button
+          onClick={() => setRealTimeExpanded(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: '100%', background: 'var(--ov-card-bg)',
+            backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+            border: '1px solid var(--ov-card-border)', borderRadius: realTimeExpanded ? '14px 14px 0 0' : 14,
+            padding: '11px 18px', cursor: 'pointer',
+            fontFamily: 'Figtree, system-ui, sans-serif',
+            fontSize: realTimeExpanded ? 13 : 11,
+            fontWeight: 700, color: 'var(--ov-text)',
+            letterSpacing: '0.04em', transition: 'font-size 0.3s ease, border-radius 0.3s ease',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.55)',
+          }}
+        >
+          <span>Real Time Updates</span>
+          <span style={{
+            fontSize: 10, color: 'var(--ov-muted)',
+            transform: realTimeExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.3s ease', display: 'inline-block',
+          }}>▾</span>
+        </button>
+        <div style={{
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: 16,
+          overflow: 'hidden',
+          maxHeight: realTimeExpanded ? '600px' : '0',
+          opacity: realTimeExpanded ? 1 : 0,
+          transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
+          paddingTop: realTimeExpanded ? 16 : 0,
+        }}>
+          <ActivityChart sessions={sessions} />
+          <ProgressMomentum history={readinessHistory} verifiedCount={verifiedCount} checklistSize={checked.size} docTotal={DOC_ITEMS.length} activeActions={activeActions} />
+          {!isMobile && <ReadinessCard score={readinessPct} capturedItems={capturedItems} />}
+        </div>
       </div>
 
       {/* Search section */}
@@ -1709,8 +1774,7 @@ export default function DashboardOverview({
               </div>
             )}
 
-            {/* Chat to Clara — column 3, desktop only */}
-            {!isMobile && (
+            {/* Chat to Clara — desktop only; mobile uses the sticky sphere below */}
             <div
               onClick={!claraActive ? handleClaraCardClick : undefined}
               onMouseDown={claraActive && claraSelectedTopic ? handleClaraPressStart : undefined}
@@ -1720,6 +1784,7 @@ export default function DashboardOverview({
               onTouchEnd={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
               onTouchCancel={claraActive && claraSelectedTopic ? handleClaraPressEnd : undefined}
               style={{
+                display: isMobile ? 'none' : 'flex',
                 cursor: claraActive ? (claraSelectedTopic ? 'pointer' : 'default') : 'pointer',
                 background: claraActive ? 'transparent' : 'rgba(155,123,200,0.18)',
                 backdropFilter: claraActive ? 'none' : 'blur(12px)',
@@ -1729,7 +1794,7 @@ export default function DashboardOverview({
                 position: 'relative', overflow: 'hidden',
                 boxShadow: claraActive ? 'none' : '0 8px 30px rgba(61,31,138,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
                 transition: 'background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, transform 0.2s',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 userSelect: 'none', WebkitUserSelect: 'none',
               } as React.CSSProperties}
               onMouseEnter={e => {
@@ -1748,7 +1813,7 @@ export default function DashboardOverview({
               {/* Decorative arcs — fade out when Clara activates */}
               <div style={{
                 position: 'absolute', top: -12, right: -12, width: 95, height: 95, zIndex: 0,
-                opacity: claraActive ? 0 : 1, transition: 'opacity 0.3s ease',
+                opacity: (isMobile || claraActive) ? 0 : 1, transition: 'opacity 0.3s ease',
               }}>
                 {[
                   { size: 84, color: 'rgba(94,207,207,0.45)', rot: -20 },
@@ -1830,7 +1895,6 @@ export default function DashboardOverview({
                 </div>
               )}
             </div>
-            )}
 
             {/* Clara sphere — mobile only, order 4, sticky above bottom nav */}
             {isMobile && (
